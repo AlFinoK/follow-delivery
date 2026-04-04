@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cargo {
+  id          String   @id @default(cuid())
+  trackingId  String   @unique
+  name        String?
+  fromCity    String
+  currentCity String
+  toCity      String
+  status               String    @default("ожидает отправления")
+  acceptanceDate       DateTime?
+  shipmentDate         DateTime?
+  deliveryTimeframe    String?
+  deliveryAmount       Float?
+  paymentStatus        String    @default("none")
+  partialPaymentDetail String?
+  currency             String    @default("KZT")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}

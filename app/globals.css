@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+
+:root {
+	--background: #fffbf5;
+	--foreground: #171717;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--font-sans: var(--font-inter);
+}
+
+body {
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-inter), Inter, system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+button {
+	cursor: pointer;
+}
+
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: #fef3c7;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #f97316;
+	border-radius: 3px;
+}
+
+input[type='date'] {
+	color-scheme: light;
+	cursor: pointer;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+	cursor: pointer;
+	opacity: 0.5;
+	filter: brightness(0) saturate(100%) invert(52%) sepia(95%) saturate(900%) hue-rotate(5deg);
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover {
+	opacity: 0.85;
+}
+
+input[type='date']::-webkit-datetime-edit-fields-wrapper {
+	color: #111827;
+}
+
+input[type='date']::-webkit-datetime-edit-text {
+	color: #9ca3af;
+}
+
+input[type='date'][value='']::-webkit-datetime-edit-year-field,
+input[type='date'][value='']::-webkit-datetime-edit-month-field,
+input[type='date'][value='']::-webkit-datetime-edit-day-field {
+	color: #9ca3af;
+}
+
+/* react-day-picker orange theme */
+.rdp {
+	--rdp-accent-color: #f97316;
+	--rdp-background-color: #fff7ed;
+	--rdp-accent-color-dark: #ea580c;
+	--rdp-background-color-dark: #431407;
+	--rdp-outline: 2px solid #f97316;
+	--rdp-outline-selected: 3px solid #f97316;
+	--rdp-cell-size: 36px;
+	margin: 0;
+}
+
+.rdp-caption_label {
+	font-size: 0.875rem;
+	font-weight: 700;
+	color: #111827;
+}
+
+.rdp-head_cell {
+	font-size: 11px;
+	font-weight: 700;
+	color: #fb923c;
+}
+
+.rdp-day_today:not(.rdp-day_selected) {
+	background-color: #fff7ed;
+	color: #ea580c;
+	font-weight: 700;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:hover,
+.rdp-day_selected:focus {
+	background: linear-gradient(135deg, #f59e0b, #f97316) !important;
+	color: white !important;
+	font-weight: 700;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+	background-color: #fff7ed;
+	color: #c2410c;
+}
+
+.rdp-nav_button {
+	cursor: pointer;
+}
+
+.rdp-caption_dropdowns {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.rdp-caption_dropdowns select {
+	cursor: pointer;
+	background: transparent;
+	font-weight: 700;
+	color: #111827;
+	font-size: 0.875rem;
+	border: none;
+	outline: none;
+	padding: 2px 4px;
+	border-radius: 6px;
+}
+
+.rdp-caption_dropdowns select:hover {
+	background-color: #fff7ed;
+	color: #c2410c;
+}
