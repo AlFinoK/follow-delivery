@@ -3,7 +3,7 @@
 import { memo, useState, useEffect, useRef } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { ru, kk as kkLocale } from 'date-fns/locale'
-import 'react-day-picker/dist/style.css'
+import 'react-day-picker/style.css'
 import { useLang } from '@/contexts/LangContext'
 import { formatDate } from '@/lib/format'
 
@@ -60,8 +60,8 @@ export const DatePickerField = memo(function DatePickerField({
 						defaultMonth={selected}
 						locale={locale}
 						captionLayout="dropdown"
-						fromYear={2020}
-						toYear={2035}
+						startMonth={new Date(2020, 0)}
+						endMonth={new Date(2035, 11)}
 						onSelect={(date) => {
 							if (date) {
 								const y = date.getFullYear()
