@@ -268,7 +268,7 @@ export const translations: Record<Lang, Translations> = {
 		goHome: 'Басты бетке',
 		logout: 'Шығу',
 		realtimeBadge: 'Нақты уақытта бақылау',
-		heroTitle: 'Жүкіңіз қайда',
+		heroTitle: 'Жүгіңіз қайда',
 		heroSubtitle: 'Трек-нөмірді енгізіп, жеткізу мәртебесін алыңыз',
 		trackInputPlaceholder: 'Трек-нөмірді енгізіңіз...',
 		trackButton: 'Жүкті бақылау',
