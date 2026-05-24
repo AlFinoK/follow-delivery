@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 function mapCargo(cargo: {
 	id: string
 	trackingId: string
+	cargoNumber: number | null
 	name: string | null
 	fromCity: string
 	currentCity: string
@@ -16,11 +17,13 @@ function mapCargo(cargo: {
 	paymentStatus: string
 	partialPaymentDetail: string | null
 	currency: string
+	folderId: string | null
 	createdAt: Date
 }) {
 	return {
 		docId: cargo.id,
 		id: cargo.trackingId,
+		cargoNumber: cargo.cargoNumber,
 		name: cargo.name,
 		fromCity: cargo.fromCity,
 		currentCity: cargo.currentCity,
@@ -33,6 +36,7 @@ function mapCargo(cargo: {
 		paymentStatus: cargo.paymentStatus,
 		partialPaymentDetail: cargo.partialPaymentDetail,
 		currency: cargo.currency,
+		folderId: cargo.folderId,
 		createdAt: cargo.createdAt,
 	}
 }
@@ -52,7 +56,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 	const data: Record<string, unknown> = {}
 	if (body.status !== undefined) data.status = body.status
+	if (body.fromCity !== undefined) data.fromCity = body.fromCity
+	if (body.toCity !== undefined) data.toCity = body.toCity
 	if (body.currentCity !== undefined) data.currentCity = body.currentCity
+	if (body.cargoNumber !== undefined) data.cargoNumber = body.cargoNumber != null && body.cargoNumber !== '' ? Number(body.cargoNumber) : null
 	if (body.name !== undefined) data.name = body.name || null
 	if (body.acceptanceDate !== undefined) data.acceptanceDate = body.acceptanceDate ? new Date(body.acceptanceDate) : null
 	if (body.shipmentDate !== undefined) data.shipmentDate = body.shipmentDate ? new Date(body.shipmentDate) : null
@@ -61,6 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	if (body.paymentStatus !== undefined) data.paymentStatus = body.paymentStatus
 	if (body.partialPaymentDetail !== undefined) data.partialPaymentDetail = body.partialPaymentDetail || null
 	if (body.currency !== undefined) data.currency = body.currency
+	if (body.folderId !== undefined) data.folderId = body.folderId || null
 
 	if (Object.keys(data).length === 0) {
 		return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 })

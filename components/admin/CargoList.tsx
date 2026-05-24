@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useLang } from '@/contexts/LangContext'
 import { Spinner } from '@/components/Spinner'
 import { CargoListCard } from './CargoListCard'
@@ -17,6 +17,8 @@ const STATUS_FILTERS = [
 	{ key: 'arrived' as const, value: 'прибыл' },
 ]
 
+type StatusKey = 'all' | 'waiting' | 'transit' | 'arrived'
+
 interface CargoListProps {
 	cargos: Cargo[]
 	loadingCargos: boolean
@@ -25,9 +27,23 @@ interface CargoListProps {
 export function CargoList({ cargos, loadingCargos }: CargoListProps) {
 	const { t, tf } = useLang()
 	const router = useRouter()
-	const [searchQuery, setSearchQuery] = useState('')
-	const [statusFilter, setStatusFilter] = useState<'all' | 'waiting' | 'transit' | 'arrived'>('all')
-	const [page, setPage] = useState(1)
+	const pathname = usePathname()
+	const searchParams = useSearchParams()
+
+	const searchQuery = searchParams.get('q') ?? ''
+	const rawStatus = searchParams.get('status')
+	const statusFilter: StatusKey = rawStatus === 'waiting' || rawStatus === 'transit' || rawStatus === 'arrived' ? rawStatus : 'all'
+	const page = Math.max(1, Number(searchParams.get('page')) || 1)
+
+	const updateParams = (updates: Record<string, string | null>) => {
+		const params = new URLSearchParams(searchParams.toString())
+		for (const [k, v] of Object.entries(updates)) {
+			if (v === null || v === '') params.delete(k)
+			else params.set(k, v)
+		}
+		const qs = params.toString()
+		router.replace(qs ? `${pathname}?${qs}` : pathname)
+	}
 
 	const filtered = useMemo(() => {
 		let result = cargos
@@ -42,6 +58,7 @@ export function CargoList({ cargos, loadingCargos }: CargoListProps) {
 			result = result.filter(
 				(c) =>
 					c.id.toLowerCase().includes(q) ||
+					(c.cargoNumber != null && String(c.cargoNumber).includes(q)) ||
 					(c.name ?? '').toLowerCase().includes(q) ||
 					c.fromCity.toLowerCase().includes(q) ||
 					c.toCity.toLowerCase().includes(q) ||
@@ -57,31 +74,33 @@ export function CargoList({ cargos, loadingCargos }: CargoListProps) {
 	const currentPage = Math.min(page, totalPages)
 	const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
-	const handleFilterChange = (key: typeof statusFilter) => {
-		setStatusFilter(key)
-		setPage(1)
+	const handleFilterChange = (key: StatusKey) => {
+		updateParams({ status: key === 'all' ? null : key, page: null })
 	}
 
 	const handleSearch = (value: string) => {
-		setSearchQuery(value)
-		setPage(1)
+		updateParams({ q: value, page: null })
 	}
 
-	const filterLabels: Record<typeof statusFilter, string> = {
+	const setPage = (p: number) => {
+		updateParams({ page: p === 1 ? null : String(p) })
+	}
+
+	const filterLabels: Record<StatusKey, string> = {
 		all: t('filterAll'),
 		waiting: t('statusWaiting'),
 		transit: t('statusInTransit'),
 		arrived: t('statusArrived'),
 	}
 
-	const filterColors: Record<typeof statusFilter, { active: string; count: string }> = {
+	const filterColors: Record<StatusKey, { active: string; count: string }> = {
 		all: { active: 'bg-orange-500 text-white border-orange-500', count: 'bg-orange-100 text-orange-600' },
 		waiting: { active: 'bg-amber-500 text-white border-amber-500', count: 'bg-amber-100 text-amber-700' },
 		transit: { active: 'bg-blue-500 text-white border-blue-500', count: 'bg-blue-100 text-blue-700' },
 		arrived: { active: 'bg-emerald-500 text-white border-emerald-500', count: 'bg-emerald-100 text-emerald-700' },
 	}
 
-	const getCargosForFilter = (key: typeof statusFilter) => {
+	const getCargosForFilter = (key: StatusKey) => {
 		if (key === 'all') return cargos.length
 		const statusValue = STATUS_FILTERS.find((f) => f.key === key)?.value
 		return cargos.filter((c) => c.status === statusValue).length
@@ -199,7 +218,7 @@ export function CargoList({ cargos, loadingCargos }: CargoListProps) {
 					{totalPages > 1 && (
 						<div className="flex items-center justify-between mt-5 pt-4 border-t border-orange-100">
 							<button
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
+								onClick={() => setPage(Math.max(1, currentPage - 1))}
 								disabled={currentPage === 1}
 								className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 hover:border-orange-300 hover:text-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
 								<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -236,7 +255,7 @@ export function CargoList({ cargos, loadingCargos }: CargoListProps) {
 							</div>
 
 							<button
-								onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+								onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
 								disabled={currentPage === totalPages}
 								className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-600 border border-gray-200 hover:border-orange-300 hover:text-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
 								<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

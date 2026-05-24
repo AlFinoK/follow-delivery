@@ -8,12 +8,13 @@ datasource db {
 }
 
 model Cargo {
-  id          String   @id @default(cuid())
-  trackingId  String   @unique
-  name        String?
-  fromCity    String
-  currentCity String
-  toCity      String
+  id           String   @id @default(cuid())
+  trackingId   String   @unique
+  cargoNumber  Int?
+  name         String?
+  fromCity     String
+  currentCity  String
+  toCity       String
   status               String    @default("ожидает отправления")
   acceptanceDate       DateTime?
   shipmentDate         DateTime?
@@ -22,6 +23,19 @@ model Cargo {
   paymentStatus        String    @default("none")
   partialPaymentDetail String?
   currency             String    @default("KZT")
+  folderId             String?
+  folder               Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+
+  @@index([folderId])
+  @@index([cargoNumber])
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  cargos    Cargo[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -5,7 +5,7 @@ import { useLang } from '@/contexts/LangContext'
 import { useDropdown } from './useDropdown'
 import { DropdownTrigger } from './DropdownTrigger'
 
-const CITIES_KZ = ['Алматы', 'Астана', 'Шымкент', 'Актобе', 'Тараз', 'Павлодар', 'Усть-Каменогорск']
+const CITIES_KZ = ['Алматы', 'Астана', 'Костанай', 'Шымкент', 'Актобе', 'Тараз', 'Павлодар', 'Усть-Каменогорск']
 const CITIES_RU_LIST = ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань', 'Омск', 'Самара', 'Уфа']
 const ALL_CITIES = [...CITIES_KZ, ...CITIES_RU_LIST]
 

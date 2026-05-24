@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useLang } from '@/contexts/LangContext'
 import type { Cargo } from './types'
 
@@ -13,18 +13,27 @@ function getStatusBadge(status: string, t: (k: any) => string) {
 
 export function CargoListCard({ cargo }: { cargo: Cargo }) {
 	const router = useRouter()
+	const searchParams = useSearchParams()
 	const { t } = useLang()
 	const badge = getStatusBadge(cargo.status, t)
 
+	const handleOpen = () => {
+		const qs = searchParams.toString()
+		router.push(qs ? `/admin/cargo/${cargo.docId}?${qs}` : `/admin/cargo/${cargo.docId}`)
+	}
+
 	return (
 		<button
-			onClick={() => router.push(`/admin/cargo/${cargo.docId}`)}
+			onClick={handleOpen}
 			className="w-full text-left bg-white rounded-xl p-4 sm:p-5 border-2 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all group cursor-pointer">
 			{/* Top: name + status badge + arrow */}
 			<div className="flex items-start justify-between gap-3 mb-3">
 				<div className="flex-1 min-w-0">
-					{cargo.name ? (
+					{cargo.name || cargo.cargoNumber != null ? (
 						<p className="font-bold text-gray-900 text-sm truncate group-hover:text-orange-600 transition-colors">
+							{cargo.cargoNumber != null && (
+								<span className="text-orange-500 mr-1.5">№{cargo.cargoNumber}</span>
+							)}
 							{cargo.name}
 						</p>
 					) : (
@@ -33,6 +42,9 @@ export function CargoListCard({ cargo }: { cargo: Cargo }) {
 					<p className="text-xs text-gray-400 font-mono mt-0.5 truncate">{cargo.id}</p>
 				</div>
 				<div className="flex items-center gap-2 flex-shrink-0">
+					{cargo.folderId && (
+						<span className="text-base" title="В папке">🗂️</span>
+					)}
 					<span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
 				</div>
 			</div>

@@ -19,6 +19,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 	const { t, tf } = useLang()
 	const [fromCity, setFromCity] = useState('')
 	const [toCity, setToCity] = useState('')
+	const [cargoNumber, setCargoNumber] = useState('')
 	const [cargoName, setCargoName] = useState('')
 	const [status, setStatus] = useState('ожидает отправления')
 	const [acceptanceDate, setAcceptanceDate] = useState('')
@@ -48,6 +49,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					id: normalizedId,
+					cargoNumber: cargoNumber.trim() ? Number(cargoNumber.trim()) : null,
 					name: cargoName.trim() || null,
 					fromCity: fromCity.trim(),
 					currentCity: fromCity.trim(),
@@ -66,6 +68,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 			addToast(tf('cargoCreated', { id: normalizedId }), 'success')
 			setFromCity('')
 			setToCity('')
+			setCargoNumber('')
 			setCargoName('')
 			setStatus('ожидает отправления')
 			setAcceptanceDate('')
@@ -110,6 +113,18 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 					<div>
 						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Информация</p>
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div>
+								<Label>{t('cargoNumberLabel')}</Label>
+								<input
+									type="number"
+									min="0"
+									step="1"
+									value={cargoNumber}
+									onChange={(e) => setCargoNumber(e.target.value)}
+									placeholder={t('enterCargoNumber')}
+									className={INPUT_CLS}
+								/>
+							</div>
 							<div>
 								<Label>{t('cargoNameLabel')}</Label>
 								<input
@@ -232,6 +247,18 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 				<div>
 					<Label>{t('toFormLabel')}</Label>
 					<CitySelect value={toCity} onChange={setToCity} placeholder={t('cityDelivery')} required />
+				</div>
+				<div>
+					<Label>{t('cargoNumberLabel')}</Label>
+					<input
+						type="number"
+						min="0"
+						step="1"
+						value={cargoNumber}
+						onChange={(e) => setCargoNumber(e.target.value)}
+						placeholder={t('enterCargoNumber')}
+						className={INPUT_CLS}
+					/>
 				</div>
 				<div>
 					<Label>{t('cargoNameLabel')}</Label>

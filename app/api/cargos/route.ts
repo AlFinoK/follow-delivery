@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 function mapCargo(cargo: {
 	id: string
 	trackingId: string
+	cargoNumber: number | null
 	name: string | null
 	fromCity: string
 	currentCity: string
@@ -16,11 +17,13 @@ function mapCargo(cargo: {
 	paymentStatus: string
 	partialPaymentDetail: string | null
 	currency: string
+	folderId: string | null
 	createdAt: Date
 }) {
 	return {
 		docId: cargo.id,
 		id: cargo.trackingId,
+		cargoNumber: cargo.cargoNumber,
 		name: cargo.name,
 		fromCity: cargo.fromCity,
 		currentCity: cargo.currentCity,
@@ -33,6 +36,7 @@ function mapCargo(cargo: {
 		paymentStatus: cargo.paymentStatus,
 		partialPaymentDetail: cargo.partialPaymentDetail,
 		currency: cargo.currency,
+		folderId: cargo.folderId,
 		createdAt: cargo.createdAt,
 	}
 }
@@ -64,6 +68,7 @@ export async function POST(req: NextRequest) {
 	const cargo = await prisma.cargo.create({
 		data: {
 			trackingId: (body.id as string).toUpperCase().trim(),
+			cargoNumber: body.cargoNumber != null && body.cargoNumber !== '' ? Number(body.cargoNumber) : null,
 			name: body.name || null,
 			fromCity: body.fromCity,
 			currentCity: body.currentCity,

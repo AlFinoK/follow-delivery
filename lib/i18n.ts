@@ -49,6 +49,8 @@ export type Translations = {
 	newCargoTitle: string
 	fromFormLabel: string
 	toFormLabel: string
+	cargoNumberLabel: string
+	enterCargoNumber: string
 	cargoNameLabel: string
 	statusFormLabel: string
 	creating: string
@@ -139,6 +141,49 @@ export type Translations = {
 	createHintTo: string
 	createHintBoth: string
 	loggedOut: string
+	// Folders
+	foldersNavLink: string
+	foldersTitle: string
+	foldersCount: string
+	newFolderButton: string
+	newFolderTitle: string
+	folderNamePlaceholder: string
+	folderNameEmpty: string
+	folderCreated: string
+	folderCreateError: string
+	folderRenamed: string
+	folderRenameError: string
+	folderDeleted: string
+	folderDeleteError: string
+	confirmDeleteFolder: string
+	noFolders: string
+	createFirstFolder: string
+	folderEmptyCargos: string
+	folderActiveCount: string
+	folderTotalCargos: string
+	addCargosTitle: string
+	addCargosHint: string
+	addCargosPlaceholder: string
+	addCargosButton: string
+	cargosAddedToast: string
+	cargosNotFoundToast: string
+	cargosAlreadyDeliveredToast: string
+	cargosAlreadyInFolderToast: string
+	cargosMovedToast: string
+	bulkUpdateTitle: string
+	bulkUpdateHint: string
+	bulkUpdateButton: string
+	bulkUpdatedToast: string
+	bulkUpdateError: string
+	bulkNothingToUpdate: string
+	removeFromFolderButton: string
+	removeFromFolderError: string
+	folderTabActive: string
+	folderTabDelivered: string
+	folderTabAll: string
+	renameFolderButton: string
+	saveFolderName: string
+	openFolderButton: string
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -181,6 +226,8 @@ export const translations: Record<Lang, Translations> = {
 		newCargoTitle: 'Новый груз',
 		fromFormLabel: 'ОТКУДА',
 		toFormLabel: 'КУДА',
+		cargoNumberLabel: 'НОМЕР',
+		enterCargoNumber: 'Напр.: 1899',
 		cargoNameLabel: 'НАЗВАНИЕ ГРУЗА',
 		statusFormLabel: 'СТАТУС',
 		creating: 'Создание...',
@@ -262,6 +309,48 @@ export const translations: Record<Lang, Translations> = {
 		createHintTo: 'Укажите город доставки',
 		createHintBoth: 'Укажите города отправления и доставки',
 		loggedOut: 'Вы вышли из системы',
+		foldersNavLink: 'Папки',
+		foldersTitle: 'Папки',
+		foldersCount: '{count} активных',
+		newFolderButton: '➕ Новая папка',
+		newFolderTitle: 'Новая папка',
+		folderNamePlaceholder: 'Напр.: Консол 1, Машина Алматы — Москва',
+		folderNameEmpty: 'Название не может быть пустым',
+		folderCreated: 'Папка создана',
+		folderCreateError: 'Ошибка при создании папки',
+		folderRenamed: 'Папка переименована',
+		folderRenameError: 'Ошибка при переименовании',
+		folderDeleted: 'Папка удалена',
+		folderDeleteError: 'Ошибка при удалении папки',
+		confirmDeleteFolder: 'Удалить папку? Грузы внутри останутся и просто отвяжутся.',
+		noFolders: 'Папок ещё нет',
+		createFirstFolder: 'Создайте первую папку — например, под рейс или машину',
+		folderEmptyCargos: 'В этой папке пока нет грузов',
+		folderActiveCount: 'Активных: {count}',
+		folderTotalCargos: 'Всего: {count}',
+		addCargosTitle: 'Добавить грузы по номерам',
+		addCargosHint: 'Введите номера через запятую, пробел или Enter. Например: 1899, 1889, 1891',
+		addCargosPlaceholder: '1899, 1889, 1891',
+		addCargosButton: 'Добавить',
+		cargosAddedToast: 'Добавлено: {count}',
+		cargosNotFoundToast: 'Не найдены: {numbers}',
+		cargosAlreadyDeliveredToast: 'Уже доставлены: {numbers}',
+		cargosAlreadyInFolderToast: 'Уже в этой папке: {numbers}',
+		cargosMovedToast: 'Перенесены из других папок: {numbers}',
+		bulkUpdateTitle: 'Массовое обновление',
+		bulkUpdateHint: 'Изменения применятся ко всем активным грузам в папке',
+		bulkUpdateButton: 'Применить ко всем',
+		bulkUpdatedToast: 'Обновлено: {count}',
+		bulkUpdateError: 'Ошибка при массовом обновлении',
+		bulkNothingToUpdate: 'Выберите хотя бы одно поле',
+		removeFromFolderButton: 'Убрать из папки',
+		removeFromFolderError: 'Ошибка при откреплении',
+		folderTabActive: 'Активные',
+		folderTabDelivered: 'Доставленные',
+		folderTabAll: 'Все',
+		renameFolderButton: 'Переименовать',
+		saveFolderName: 'Сохранить',
+		openFolderButton: 'Открыть',
 	},
 	kk: {
 		headerSubtitle: 'Логистика және жеткізу',
@@ -302,6 +391,8 @@ export const translations: Record<Lang, Translations> = {
 		newCargoTitle: 'Жаңа жүк',
 		fromFormLabel: 'ҚАЙДАН',
 		toFormLabel: 'ҚАЙДА',
+		cargoNumberLabel: 'НӨМІР',
+		enterCargoNumber: 'Мыс.: 1899',
 		cargoNameLabel: 'ЖҮК АТАУЫ',
 		statusFormLabel: 'МӘРТЕБЕ',
 		creating: 'Жасалуда...',
@@ -383,6 +474,48 @@ export const translations: Record<Lang, Translations> = {
 		createHintTo: 'Жеткізу қаласын көрсетіңіз',
 		createHintBoth: 'Жөнелту және жеткізу қалаларын көрсетіңіз',
 		loggedOut: 'Жүйеден шықтыңыз',
+		foldersNavLink: 'Папкалар',
+		foldersTitle: 'Папкалар',
+		foldersCount: '{count} белсенді',
+		newFolderButton: '➕ Жаңа папка',
+		newFolderTitle: 'Жаңа папка',
+		folderNamePlaceholder: 'Мыс.: Консол 1, Көлік Алматы — Мәскеу',
+		folderNameEmpty: 'Атау бос болмауы керек',
+		folderCreated: 'Папка жасалды',
+		folderCreateError: 'Папка жасау кезінде қате',
+		folderRenamed: 'Папка атауы өзгертілді',
+		folderRenameError: 'Атауды өзгерту кезінде қате',
+		folderDeleted: 'Папка жойылды',
+		folderDeleteError: 'Папканы жою кезінде қате',
+		confirmDeleteFolder: 'Папканы жою керек пе? Ішіндегі жүктер сақталады, тек ажыратылады.',
+		noFolders: 'Папкалар әлі жоқ',
+		createFirstFolder: 'Бірінші папканы жасаңыз — мысалы, рейс немесе көлік үшін',
+		folderEmptyCargos: 'Бұл папкада жүктер әзірге жоқ',
+		folderActiveCount: 'Белсенді: {count}',
+		folderTotalCargos: 'Барлығы: {count}',
+		addCargosTitle: 'Нөмірлер бойынша жүктер қосу',
+		addCargosHint: 'Нөмірлерді үтір, бос орын немесе Enter арқылы енгізіңіз. Мыс.: 1899, 1889, 1891',
+		addCargosPlaceholder: '1899, 1889, 1891',
+		addCargosButton: 'Қосу',
+		cargosAddedToast: 'Қосылды: {count}',
+		cargosNotFoundToast: 'Табылмады: {numbers}',
+		cargosAlreadyDeliveredToast: 'Жеткізілген: {numbers}',
+		cargosAlreadyInFolderToast: 'Бұл папкада бар: {numbers}',
+		cargosMovedToast: 'Басқа папкадан көшірілді: {numbers}',
+		bulkUpdateTitle: 'Жаппай жаңарту',
+		bulkUpdateHint: 'Өзгерістер папкадағы барлық белсенді жүктерге қолданылады',
+		bulkUpdateButton: 'Барлығына қолдану',
+		bulkUpdatedToast: 'Жаңартылды: {count}',
+		bulkUpdateError: 'Жаппай жаңарту кезінде қате',
+		bulkNothingToUpdate: 'Кемінде бір өрісті таңдаңыз',
+		removeFromFolderButton: 'Папкадан алып тастау',
+		removeFromFolderError: 'Ажырату кезінде қате',
+		folderTabActive: 'Белсенді',
+		folderTabDelivered: 'Жеткізілген',
+		folderTabAll: 'Барлығы',
+		renameFolderButton: 'Атауын өзгерту',
+		saveFolderName: 'Сақтау',
+		openFolderButton: 'Ашу',
 	},
 }
 

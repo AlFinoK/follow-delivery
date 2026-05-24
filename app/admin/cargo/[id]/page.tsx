@@ -1,7 +1,7 @@
 'use client'
 
 import { use, useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useLang } from '@/contexts/LangContext'
 import { ToastItem } from '@/components/Toast'
 import { AdminNav } from '@/components/admin/AdminNav'
@@ -15,8 +15,11 @@ import type { Toast } from '@/components/Toast'
 import type { Cargo } from '@/components/admin/types'
 
 interface DraftState {
+	cargoNumber: string
 	name: string
+	fromCity: string
 	currentCity: string
+	toCity: string
 	acceptanceDate: string
 	shipmentDate: string
 	deliveryTimeframe: string
@@ -29,8 +32,11 @@ interface DraftState {
 
 function cargoToDraft(cargo: Cargo): DraftState {
 	return {
+		cargoNumber: cargo.cargoNumber != null ? String(cargo.cargoNumber) : '',
 		name: cargo.name ?? '',
+		fromCity: cargo.fromCity,
 		currentCity: cargo.currentCity,
+		toCity: cargo.toCity,
 		acceptanceDate: toInputDate(cargo.acceptanceDate),
 		shipmentDate: toInputDate(cargo.shipmentDate),
 		deliveryTimeframe: cargo.deliveryTimeframe ?? '',
@@ -69,6 +75,13 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 	const { id } = use(params)
 	const { t } = useLang()
 	const router = useRouter()
+	const searchParams = useSearchParams()
+	const backToList = () => {
+		const returnTo = searchParams.get('returnTo')
+		if (returnTo) { router.push(returnTo); return }
+		const qs = searchParams.toString()
+		router.push(qs ? `/admin?${qs}` : '/admin')
+	}
 	const [mounted, setMounted] = useState(false)
 	const [cargo, setCargo] = useState<Cargo | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -92,7 +105,7 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 	const loadCargo = useCallback(async () => {
 		try {
 			const res = await fetch(`/api/cargos/${id}`)
-			if (res.status === 404) { router.push('/admin'); return }
+			if (res.status === 404) { backToList(); return }
 			if (!res.ok) throw new Error()
 			setCargo(await res.json())
 		} catch {
@@ -116,15 +129,18 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 
 	const handleSave = async () => {
 		if (!cargo || !draft) return
-		if (!draft.currentCity.trim()) { addToast(t('cityEmpty'), 'error'); return }
+		if (!draft.fromCity.trim() || !draft.currentCity.trim() || !draft.toCity.trim()) { addToast(t('cityEmpty'), 'error'); return }
 		setSaving(true)
 		try {
 			const res = await fetch(`/api/cargos/${cargo.docId}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					cargoNumber: draft.cargoNumber.trim() ? Number(draft.cargoNumber.trim()) : null,
 					name: draft.name.trim() || null,
+					fromCity: draft.fromCity.trim(),
 					currentCity: draft.currentCity.trim(),
+					toCity: draft.toCity.trim(),
 					status: draft.status,
 					acceptanceDate: draft.acceptanceDate || null,
 					shipmentDate: draft.shipmentDate || null,
@@ -152,7 +168,7 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 		const res = await fetch(`/api/cargos/${cargo.docId}`, { method: 'DELETE' })
 		if (!res.ok) { addToast(t('deleteError'), 'error'); return }
 		sessionStorage.setItem('pendingToast', JSON.stringify({ message: t('cargoDeleted'), type: 'success' }))
-		router.push('/admin')
+		backToList()
 	}
 
 	const handleCopy = () => {
@@ -188,7 +204,7 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 						{/* Back + title */}
 						<div className="flex items-center justify-between gap-3 mb-6">
 							<button
-								onClick={() => router.push('/admin')}
+								onClick={backToList}
 								className="flex items-center gap-1.5 text-orange-600 hover:text-orange-700 font-semibold text-sm transition-colors flex-shrink-0">
 								<svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
 									<path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -211,19 +227,36 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 								<div className="flex items-start justify-between gap-4">
 									<div className="flex-1 min-w-0">
 										{editMode ? (
-											<div>
-												<FieldLabel>{t('cargoNameCardLabel')}</FieldLabel>
-												<input
-													type="text"
-													value={d.name}
-													onChange={(e) => setField('name', e.target.value)}
-													placeholder={t('enterName')}
-													autoFocus
-													className="w-full px-3 py-2.5 text-base font-bold text-gray-900 bg-gray-50 border-2 border-orange-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-400/30 rounded-xl outline-none placeholder-gray-400 transition-all"
-												/>
+											<div className="flex gap-2">
+												<div className="w-24 shrink-0">
+													<FieldLabel>{t('cargoNumberLabel')}</FieldLabel>
+													<input
+														type="number"
+														min="0"
+														step="1"
+														value={d.cargoNumber}
+														onChange={(e) => setField('cargoNumber', e.target.value)}
+														placeholder={t('enterCargoNumber')}
+														className="w-full px-3 py-2.5 text-base font-bold text-gray-900 bg-gray-50 border-2 border-orange-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-400/30 rounded-xl outline-none placeholder-gray-400 transition-all"
+													/>
+												</div>
+												<div className="flex-1 min-w-0">
+													<FieldLabel>{t('cargoNameCardLabel')}</FieldLabel>
+													<input
+														type="text"
+														value={d.name}
+														onChange={(e) => setField('name', e.target.value)}
+														placeholder={t('enterName')}
+														autoFocus
+														className="w-full px-3 py-2.5 text-base font-bold text-gray-900 bg-gray-50 border-2 border-orange-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-400/30 rounded-xl outline-none placeholder-gray-400 transition-all"
+													/>
+												</div>
 											</div>
 										) : (
 											<h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-snug truncate">
+												{cargo.cargoNumber != null && (
+													<span className="text-orange-500 mr-2">№{cargo.cargoNumber}</span>
+												)}
 												{cargo.name || <span className="text-gray-400 italic font-semibold text-lg">{t('noName')}</span>}
 											</h2>
 										)}
@@ -255,7 +288,7 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 										<div className="flex-1 min-w-0 text-center">
 											<div className="w-7 h-7 sm:w-8 sm:h-8 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-1"><span className="text-xs sm:text-sm">📤</span></div>
 											<p className="text-[8px] sm:text-[9px] font-black text-orange-500 uppercase tracking-wide mb-0.5 truncate">{t('fromCardLabel')}</p>
-											<p className="text-xs font-bold text-gray-900 truncate">{cargo.fromCity}</p>
+											<p className="text-xs font-bold text-gray-900 truncate">{editMode ? d.fromCity || cargo.fromCity : cargo.fromCity}</p>
 										</div>
 										<div className="flex items-center self-center pb-4 shrink-0">
 											<div className="w-2 sm:w-5 h-px bg-orange-200" /><span className="text-orange-400 text-xs">›</span><div className="w-2 sm:w-5 h-px bg-orange-200" />
@@ -271,7 +304,7 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 										<div className="flex-1 min-w-0 text-center">
 											<div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-1"><span className="text-xs sm:text-sm">📥</span></div>
 											<p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-wide mb-0.5 truncate">{t('toCardLabel')}</p>
-											<p className="text-xs font-bold text-gray-900 truncate">{cargo.toCity}</p>
+											<p className="text-xs font-bold text-gray-900 truncate">{editMode ? d.toCity || cargo.toCity : cargo.toCity}</p>
 										</div>
 									</div>
 								</div>
@@ -282,6 +315,18 @@ export default function CargoDetailPage({ params }: { params: Promise<{ id: stri
 								<div>
 									<SectionTitle>Маршрут</SectionTitle>
 									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+										<div>
+											<FieldLabel>{t('fromCardLabel')}</FieldLabel>
+											{editMode
+												? <CitySelect value={d.fromCity} onChange={(v) => setField('fromCity', v)} />
+												: <FieldValue>{cargo.fromCity}</FieldValue>}
+										</div>
+										<div>
+											<FieldLabel>{t('toCardLabel')}</FieldLabel>
+											{editMode
+												? <CitySelect value={d.toCity} onChange={(v) => setField('toCity', v)} />
+												: <FieldValue>{cargo.toCity}</FieldValue>}
+										</div>
 										<div>
 											<FieldLabel>{t('currentLocationLabel')}</FieldLabel>
 											{editMode

@@ -1,6 +1,7 @@
 export interface Cargo {
 	docId: string
 	id: string
+	cargoNumber?: number | null
 	name?: string | null
 	fromCity: string
 	currentCity: string
@@ -13,6 +14,7 @@ export interface Cargo {
 	paymentStatus?: string
 	partialPaymentDetail?: string | null
 	currency?: string
+	folderId?: string | null
 	createdAt: any
 }
 
