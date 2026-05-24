@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { Plus, Folder, ChevronRight, FolderOpen } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { ToastItem } from '@/components/Toast'
-import { AdminNav } from '@/components/admin/AdminNav'
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import type { Toast } from '@/components/Toast'
@@ -94,45 +95,40 @@ export default function FoldersPage() {
 	}
 
 	if (!mounted) return <div suppressHydrationWarning />
-
 	if (!minLoadDone || loading) return <PageLoader />
 
 	return (
-		<div
-			className="min-h-screen flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50"
-			suppressHydrationWarning>
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
-				{toasts.map((toast) => (
-					<ToastItem key={toast.id} toast={toast} />
-				))}
-			</div>
+		<div className="min-h-screen bg-slate-50" suppressHydrationWarning>
+			<AdminSidebar />
 
-			<AdminNav />
+			<div className="lg:ml-64 min-h-screen flex flex-col">
+				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+					{toasts.map((toast) => (
+						<ToastItem key={toast.id} toast={toast} />
+					))}
+				</div>
 
-			<main className="flex-1 p-4 sm:p-6 pb-12">
+				<main className="flex-1 p-4 sm:p-6 pb-12">
 				<div className="max-w-4xl mx-auto">
-					<div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-orange-100">
+					<div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200">
 						{/* Header */}
-						<div className="flex items-center gap-3 mb-5">
-							<span className="text-2xl sm:text-3xl">🗂️</span>
-							<div className="flex-1">
-								<h2 className="text-xl sm:text-2xl font-black text-gray-900">{t('foldersTitle')}</h2>
-								<p className="text-orange-600 text-xs sm:text-sm">{tf('totalCount', { total: folders.length })}</p>
+						<div className="flex items-center justify-between gap-3 mb-4">
+							<div>
+								<h2 className="text-lg font-semibold text-slate-900">{t('foldersTitle')}</h2>
+								<p className="text-slate-500 text-xs mt-0.5">{tf('totalCount', { total: folders.length })}</p>
 							</div>
 							<button
 								onClick={() => setShowCreate((v) => !v)}
-								className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-xl font-bold text-sm hover:shadow-lg transition-all flex-shrink-0">
-								<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-									<path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-								</svg>
-								<span className="hidden sm:inline">{t('newFolderButton').replace('➕ ', '')}</span>
+								className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-semibold text-sm transition-colors shrink-0">
+								<Plus className="w-4 h-4" />
+								<span className="hidden sm:inline">{t('newFolderButton')}</span>
 							</button>
 						</div>
 
 						{/* Create form */}
 						{showCreate && (
-							<form onSubmit={handleCreate} className="mb-5 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-								<p className="text-xs font-bold text-orange-600 uppercase tracking-widest mb-2">{t('newFolderTitle')}</p>
+							<form onSubmit={handleCreate} className="mb-5 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+								<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('newFolderTitle')}</p>
 								<div className="flex gap-2">
 									<input
 										type="text"
@@ -140,18 +136,18 @@ export default function FoldersPage() {
 										onChange={(e) => setNewName(e.target.value)}
 										placeholder={t('folderNamePlaceholder')}
 										autoFocus
-										className="flex-1 px-4 py-2.5 bg-white border-2 border-orange-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400/30 transition-all text-sm font-medium"
+										className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 									/>
 									<button
 										type="submit"
 										disabled={creating || !newName.trim()}
-										className="px-5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl hover:shadow-lg disabled:opacity-50 transition-all text-sm">
-										{creating ? <Spinner /> : t('saveFolderName')}
+										className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
+										{creating ? <Spinner className="w-4 h-4 text-white" /> : t('saveFolderName')}
 									</button>
 									<button
 										type="button"
 										onClick={() => { setShowCreate(false); setNewName('') }}
-										className="px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors text-sm">
+										className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
 										{t('cancelButton')}
 									</button>
 								</div>
@@ -161,26 +157,26 @@ export default function FoldersPage() {
 						{/* List */}
 						{folders.length === 0 ? (
 							<div className="text-center py-12">
-								<p className="text-4xl mb-3">📭</p>
-								<p className="text-gray-500 font-semibold">{t('noFolders')}</p>
-								<p className="text-gray-400 text-sm mt-1">{t('createFirstFolder')}</p>
+								<Folder className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+								<p className="text-slate-600 font-medium text-sm">{t('noFolders')}</p>
+								<p className="text-slate-400 text-xs mt-1">{t('createFirstFolder')}</p>
 							</div>
 						) : (
-							<div className="space-y-3">
+							<div className="space-y-2">
 								{folders.map((f) => (
 									<button
 										key={f.id}
 										onClick={() => router.push(`/admin/folders/${f.id}`)}
-										className="w-full text-left bg-white rounded-xl p-4 sm:p-5 border-2 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all group cursor-pointer">
+										className="w-full text-left bg-white rounded-lg p-3.5 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all group cursor-pointer">
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex items-center gap-3 min-w-0 flex-1">
-												<span className="text-2xl shrink-0">🗂️</span>
+												<FolderOpen className="w-5 h-5 text-orange-500 shrink-0" />
 												<div className="min-w-0 flex-1">
-													<p className="font-bold text-gray-900 text-sm sm:text-base truncate group-hover:text-orange-600 transition-colors">{f.name}</p>
-													<p className="text-xs text-gray-500 mt-0.5">{tf('foldersCount', { count: f.cargoCount })}</p>
+													<p className="font-semibold text-slate-900 text-sm truncate group-hover:text-orange-600 transition-colors">{f.name}</p>
+													<p className="text-xs text-slate-500 mt-0.5">{tf('foldersCount', { count: f.cargoCount })}</p>
 												</div>
 											</div>
-											<span className="shrink-0 text-orange-400 text-xl">›</span>
+											<ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
 										</div>
 									</button>
 								))}
@@ -188,11 +184,12 @@ export default function FoldersPage() {
 						)}
 					</div>
 
-					<div className="mt-8 text-center text-gray-500 text-xs sm:text-sm">
+					<div className="mt-8 text-center text-slate-400 text-xs">
 						<p>{t('adminFooter')}</p>
 					</div>
 				</div>
 			</main>
+			</div>
 		</div>
 	)
 }

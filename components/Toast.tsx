@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
 
 export interface Toast {
 	id: string
@@ -16,13 +17,15 @@ export function ToastItem({ toast }: { toast: Toast }) {
 		return () => cancelAnimationFrame(raf)
 	}, [])
 	const shown = visible && !toast.exiting
+	const isSuccess = toast.type === 'success'
+	const Icon = isSuccess ? CheckCircle2 : AlertCircle
 	return (
 		<div
-			className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold transition-all duration-300 ease-out ${
-				shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-6'
-			} ${toast.type === 'success' ? 'bg-emerald-500 border-emerald-400/50 text-white' : 'bg-red-500 border-red-400/50 text-white'}`}>
-			<span className="text-base leading-none">{toast.type === 'success' ? '✓' : '✕'}</span>
-			{toast.message}
+			className={`flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg shadow-sm border text-sm font-medium transition-all duration-200 ease-out bg-white ${
+				shown ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
+			} ${isSuccess ? 'border-emerald-200 text-emerald-700' : 'border-red-200 text-red-700'}`}>
+			<Icon className={`w-4 h-4 mt-0.5 shrink-0 ${isSuccess ? 'text-emerald-500' : 'text-red-500'}`} />
+			<span className="leading-snug">{toast.message}</span>
 		</div>
 	)
 }

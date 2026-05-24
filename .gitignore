@@ -35,6 +35,7 @@ yarn-error.log*
 
 # local db dumps
 *.sql
+!prisma/migrations/**/*.sql
 
 # vercel
 .vercel

@@ -1,56 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { mapCargo } from '@/lib/mapCargo'
 
-function mapCargo(cargo: {
-	id: string
-	trackingId: string
-	cargoNumber: number | null
-	name: string | null
-	fromCity: string
-	currentCity: string
-	toCity: string
-	status: string
-	acceptanceDate: Date | null
-	shipmentDate: Date | null
-	deliveryTimeframe: string | null
-	deliveryAmount: number | null
-	paymentStatus: string
-	partialPaymentDetail: string | null
-	currency: string
-	folderId: string | null
-	createdAt: Date
-}) {
-	return {
-		docId: cargo.id,
-		id: cargo.trackingId,
-		cargoNumber: cargo.cargoNumber,
-		name: cargo.name,
-		fromCity: cargo.fromCity,
-		currentCity: cargo.currentCity,
-		toCity: cargo.toCity,
-		status: cargo.status,
-		acceptanceDate: cargo.acceptanceDate ? cargo.acceptanceDate.toISOString() : null,
-		shipmentDate: cargo.shipmentDate ? cargo.shipmentDate.toISOString() : null,
-		deliveryTimeframe: cargo.deliveryTimeframe,
-		deliveryAmount: cargo.deliveryAmount,
-		paymentStatus: cargo.paymentStatus,
-		partialPaymentDetail: cargo.partialPaymentDetail,
-		currency: cargo.currency,
-		folderId: cargo.folderId,
-		createdAt: cargo.createdAt,
-	}
+async function requireAuth() {
+	const session = await getServerSession()
+	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+	return null
 }
 
-// GET /api/cargos/[id] — получить груз по docId
+// GET /api/cargos/[id] — получить груз по docId (auth)
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const denied = await requireAuth()
+	if (denied) return denied
+
 	const { id } = await params
 	const cargo = await prisma.cargo.findUnique({ where: { id } })
 	if (!cargo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 	return NextResponse.json(mapCargo(cargo))
 }
 
-// PATCH /api/cargos/[id] — обновить поля груза
+// PATCH /api/cargos/[id] — обновить поля груза (auth)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const denied = await requireAuth()
+	if (denied) return denied
+
 	const { id } = await params
 	const body = await req.json()
 
@@ -78,8 +52,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	return NextResponse.json(mapCargo(cargo))
 }
 
-// DELETE /api/cargos/[id] — удалить груз
+// DELETE /api/cargos/[id] — удалить груз (auth)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const denied = await requireAuth()
+	if (denied) return denied
+
 	const { id } = await params
 	await prisma.cargo.delete({ where: { id } })
 	return NextResponse.json({ success: true })

@@ -1,21 +1,11 @@
 'use client'
 
 import { memo, useState, useRef, useEffect } from 'react'
+import { Check } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { DropdownTrigger } from './DropdownTrigger'
 
-const CHECK = (
-	<svg
-		className="w-4 h-4 text-orange-500 flex-shrink-0"
-		viewBox="0 0 20 20"
-		fill="currentColor">
-		<path
-			fillRule="evenodd"
-			d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-			clipRule="evenodd"
-		/>
-	</svg>
-)
+const CHECK = <Check className="w-4 h-4 text-orange-500 shrink-0" />
 
 export const TimeframeInput = memo(function TimeframeInput({
 	value,
@@ -80,15 +70,11 @@ export const TimeframeInput = memo(function TimeframeInput({
 				value={numStr}
 				onChange={(e) => emit(e.target.value, safeUnit)}
 				placeholder="1"
-				className="flex-1 min-w-0 px-3 py-3 bg-gray-50 border-2 border-orange-200 rounded-xl text-gray-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-400/30 transition-all text-sm font-medium"
+				className="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 			/>
-			<div
-				ref={triggerRef}
-				className="flex-1 min-w-0 relative">
-				<DropdownTrigger
-					open={open}
-					onClick={toggle}>
-					<span className="text-gray-900 truncate">{selectedUnit.label}</span>
+			<div ref={triggerRef} className="flex-1 min-w-0 relative">
+				<DropdownTrigger open={open} onClick={toggle}>
+					<span className="text-slate-900 truncate">{selectedUnit.label}</span>
 				</DropdownTrigger>
 
 				{open && rect && (
@@ -102,7 +88,7 @@ export const TimeframeInput = memo(function TimeframeInput({
 							width: dropdownWidth,
 							zIndex: 9999,
 						}}
-						className="bg-white border border-orange-100 rounded-xl shadow-xl overflow-hidden">
+						className="bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
 						{units.map((opt) => (
 							<button
 								key={opt.value}
@@ -112,10 +98,10 @@ export const TimeframeInput = memo(function TimeframeInput({
 									emit(numStr, opt.value)
 									setOpen(false)
 								}}
-								className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+								className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
 									safeUnit === opt.value
-										? 'bg-orange-50 text-orange-600 font-semibold'
-										: 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+										? 'bg-orange-50 text-orange-700 font-semibold'
+										: 'text-slate-700 hover:bg-slate-50'
 								}`}>
 								{opt.label}
 								{safeUnit === opt.value && CHECK}

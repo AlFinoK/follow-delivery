@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { ToastItem } from '@/components/Toast'
-import { AdminNav } from '@/components/admin/AdminNav'
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { NewCargoForm } from '@/components/admin/NewCargoForm'
 import type { Toast } from '@/components/Toast'
 
@@ -27,37 +28,32 @@ export default function NewCargoPage() {
 	}
 
 	return (
-		<div className="h-screen flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 overflow-hidden">
-			{/* Toasts */}
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
-				{toasts.map((toast) => (
-					<ToastItem key={toast.id} toast={toast} />
-				))}
-			</div>
+		<div className="min-h-screen bg-slate-50">
+			<AdminSidebar />
 
-			<AdminNav />
-
-			<main className="flex-1 overflow-y-auto">
-				<div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-					{/* Back + title */}
-					<div className="flex items-center justify-between gap-3 mb-6">
-						<button
-							onClick={() => router.back()}
-							className="flex items-center gap-1.5 text-orange-600 hover:text-orange-700 font-semibold text-sm transition-colors flex-shrink-0">
-							<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-								<path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-							</svg>
-							{t('backToList')}
-						</button>
-						<div className="flex items-center gap-2">
-							<span className="text-xl">➕</span>
-							<h1 className="text-xl font-black text-gray-900">{t('newCargoTitle')}</h1>
-						</div>
-					</div>
-
-					<NewCargoForm onCreated={handleCreated} addToast={addToast} wide />
+			<div className="lg:ml-64 min-h-screen flex flex-col">
+				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+					{toasts.map((toast) => (
+						<ToastItem key={toast.id} toast={toast} />
+					))}
 				</div>
-			</main>
+
+				<main className="flex-1 overflow-y-auto">
+					<div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+						<div className="flex items-center justify-between gap-3 mb-5">
+							<button
+								onClick={() => router.back()}
+								className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors">
+								<ArrowLeft className="w-4 h-4" />
+								{t('backToList')}
+							</button>
+							<h1 className="text-lg font-semibold text-slate-900">{t('newCargoTitle')}</h1>
+						</div>
+
+						<NewCargoForm onCreated={handleCreated} addToast={addToast} wide />
+					</div>
+				</main>
+			</div>
 		</div>
 	)
 }

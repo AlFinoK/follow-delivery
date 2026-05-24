@@ -3,18 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLang } from '@/contexts/LangContext'
 import { ToastItem } from '@/components/Toast'
-import { AdminNav } from '@/components/admin/AdminNav'
+import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { CargoList } from '@/components/admin/CargoList'
-import { PageLoader } from '@/components/PageLoader'
 import type { Toast } from '@/components/Toast'
-import type { Cargo } from '@/components/admin/types'
 
 export default function Admin() {
 	const { t } = useLang()
 	const [mounted, setMounted] = useState(false)
-	const [minLoadDone, setMinLoadDone] = useState(false)
-	const [cargos, setCargos] = useState<Cargo[]>([])
-	const [loadingCargos, setLoadingCargos] = useState(false)
 	const [toasts, setToasts] = useState<Toast[]>([])
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -26,25 +21,9 @@ export default function Admin() {
 		}, 5000)
 	}, [])
 
-	const loadCargos = useCallback(async () => {
-		setLoadingCargos(true)
-		try {
-			const res = await fetch('/api/cargos')
-			if (!res.ok) throw new Error()
-			setCargos(await res.json())
-		} catch {
-			addToast(t('loadError'), 'error')
-		} finally {
-			setLoadingCargos(false)
-		}
-	}, [addToast, t])
-
 	useEffect(() => {
 		setMounted(true)
-		loadCargos()
-		const timer = setTimeout(() => setMinLoadDone(true), 444)
-		return () => clearTimeout(timer)
-	}, [loadCargos])
+	}, [])
 
 	useEffect(() => {
 		const pending = sessionStorage.getItem('pendingToast')
@@ -59,35 +38,26 @@ export default function Admin() {
 
 	if (!mounted) return <div suppressHydrationWarning />
 
-	if (!minLoadDone || (loadingCargos && cargos.length === 0)) return <PageLoader />
-
 	return (
-		<div
-			className="min-h-screen flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50"
-			suppressHydrationWarning>
-			{/* Toasts */}
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
-				{toasts.map((toast) => (
-					<ToastItem
-						key={toast.id}
-						toast={toast}
-					/>
-				))}
-			</div>
+		<div className="min-h-screen bg-slate-50" suppressHydrationWarning>
+			<AdminSidebar />
 
-			<AdminNav />
-
-			<main className="flex-1 p-4 sm:p-6 pb-12">
-				<div className="max-w-4xl mx-auto">
-					<CargoList
-						cargos={cargos}
-						loadingCargos={loadingCargos}
-					/>
-					<div className="mt-8 text-center text-gray-500 text-xs sm:text-sm">
-						<p>{t('adminFooter')}</p>
-					</div>
+			<div className="lg:ml-64 min-h-screen flex flex-col">
+				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+					{toasts.map((toast) => (
+						<ToastItem key={toast.id} toast={toast} />
+					))}
 				</div>
-			</main>
+
+				<main className="flex-1 p-4 sm:p-6 pb-12">
+					<div className="max-w-4xl mx-auto">
+						<CargoList onError={(msg) => addToast(msg, 'error')} />
+						<div className="mt-8 text-center text-slate-400 text-xs">
+							<p>{t('adminFooter')}</p>
+						</div>
+					</div>
+				</main>
+			</div>
 		</div>
 	)
 }

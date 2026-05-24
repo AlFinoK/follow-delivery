@@ -1,5 +1,6 @@
 'use client'
 
+import { Search, Zap, Radio, ShieldCheck } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { Spinner } from '@/components/Spinner'
 
@@ -14,46 +15,45 @@ export function SearchSection({ trackingId, loading, onTrackingIdChange, onSubmi
 	const { t } = useLang()
 
 	const features = [
-		{ icon: '⚡', label: t('featureInstant') },
-		{ icon: '📡', label: t('featureRealtime') },
-		{ icon: '🔒', label: t('featureSecure') },
+		{ Icon: Zap, label: t('featureInstant') },
+		{ Icon: Radio, label: t('featureRealtime') },
+		{ Icon: ShieldCheck, label: t('featureSecure') },
 	]
 
 	return (
 		<>
 			{/* Hero */}
-			<div className="text-center mb-8 sm:mb-10">
-				<p className="inline-block text-xs font-bold text-orange-500 bg-orange-100 border border-orange-200 rounded-full px-3 py-1 mb-4 tracking-wider uppercase">
+			<div className="text-center mb-8">
+				<p className="inline-block text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-3 py-1 mb-4 tracking-wide">
 					{t('realtimeBadge')}
 				</p>
-				<h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-4 leading-[1.1] tracking-tight">
+				<h2 className="text-3xl sm:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
 					{t('heroTitle')}
-					<span className="text-orange-500">?</span>
 				</h2>
-				<p className="text-gray-500 text-sm sm:text-base max-w-sm mx-auto leading-relaxed">{t('heroSubtitle')}</p>
+				<p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">{t('heroSubtitle')}</p>
 			</div>
 
 			{/* Search Card */}
-			<div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-orange-100/60 p-6 sm:p-8 border border-orange-100/80">
-				<form onSubmit={onSubmit} className="flex flex-col gap-4">
+			<div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+				<form onSubmit={onSubmit} className="flex flex-col gap-3">
 					<div className="relative">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
 						<input
 							type="text"
 							value={trackingId}
 							onChange={(e) => onTrackingIdChange(e.target.value)}
 							placeholder={t('trackInputPlaceholder')}
-							className="w-full pl-5 pr-12 py-4 bg-gray-50 border-2 border-orange-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-400/15 transition-all text-sm sm:text-base font-medium"
+							className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 							required
 						/>
-						<span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg select-none">🔍</span>
 					</div>
 					<button
 						type="submit"
 						disabled={loading}
-						className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-orange-300/50 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm sm:text-base hover:scale-[1.02] active:scale-[0.98]">
+						className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm">
 						{loading ? (
-							<span className="flex items-center justify-center gap-2">
-								<Spinner />
+							<span className="inline-flex items-center justify-center gap-2">
+								<Spinner className="w-4 h-4 text-white" />
 								{t('searching')}
 							</span>
 						) : (
@@ -65,10 +65,10 @@ export function SearchSection({ trackingId, loading, onTrackingIdChange, onSubmi
 
 			{/* Features row */}
 			<div className="mt-6 grid grid-cols-3 gap-3 text-center">
-				{features.map((f) => (
-					<div key={f.label} className="bg-white/60 rounded-xl p-3 border border-orange-100">
-						<p className="text-xl mb-1">{f.icon}</p>
-						<p className="text-[11px] text-gray-500 font-medium leading-tight">{f.label}</p>
+				{features.map(({ Icon, label }) => (
+					<div key={label} className="bg-white rounded-lg p-3 border border-slate-200">
+						<Icon className="w-4 h-4 text-orange-500 mx-auto mb-1.5" />
+						<p className="text-xs text-slate-500 font-medium">{label}</p>
 					</div>
 				))}
 			</div>

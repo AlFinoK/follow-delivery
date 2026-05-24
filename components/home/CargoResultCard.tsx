@@ -1,5 +1,6 @@
 'use client'
 
+import { Package, MapPin, Truck, Clock, CheckCircle2, ArrowRight, RotateCcw } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { formatDate } from '@/lib/format'
 
@@ -29,30 +30,23 @@ function getStatusLabel(status: string, t: (key: any) => string): string {
 	return status
 }
 
-function getStatusColor(status: string) {
+function getStatusBadge(status: string) {
 	switch (status) {
 		case 'в пути':
-			return { badge: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' }
+			return { cls: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' }
 		case 'ожидает отправления':
-			return { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' }
+			return { cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' }
 		case 'прибыл':
-			return { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' }
+			return { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' }
 		default:
-			return { badge: 'bg-gray-100 text-gray-600 border-gray-200', dot: 'bg-gray-400' }
+			return { cls: 'bg-slate-50 text-slate-600 border-slate-200', dot: 'bg-slate-400' }
 	}
 }
 
-function getStatusIcon(status: string): string {
-	switch (status) {
-		case 'в пути':
-			return '🚚'
-		case 'ожидает отправления':
-			return '⏳'
-		case 'прибыл':
-			return '✅'
-		default:
-			return '📦'
-	}
+function getStatusIcon(status: string) {
+	if (status === 'в пути') return Truck
+	if (status === 'прибыл') return CheckCircle2
+	return Clock
 }
 
 function getStepIndex(status: string) {
@@ -68,9 +62,9 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 	const { t } = useLang()
 
 	const steps = [
-		{ status: 'ожидает отправления', label: t('statusWaiting'), icon: '📋' },
-		{ status: 'в пути', label: t('statusInTransit'), icon: '🚚' },
-		{ status: 'прибыл', label: t('statusArrived'), icon: '🎉' },
+		{ status: 'ожидает отправления', label: t('statusWaiting'), Icon: Clock },
+		{ status: 'в пути', label: t('statusInTransit'), Icon: Truck },
+		{ status: 'прибыл', label: t('statusArrived'), Icon: CheckCircle2 },
 	]
 
 	const currencySymbol = cargo.currency === 'RUB' ? '₽' : '₸'
@@ -82,90 +76,79 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 		cargo.deliveryAmount != null ||
 		(cargo.paymentStatus && cargo.paymentStatus !== 'none')
 
-	return (
-		<div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl shadow-orange-100/60 border border-orange-100/80 overflow-hidden animate-in fade-in duration-300">
-			{/* Card top accent */}
-			<div className="h-1 w-full bg-gradient-to-r from-amber-400 to-orange-500" />
+	const badge = getStatusBadge(cargo.status)
+	const StatusIcon = getStatusIcon(cargo.status)
+	const currentIdx = getStepIndex(cargo.status)
 
-			<div className="p-6 sm:p-8">
+	return (
+		<div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+			<div className="p-6 sm:p-7 flex flex-col gap-5">
 				{/* Status header */}
-				<div className="flex items-start gap-4 mb-6">
-					<span className="text-4xl leading-none">{getStatusIcon(cargo.status)}</span>
+				<div className="flex items-start gap-3">
+					<div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+						<StatusIcon className="w-5 h-5 text-orange-600" />
+					</div>
 					<div className="flex-1 min-w-0">
-						<h3 className="text-sm font-bold text-gray-500 mb-1">{t('cargoStatusLabel')}</h3>
+						<p className="text-xs font-medium text-slate-500 mb-1">{t('cargoStatusLabel')}</p>
 						<span
-							className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(cargo.status).badge}`}>
-							<span className={`w-1.5 h-1.5 rounded-full ${getStatusColor(cargo.status).dot}`} />
-							{getStatusLabel(cargo.status, t).toUpperCase()}
+							className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${badge.cls}`}>
+							<span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+							{getStatusLabel(cargo.status, t)}
 						</span>
 					</div>
 				</div>
 
 				{/* Track ID */}
-				<div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 mb-5">
-					<p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-1">{t('trackNumberLabel')}</p>
-					<p className="font-mono text-xs sm:text-sm text-gray-800 font-semibold break-all">{cargo.id}</p>
+				<div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5">
+					<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('trackNumberLabel')}</p>
+					<p className="font-mono text-xs text-slate-700 break-all">{cargo.id}</p>
 				</div>
 
-				{/* Route visual */}
-				<div className="bg-gray-50 border border-orange-100 rounded-xl p-4 sm:p-5 mb-5">
-					<p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">{t('routeLabel')}</p>
-					<div className="flex items-center gap-1.5">
+				{/* Route */}
+				<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+					<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('routeLabel')}</p>
+					<div className="flex items-center gap-2">
 						<div className="flex-1 min-w-0 text-center">
-							<div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-1.5">
-								<span className="text-sm">📤</span>
-							</div>
-							<p className="text-[10px] text-orange-500 font-bold uppercase mb-0.5">{t('fromLabel')}</p>
-							<p className="text-xs sm:text-sm font-bold text-gray-900 truncate">{cargo.fromCity}</p>
+							<Package className="w-4 h-4 text-slate-400 mx-auto mb-1.5" />
+							<p className="text-[10px] text-slate-500 font-medium uppercase mb-0.5">{t('fromLabel')}</p>
+							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.fromCity}</p>
 						</div>
-						<div className="flex items-center gap-0.5 flex-shrink-0 pb-3">
-							<div className="w-4 h-px bg-orange-300" />
-							<div className="w-4 h-px bg-orange-300" />
-							<span className="text-orange-400 text-xs">›</span>
-						</div>
+						<ArrowRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 						<div className="flex-1 min-w-0 text-center">
-							<div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-1.5">
-								<span className="text-sm">📍</span>
-							</div>
-							<p className="text-[10px] text-blue-500 font-bold uppercase mb-0.5">{t('currentLabel')}</p>
-							<p className="text-xs sm:text-sm font-bold text-gray-900 truncate">{cargo.currentCity || cargo.fromCity}</p>
+							<MapPin className="w-4 h-4 text-orange-500 mx-auto mb-1.5" />
+							<p className="text-[10px] text-orange-600 font-medium uppercase mb-0.5">{t('currentLabel')}</p>
+							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.currentCity || cargo.fromCity}</p>
 						</div>
-						<div className="flex items-center gap-0.5 flex-shrink-0 pb-3">
-							<div className="w-4 h-px bg-orange-300" />
-							<div className="w-4 h-px bg-orange-300" />
-							<span className="text-orange-400 text-xs">›</span>
-						</div>
+						<ArrowRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 						<div className="flex-1 min-w-0 text-center">
-							<div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-1.5">
-								<span className="text-sm">📥</span>
-							</div>
-							<p className="text-[10px] text-emerald-600 font-bold uppercase mb-0.5">{t('toLabel')}</p>
-							<p className="text-xs sm:text-sm font-bold text-gray-900 truncate">{cargo.toCity}</p>
+							<CheckCircle2 className="w-4 h-4 text-slate-400 mx-auto mb-1.5" />
+							<p className="text-[10px] text-slate-500 font-medium uppercase mb-0.5">{t('toLabel')}</p>
+							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.toCity}</p>
 						</div>
 					</div>
 				</div>
 
 				{/* Details */}
 				{hasDetails && (
-					<div className="bg-gray-50 border border-orange-100 rounded-xl p-4 sm:p-5 mb-5">
-						<p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">{t('detailsLabel')}</p>
-						<div className="space-y-2.5">
+					<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+						<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('detailsLabel')}</p>
+						<div className="space-y-2">
 							{cargo.acceptanceDate && (
-								<div className="flex justify-between items-center">
-									<span className="text-gray-500 text-xs font-medium">{t('acceptanceDateLabel')}</span>
-									<span className="text-gray-800 text-xs font-semibold">{formatDate(cargo.acceptanceDate)}</span>
+								<div className="flex justify-between items-center text-xs">
+									<span className="text-slate-500">{t('acceptanceDateLabel')}</span>
+									<span className="text-slate-900 font-medium">{formatDate(cargo.acceptanceDate)}</span>
 								</div>
 							)}
 							{cargo.shipmentDate && (
-								<div className="flex justify-between items-center">
-									<span className="text-gray-500 text-xs font-medium">{t('shipmentDateLabel')}</span>
-									<span className="text-gray-800 text-xs font-semibold">{formatDate(cargo.shipmentDate)}</span>
+								<div className="flex justify-between items-center text-xs">
+									<span className="text-slate-500">{t('shipmentDateLabel')}</span>
+									<span className="text-slate-900 font-medium">{formatDate(cargo.shipmentDate)}</span>
 								</div>
 							)}
 							{cargo.deliveryTimeframe && (
-								<div className="flex justify-between items-center">
-									<span className="text-gray-500 text-xs font-medium">{t('deliveryTimeframeLabel')}</span>
-									<span className="text-gray-800 text-xs font-semibold">
+								<div className="flex justify-between items-center text-xs">
+									<span className="text-slate-500">{t('deliveryTimeframeLabel')}</span>
+									<span className="text-slate-900 font-medium">
 										{(() => {
 											const [num, unit] = cargo.deliveryTimeframe!.split('|')
 											if (!unit) return cargo.deliveryTimeframe
@@ -176,28 +159,30 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 								</div>
 							)}
 							{cargo.deliveryAmount != null && (
-								<div className="flex justify-between items-center">
-									<span className="text-gray-500 text-xs font-medium">{t('deliveryAmountLabel')}</span>
-									<span className="text-gray-800 text-xs font-semibold">
+								<div className="flex justify-between items-center text-xs">
+									<span className="text-slate-500">{t('deliveryAmountLabel')}</span>
+									<span className="text-slate-900 font-medium">
 										{cargo.deliveryAmount.toLocaleString()} {currencySymbol}
 									</span>
 								</div>
 							)}
 							{cargo.paymentStatus && cargo.paymentStatus !== 'none' && (
 								<>
-									<div className="flex justify-between items-center">
-										<span className="text-gray-500 text-xs font-medium">{t('paymentStatusLabel')}</span>
+									<div className="flex justify-between items-center text-xs">
+										<span className="text-slate-500">{t('paymentStatusLabel')}</span>
 										<span
-											className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-												cargo.paymentStatus === 'full' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+											className={`font-semibold px-2 py-0.5 rounded-md text-[11px] ${
+												cargo.paymentStatus === 'full'
+													? 'bg-emerald-50 text-emerald-700'
+													: 'bg-amber-50 text-amber-700'
 											}`}>
 											{cargo.paymentStatus === 'full' ? t('paymentFull') : t('paymentPartial')}
 										</span>
 									</div>
 									{cargo.paymentStatus === 'partial' && cargo.partialPaymentDetail && (
-										<div className="flex justify-between items-center">
-											<span className="text-gray-500 text-xs font-medium">{t('partialPaymentDetailLabel')}</span>
-											<span className="text-gray-800 text-xs font-semibold">
+										<div className="flex justify-between items-center text-xs">
+											<span className="text-slate-500">{t('partialPaymentDetailLabel')}</span>
+											<span className="text-slate-900 font-medium">
 												{!isNaN(Number(cargo.partialPaymentDetail))
 													? Number(cargo.partialPaymentDetail).toLocaleString()
 													: cargo.partialPaymentDetail}{' '}
@@ -212,27 +197,27 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 				)}
 
 				{/* Timeline */}
-				<div className="mb-6">
-					<p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-3">{t('stagesLabel')}</p>
+				<div>
+					<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('stagesLabel')}</p>
 					<div className="space-y-2">
 						{steps.map((step, i) => {
-							const currentIdx = getStepIndex(cargo.status)
 							const done = i <= currentIdx
 							const active = i === currentIdx
+							const Icon = step.Icon
 							return (
 								<div
 									key={step.status}
-									className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold border transition-all ${
+									className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium border ${
 										active
 											? 'bg-orange-50 border-orange-200 text-orange-700'
 											: done
 												? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-												: 'bg-gray-50 border-gray-200 text-gray-400'
+												: 'bg-slate-50 border-slate-200 text-slate-400'
 									}`}>
-									<span className={`text-sm ${!done && !active ? 'opacity-40' : ''}`}>{step.icon}</span>
+									<Icon className={`w-3.5 h-3.5 shrink-0 ${!done && !active ? 'opacity-50' : ''}`} />
 									<span>{step.label}</span>
-									{done && !active && <span className="ml-auto">✓</span>}
-									{active && <span className="ml-auto w-2 h-2 rounded-full bg-orange-400 animate-pulse" />}
+									{done && !active && <CheckCircle2 className="ml-auto w-3.5 h-3.5" />}
+									{active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />}
 								</div>
 							)
 						})}
@@ -241,7 +226,8 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 
 				<button
 					onClick={onNewSearch}
-					className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 px-6 py-3 rounded-xl text-sm font-bold transition-all hover:shadow-sm active:scale-[0.98]">
+					className="inline-flex items-center justify-center gap-2 w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+					<RotateCcw className="w-4 h-4" />
 					{t('newSearchButton')}
 				</button>
 			</div>

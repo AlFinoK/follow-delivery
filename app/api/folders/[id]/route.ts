@@ -1,61 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { mapCargo } from '@/lib/mapCargo'
 
-function mapCargo(cargo: {
-	id: string
-	trackingId: string
-	cargoNumber: number | null
-	name: string | null
-	fromCity: string
-	currentCity: string
-	toCity: string
-	status: string
-	acceptanceDate: Date | null
-	shipmentDate: Date | null
-	deliveryTimeframe: string | null
-	deliveryAmount: number | null
-	paymentStatus: string
-	partialPaymentDetail: string | null
-	currency: string
-	folderId: string | null
-	createdAt: Date
-}) {
-	return {
-		docId: cargo.id,
-		id: cargo.trackingId,
-		cargoNumber: cargo.cargoNumber,
-		name: cargo.name,
-		fromCity: cargo.fromCity,
-		currentCity: cargo.currentCity,
-		toCity: cargo.toCity,
-		status: cargo.status,
-		acceptanceDate: cargo.acceptanceDate ? cargo.acceptanceDate.toISOString() : null,
-		shipmentDate: cargo.shipmentDate ? cargo.shipmentDate.toISOString() : null,
-		deliveryTimeframe: cargo.deliveryTimeframe,
-		deliveryAmount: cargo.deliveryAmount,
-		paymentStatus: cargo.paymentStatus,
-		partialPaymentDetail: cargo.partialPaymentDetail,
-		currency: cargo.currency,
-		folderId: cargo.folderId,
-		createdAt: cargo.createdAt,
-	}
-}
+const PAGE_SIZE = 20
 
-// GET /api/folders/[id] — папка + грузы внутри (включая доставленные, чтобы видеть историю — UI решит фильтрацию)
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type TabKey = 'active' | 'delivered' | 'all'
+
+// GET /api/folders/[id]:
+//   ?tab=active|delivered|all (default: active)
+//   ?page=N
+// Возвращает { folder, items, total, page, pageSize, counts }
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params
-	const folder = await prisma.folder.findUnique({
-		where: { id },
-		include: { cargos: { orderBy: { createdAt: 'desc' } } },
-	})
+
+	const folder = await prisma.folder.findUnique({ where: { id } })
 	if (!folder) return NextResponse.json({ error: 'Папка не найдена' }, { status: 404 })
 
+	const sp = req.nextUrl.searchParams
+	const rawTab = sp.get('tab') as TabKey | null
+	const tab: TabKey = rawTab === 'delivered' || rawTab === 'all' ? rawTab : 'active'
+	const page = Math.max(1, Number(sp.get('page')) || 1)
+
+	const where =
+		tab === 'active'
+			? { folderId: id, status: { not: 'прибыл' } }
+			: tab === 'delivered'
+				? { folderId: id, status: 'прибыл' }
+				: { folderId: id }
+
+	const [items, total, allCount, deliveredCount] = await Promise.all([
+		prisma.cargo.findMany({
+			where,
+			orderBy: { createdAt: 'desc' },
+			skip: (page - 1) * PAGE_SIZE,
+			take: PAGE_SIZE,
+		}),
+		prisma.cargo.count({ where }),
+		prisma.cargo.count({ where: { folderId: id } }),
+		prisma.cargo.count({ where: { folderId: id, status: 'прибыл' } }),
+	])
+
 	return NextResponse.json({
-		id: folder.id,
-		name: folder.name,
-		createdAt: folder.createdAt,
-		updatedAt: folder.updatedAt,
-		cargos: folder.cargos.map(mapCargo),
+		folder: {
+			id: folder.id,
+			name: folder.name,
+			createdAt: folder.createdAt,
+			updatedAt: folder.updatedAt,
+		},
+		items: items.map(mapCargo),
+		total,
+		page,
+		pageSize: PAGE_SIZE,
+		counts: {
+			all: allCount,
+			active: allCount - deliveredCount,
+			delivered: deliveredCount,
+		},
 	})
 }
 

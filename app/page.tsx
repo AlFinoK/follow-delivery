@@ -85,52 +85,35 @@ export default function Home() {
 
 	return (
 		<div
-			className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex flex-col"
+			className="min-h-screen bg-slate-50 flex flex-col"
 			suppressHydrationWarning>
-			{/* Background decorations */}
-			<div
-				className="fixed inset-0 pointer-events-none overflow-hidden"
-				aria-hidden>
-				<div className="absolute -top-32 -right-32 w-96 h-96 bg-orange-200/30 rounded-full blur-3xl" />
-				<div className="absolute -bottom-32 -left-32 w-96 h-96 bg-amber-200/30 rounded-full blur-3xl" />
-			</div>
-
 			{/* Toast Notifications */}
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+			<div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
 				{toasts.map((toast) => (
-					<ToastItem
-						key={toast.id}
-						toast={toast}
-					/>
+					<ToastItem key={toast.id} toast={toast} />
 				))}
 			</div>
 
 			{/* Header */}
-			<header className="relative z-10 bg-white/70 backdrop-blur-xl border-b border-orange-100 shadow-sm flex-shrink-0">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-					<div className="flex items-center gap-2 sm:gap-3 min-w-0">
+			<header className="bg-white border-b border-slate-200">
+				<div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+					<div className="flex items-center gap-2.5 min-w-0">
 						<img
 							src="/logo.png"
 							alt="Leader Trans Team"
-							className="w-9 h-9 sm:w-11 sm:h-11 object-contain shrink-0"
+							className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
 						/>
-						<div className="min-w-0">
-							<h1 className="text-base sm:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600 leading-tight truncate">
-								Leader Trans Team
-							</h1>
-							<p className="text-[10px] sm:text-xs text-orange-500/80 font-bold tracking-[0.2em] uppercase hidden sm:block">
-								{t('headerSubtitle')}
-							</p>
+						<div className="min-w-0 leading-tight">
+							<p className="text-sm sm:text-base font-semibold text-slate-900 truncate">Leader Trans Team</p>
+							<p className="text-[11px] text-slate-500 hidden sm:block">{t('headerSubtitle')}</p>
 						</div>
 					</div>
-					<div className="shrink-0">
-						<LangSwitcher />
-					</div>
+					<LangSwitcher />
 				</div>
 			</header>
 
 			{/* Main */}
-			<main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-16">
+			<main className="flex-1 flex flex-col items-center justify-center px-4 py-10 sm:py-16">
 				<div className="w-full max-w-xl">
 					{!cargo ? (
 						<SearchSection
@@ -149,8 +132,8 @@ export default function Home() {
 			</main>
 
 			{/* Footer */}
-			<footer className="relative z-10 text-center py-4 pb-6">
-				<p className="text-gray-400 text-xs font-medium">{t('footer')}</p>
+			<footer className="text-center py-4">
+				<p className="text-slate-400 text-xs">{t('footer')}</p>
 			</footer>
 		</div>
 	)

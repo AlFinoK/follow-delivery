@@ -1,12 +1,4 @@
-const CHEVRON = (
-	<svg viewBox="0 0 20 20" fill="currentColor">
-		<path
-			fillRule="evenodd"
-			d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-			clipRule="evenodd"
-		/>
-	</svg>
-)
+import { ChevronDown } from 'lucide-react'
 
 export function DropdownTrigger({
 	open,
@@ -21,13 +13,15 @@ export function DropdownTrigger({
 		<button
 			type="button"
 			onClick={onClick}
-			className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all cursor-pointer text-left ${
-				open ? 'bg-white border-orange-500 ring-2 ring-orange-400/20' : 'bg-gray-50 border-orange-200 hover:border-orange-300'
+			className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer text-left ${
+				open
+					? 'bg-white border-orange-500 ring-2 ring-orange-500/15'
+					: 'bg-white border-slate-200 hover:border-slate-300'
 			}`}>
 			{children}
-			<span className={`w-4 h-4 text-orange-500 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-				{CHEVRON}
-			</span>
+			<ChevronDown
+				className={`w-4 h-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+			/>
 		</button>
 	)
 }

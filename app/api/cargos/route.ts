@@ -1,64 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { mapCargo } from '@/lib/mapCargo'
 
-function mapCargo(cargo: {
-	id: string
-	trackingId: string
-	cargoNumber: number | null
-	name: string | null
-	fromCity: string
-	currentCity: string
-	toCity: string
-	status: string
-	acceptanceDate: Date | null
-	shipmentDate: Date | null
-	deliveryTimeframe: string | null
-	deliveryAmount: number | null
-	paymentStatus: string
-	partialPaymentDetail: string | null
-	currency: string
-	folderId: string | null
-	createdAt: Date
-}) {
-	return {
-		docId: cargo.id,
-		id: cargo.trackingId,
-		cargoNumber: cargo.cargoNumber,
-		name: cargo.name,
-		fromCity: cargo.fromCity,
-		currentCity: cargo.currentCity,
-		toCity: cargo.toCity,
-		status: cargo.status,
-		acceptanceDate: cargo.acceptanceDate ? cargo.acceptanceDate.toISOString() : null,
-		shipmentDate: cargo.shipmentDate ? cargo.shipmentDate.toISOString() : null,
-		deliveryTimeframe: cargo.deliveryTimeframe,
-		deliveryAmount: cargo.deliveryAmount,
-		paymentStatus: cargo.paymentStatus,
-		partialPaymentDetail: cargo.partialPaymentDetail,
-		currency: cargo.currency,
-		folderId: cargo.folderId,
-		createdAt: cargo.createdAt,
-	}
+const PAGE_SIZE = 8
+
+function statusFromFilter(key: string | null): string | null {
+	if (key === 'waiting') return 'ожидает отправления'
+	if (key === 'transit') return 'в пути'
+	if (key === 'arrived') return 'прибыл'
+	return null
 }
 
-// GET /api/cargos — все грузы (админ) или поиск по trackingId (клиент)
+// GET /api/cargos:
+//   - ?trackingId=XYZ — публичный поиск по трек-номеру ИЛИ по cargoNumber (если ввод цифрами)
+//   - без trackingId — админский список с серверной пагинацией/фильтром, требует auth
+//     поддерживает ?status=waiting|transit|arrived&q=...&page=N
+//     возвращает { items, total, page, pageSize, counts }
 export async function GET(req: NextRequest) {
 	const trackingId = req.nextUrl.searchParams.get('trackingId')
 
 	if (trackingId) {
+		const raw = trackingId.trim()
+		const asNumber = Number(raw)
+		const isDigitOnly = /^\d+$/.test(raw) && Number.isInteger(asNumber) && asNumber > 0
+
+		const where: Prisma.CargoWhereInput = isDigitOnly
+			? { OR: [{ cargoNumber: asNumber }, { trackingId: { equals: raw.toUpperCase(), mode: 'insensitive' } }] }
+			: { trackingId: { equals: raw.toUpperCase(), mode: 'insensitive' } }
+
+		// Если ищут по cargoNumber и есть несколько — берём самый свежий не-доставленный, иначе самый свежий.
 		const cargo = await prisma.cargo.findFirst({
-			where: { trackingId: { equals: trackingId.toUpperCase().trim(), mode: 'insensitive' } },
+			where,
+			orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
 		})
 		if (!cargo) return NextResponse.json({ error: 'Груз не найден' }, { status: 404 })
 		return NextResponse.json(mapCargo(cargo))
 	}
 
-	const cargos = await prisma.cargo.findMany({ orderBy: { createdAt: 'desc' } })
-	return NextResponse.json(cargos.map(mapCargo))
+	const session = await getServerSession()
+	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+	const sp = req.nextUrl.searchParams
+	const status = statusFromFilter(sp.get('status'))
+	const q = (sp.get('q') ?? '').trim()
+	const page = Math.max(1, Number(sp.get('page')) || 1)
+
+	const where: Prisma.CargoWhereInput = {}
+	if (status) where.status = status
+	if (q) {
+		const asNum = Number(q)
+		const ors: Prisma.CargoWhereInput[] = [
+			{ trackingId: { contains: q, mode: 'insensitive' } },
+			{ name: { contains: q, mode: 'insensitive' } },
+			{ fromCity: { contains: q, mode: 'insensitive' } },
+			{ toCity: { contains: q, mode: 'insensitive' } },
+			{ currentCity: { contains: q, mode: 'insensitive' } },
+		]
+		if (Number.isInteger(asNum) && asNum > 0) ors.push({ cargoNumber: asNum })
+		where.OR = ors
+	}
+
+	const [items, total, groups] = await Promise.all([
+		prisma.cargo.findMany({
+			where,
+			orderBy: { createdAt: 'desc' },
+			skip: (page - 1) * PAGE_SIZE,
+			take: PAGE_SIZE,
+		}),
+		prisma.cargo.count({ where }),
+		prisma.cargo.groupBy({ by: ['status'], _count: { _all: true } }),
+	])
+
+	const counts = { all: 0, waiting: 0, transit: 0, arrived: 0 }
+	for (const g of groups) {
+		counts.all += g._count._all
+		if (g.status === 'ожидает отправления') counts.waiting = g._count._all
+		else if (g.status === 'в пути') counts.transit = g._count._all
+		else if (g.status === 'прибыл') counts.arrived = g._count._all
+	}
+
+	return NextResponse.json({
+		items: items.map(mapCargo),
+		total,
+		page,
+		pageSize: PAGE_SIZE,
+		counts,
+	})
 }
 
-// POST /api/cargos — создать груз
+// POST /api/cargos — создать груз (auth)
 export async function POST(req: NextRequest) {
+	const session = await getServerSession()
+	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
 	const body = await req.json()
 
 	if (!body.id || !body.fromCity || !body.toCity || !body.currentCity || !body.status) {

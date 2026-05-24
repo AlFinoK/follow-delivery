@@ -15,6 +15,14 @@ interface NewCargoFormProps {
 	wide?: boolean
 }
 
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+	<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{children}</p>
+)
+
+const Label = ({ children }: { children: React.ReactNode }) => (
+	<label className="text-xs font-medium text-slate-700 mb-1.5 block">{children}</label>
+)
+
 export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wide }: NewCargoFormProps) {
 	const { t, tf } = useLang()
 	const [fromCity, setFromCity] = useState('')
@@ -86,267 +94,153 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 		}
 	}
 
-	const Label = ({ children }: { children: React.ReactNode }) => (
-		<label className="text-orange-600 text-xs font-bold mb-2 block tracking-wide">{children}</label>
-	)
-
-	if (wide) {
-		return (
-			<div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-4 sm:p-8">
-				<form onSubmit={handleSubmit} className="flex flex-col gap-6">
-					{/* Route row */}
+	const formBody = (
+		<form onSubmit={handleSubmit} className="flex flex-col gap-6">
+			{/* Route */}
+			<div>
+				<SectionTitle>Маршрут</SectionTitle>
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Маршрут</p>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div>
-								<Label>{t('fromFormLabel')}</Label>
-								<CitySelect value={fromCity} onChange={setFromCity} placeholder={t('cityDeparture')} required />
-							</div>
-							<div>
-								<Label>{t('toFormLabel')}</Label>
-								<CitySelect value={toCity} onChange={setToCity} placeholder={t('cityDelivery')} required />
-							</div>
-						</div>
+						<Label>{t('fromFormLabel')}</Label>
+						<CitySelect value={fromCity} onChange={setFromCity} placeholder={t('cityDeparture')} required />
 					</div>
-
-					{/* Info row */}
 					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Информация</p>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div>
-								<Label>{t('cargoNumberLabel')}</Label>
-								<input
-									type="number"
-									min="0"
-									step="1"
-									value={cargoNumber}
-									onChange={(e) => setCargoNumber(e.target.value)}
-									placeholder={t('enterCargoNumber')}
-									className={INPUT_CLS}
-								/>
-							</div>
-							<div>
-								<Label>{t('cargoNameLabel')}</Label>
-								<input
-									type="text"
-									value={cargoName}
-									onChange={(e) => setCargoName(e.target.value)}
-									placeholder={t('enterName')}
-									className={INPUT_CLS}
-								/>
-							</div>
-							<div>
-								<Label>{t('statusFormLabel')}</Label>
-								<StatusSelect value={status} onChange={setStatus} />
-							</div>
-						</div>
+						<Label>{t('toFormLabel')}</Label>
+						<CitySelect value={toCity} onChange={setToCity} placeholder={t('cityDelivery')} required />
 					</div>
-
-					{/* Dates row */}
-					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Даты</p>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div>
-								<Label>{t('acceptanceDateLabel')}</Label>
-								<DatePickerField value={acceptanceDate} onChange={setAcceptanceDate} />
-							</div>
-							<div>
-								<Label>{t('shipmentDateLabel')}</Label>
-								<DatePickerField value={shipmentDate} onChange={setShipmentDate} />
-							</div>
-						</div>
-					</div>
-
-					{/* Payment row */}
-					<div>
-						<p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Оплата и доставка</p>
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div>
-								<Label>{t('deliveryTimeframeLabel')}</Label>
-								<TimeframeInput value={deliveryTimeframe} onChange={setDeliveryTimeframe} />
-							</div>
-							<div>
-								<Label>{t('deliveryAmountLabel')}</Label>
-								<div className="flex gap-2">
-									<input
-										type="number"
-										min="0"
-										value={deliveryAmount}
-										onChange={(e) => setDeliveryAmount(e.target.value)}
-										placeholder={t('enterAmount')}
-										className={`${INPUT_CLS} flex-1 min-w-0`}
-									/>
-									<div className="w-36 flex-shrink-0">
-										<CurrencySelect value={currency} onChange={setCurrency} />
-									</div>
-								</div>
-							</div>
-							<div>
-								<Label>{t('paymentStatusLabel')}</Label>
-								<PaymentSelect value={paymentStatus} onChange={setPaymentStatus} />
-							</div>
-							{paymentStatus === 'partial' && (
-								<div>
-									<Label>{t('partialPaymentDetailLabel')}</Label>
-									<div className="flex items-center gap-2">
-										<input
-											type="number"
-											min="0"
-											value={partialPaymentDetail}
-											onChange={(e) => setPartialPaymentDetail(e.target.value)}
-											placeholder={t('enterAmount')}
-											className={`${INPUT_CLS} flex-1`}
-										/>
-										<span className="text-gray-500 text-base font-bold flex-shrink-0">{getCurrencySymbol(currency)}</span>
-									</div>
-								</div>
-							)}
-						</div>
-					</div>
-
-					<div>
-						<button
-							type="submit"
-							disabled={!canSubmit || loading}
-							className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3.5 rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base mt-1">
-							{loading ? (
-								<span className="flex items-center justify-center gap-2">
-									<Spinner />
-									{t('creating')}
-								</span>
-							) : (
-								t('createCargoButton')
-							)}
-						</button>
-						{!canSubmit && !loading && (
-							<p className="text-xs text-orange-400 text-center mt-2">
-								{!fromCity.trim() && !toCity.trim()
-									? t('createHintBoth')
-									: !fromCity.trim()
-									? t('createHintFrom')
-									: t('createHintTo')}
-							</p>
-						)}
-					</div>
-				</form>
+				</div>
 			</div>
-		)
-	}
 
-	return (
-		<div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-orange-100">
-			<div className="flex items-center gap-3 mb-6 sm:mb-8">
-				<span className="text-2xl sm:text-3xl">➕</span>
-				<h2 className="text-xl sm:text-2xl font-black text-gray-900">{t('newCargoTitle')}</h2>
-			</div>
-			<form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
-				<div>
-					<Label>{t('fromFormLabel')}</Label>
-					<CitySelect value={fromCity} onChange={setFromCity} placeholder={t('cityDeparture')} required />
-				</div>
-				<div>
-					<Label>{t('toFormLabel')}</Label>
-					<CitySelect value={toCity} onChange={setToCity} placeholder={t('cityDelivery')} required />
-				</div>
-				<div>
-					<Label>{t('cargoNumberLabel')}</Label>
-					<input
-						type="number"
-						min="0"
-						step="1"
-						value={cargoNumber}
-						onChange={(e) => setCargoNumber(e.target.value)}
-						placeholder={t('enterCargoNumber')}
-						className={INPUT_CLS}
-					/>
-				</div>
-				<div>
-					<Label>{t('cargoNameLabel')}</Label>
-					<input
-						type="text"
-						value={cargoName}
-						onChange={(e) => setCargoName(e.target.value)}
-						placeholder={t('enterName')}
-						className={INPUT_CLS}
-					/>
-				</div>
-				<div>
-					<Label>{t('statusFormLabel')}</Label>
-					<StatusSelect value={status} onChange={setStatus} />
-				</div>
-				<div>
-					<Label>{t('acceptanceDateLabel')}</Label>
-					<DatePickerField value={acceptanceDate} onChange={setAcceptanceDate} />
-				</div>
-				<div>
-					<Label>{t('shipmentDateLabel')}</Label>
-					<DatePickerField value={shipmentDate} onChange={setShipmentDate} />
-				</div>
-				<div>
-					<Label>{t('deliveryTimeframeLabel')}</Label>
-					<TimeframeInput value={deliveryTimeframe} onChange={setDeliveryTimeframe} />
-				</div>
-				<div>
-					<Label>{t('deliveryAmountLabel')}</Label>
-					<div className="flex gap-2">
+			{/* Info */}
+			<div>
+				<SectionTitle>Информация</SectionTitle>
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div>
+						<Label>{t('cargoNumberLabel')}</Label>
 						<input
 							type="number"
 							min="0"
-							value={deliveryAmount}
-							onChange={(e) => setDeliveryAmount(e.target.value)}
-							placeholder={t('enterAmount')}
-							className={`${INPUT_CLS} flex-1`}
+							step="1"
+							value={cargoNumber}
+							onChange={(e) => setCargoNumber(e.target.value)}
+							placeholder={t('enterCargoNumber')}
+							className={INPUT_CLS}
 						/>
-						<div className="w-40 flex-shrink-0">
-							<CurrencySelect value={currency} onChange={setCurrency} />
-						</div>
+					</div>
+					<div>
+						<Label>{t('cargoNameLabel')}</Label>
+						<input
+							type="text"
+							value={cargoName}
+							onChange={(e) => setCargoName(e.target.value)}
+							placeholder={t('enterName')}
+							className={INPUT_CLS}
+						/>
+					</div>
+					<div className="sm:col-span-2">
+						<Label>{t('statusFormLabel')}</Label>
+						<StatusSelect value={status} onChange={setStatus} />
 					</div>
 				</div>
-				<div>
-					<Label>{t('paymentStatusLabel')}</Label>
-					<PaymentSelect value={paymentStatus} onChange={setPaymentStatus} />
-				</div>
-				{paymentStatus === 'partial' && (
+			</div>
+
+			{/* Dates */}
+			<div>
+				<SectionTitle>Даты</SectionTitle>
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
-						<Label>{t('partialPaymentDetailLabel')}</Label>
-						<div className="flex items-center gap-2">
+						<Label>{t('acceptanceDateLabel')}</Label>
+						<DatePickerField value={acceptanceDate} onChange={setAcceptanceDate} />
+					</div>
+					<div>
+						<Label>{t('shipmentDateLabel')}</Label>
+						<DatePickerField value={shipmentDate} onChange={setShipmentDate} />
+					</div>
+				</div>
+			</div>
+
+			{/* Payment */}
+			<div>
+				<SectionTitle>Оплата и доставка</SectionTitle>
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+					<div>
+						<Label>{t('deliveryTimeframeLabel')}</Label>
+						<TimeframeInput value={deliveryTimeframe} onChange={setDeliveryTimeframe} />
+					</div>
+					<div>
+						<Label>{t('deliveryAmountLabel')}</Label>
+						<div className="flex gap-2">
 							<input
 								type="number"
 								min="0"
-								value={partialPaymentDetail}
-								onChange={(e) => setPartialPaymentDetail(e.target.value)}
+								value={deliveryAmount}
+								onChange={(e) => setDeliveryAmount(e.target.value)}
 								placeholder={t('enterAmount')}
-								className={`${INPUT_CLS} flex-1`}
+								className={`${INPUT_CLS} flex-1 min-w-0`}
 							/>
-							<span className="text-gray-500 text-base font-bold flex-shrink-0">{getCurrencySymbol(currency)}</span>
+							<div className="w-36 shrink-0">
+								<CurrencySelect value={currency} onChange={setCurrency} />
+							</div>
 						</div>
 					</div>
-				)}
-				<div>
-					<button
-						type="submit"
-						disabled={!canSubmit || loading}
-						className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 sm:py-4 rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base">
-						{loading ? (
-							<span className="flex items-center justify-center gap-2">
-								<Spinner />
-								{t('creating')}
-							</span>
-						) : (
-							t('createCargoButton')
-						)}
-					</button>
-					{!canSubmit && !loading && (
-						<p className="text-xs text-orange-400 text-center mt-2">
-							{!fromCity.trim() && !toCity.trim()
-								? t('createHintBoth')
-								: !fromCity.trim()
-								? t('createHintFrom')
-								: t('createHintTo')}
-						</p>
+					<div>
+						<Label>{t('paymentStatusLabel')}</Label>
+						<PaymentSelect value={paymentStatus} onChange={setPaymentStatus} />
+					</div>
+					{paymentStatus === 'partial' && (
+						<div>
+							<Label>{t('partialPaymentDetailLabel')}</Label>
+							<div className="flex items-center gap-2">
+								<input
+									type="number"
+									min="0"
+									value={partialPaymentDetail}
+									onChange={(e) => setPartialPaymentDetail(e.target.value)}
+									placeholder={t('enterAmount')}
+									className={`${INPUT_CLS} flex-1`}
+								/>
+								<span className="text-slate-500 text-sm font-medium shrink-0">{getCurrencySymbol(currency)}</span>
+							</div>
+						</div>
 					)}
 				</div>
-			</form>
+			</div>
+
+			<div className="pt-2">
+				<button
+					type="submit"
+					disabled={!canSubmit || loading}
+					className="w-full inline-flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+					{loading ? (
+						<>
+							<Spinner className="w-4 h-4 text-white" />
+							{t('creating')}
+						</>
+					) : (
+						t('createCargoButton')
+					)}
+				</button>
+				{!canSubmit && !loading && (
+					<p className="text-xs text-slate-500 text-center mt-2">
+						{!fromCity.trim() && !toCity.trim()
+							? t('createHintBoth')
+							: !fromCity.trim()
+								? t('createHintFrom')
+								: t('createHintTo')}
+					</p>
+				)}
+			</div>
+		</form>
+	)
+
+	return (
+		<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6">
+			{!wide && (
+				<div className="flex items-center gap-2 mb-5">
+					<h2 className="text-lg font-semibold text-slate-900">{t('newCargoTitle')}</h2>
+				</div>
+			)}
+			{formBody}
 		</div>
 	)
 })
