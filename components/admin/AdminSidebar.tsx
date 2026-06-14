@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, Package, Folder, Menu, X } from 'lucide-react'
+import { LogOut, Home, Package, Folder, Calculator, Menu, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
 
@@ -12,6 +12,8 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 	const { t } = useLang()
 	const pathname = usePathname()
 	const isFolders = pathname.startsWith('/admin/folders')
+	const isCalc = pathname.startsWith('/admin/calculator')
+	const isCargos = !isFolders && !isCalc
 
 	const linkCls = (active: boolean) =>
 		`inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -41,13 +43,17 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 
 			{/* Primary nav */}
 			<nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-				<Link href="/admin" onClick={onLinkClick} className={linkCls(!isFolders)}>
+				<Link href="/admin" onClick={onLinkClick} className={linkCls(isCargos)}>
 					<Package className="w-4 h-4" />
 					<span>{t('cargosTitle')}</span>
 				</Link>
 				<Link href="/admin/folders" onClick={onLinkClick} className={linkCls(isFolders)}>
 					<Folder className="w-4 h-4" />
 					<span>{t('foldersNavLink')}</span>
+				</Link>
+				<Link href="/admin/calculator" onClick={onLinkClick} className={linkCls(isCalc)}>
+					<Calculator className="w-4 h-4" />
+					<span>{t('calcNavLink')}</span>
 				</Link>
 			</nav>
 

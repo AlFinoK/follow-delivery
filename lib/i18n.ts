@@ -189,6 +189,64 @@ export type Translations = {
 	renameFolderButton: string
 	saveFolderName: string
 	openFolderButton: string
+	// Calculator
+	calcNavLink: string
+	calcTitle: string
+	calcSubtitle: string
+	calcBadge: string
+	calcOriginLabel: string
+	calcOriginValue: string
+	calcDestLabel: string
+	calcDestPlaceholder: string
+	calcDestSearch: string
+	calcOtherCityOption: string
+	calcCustomCityHint: string
+	calcNoResults: string
+	calcModeTotals: string
+	calcModeDimensions: string
+	calcVolumeLabel: string
+	calcWeightLabel: string
+	calcVolumePh: string
+	calcWeightPh: string
+	calcUnitLabel: string
+	calcUnitMeters: string
+	calcUnitCm: string
+	calcPlaceTitle: string
+	calcDimLength: string
+	calcDimWidth: string
+	calcDimHeight: string
+	calcDimWeight: string
+	calcDimQty: string
+	calcPlaceVolume: string
+	calcAddPlace: string
+	calcRemove: string
+	calcResultTitle: string
+	calcResCity: string
+	calcResPlaces: string
+	calcResVolume: string
+	calcResWeight: string
+	calcResPaidWeight: string
+	calcResPrice: string
+	calcResDays: string
+	calcBilledWeight: string
+	calcBilledVolume: string
+	calcApproxNote: string
+	calcExcludedTitle: string
+	calcExcludedDesc: string
+	calcEmptyHint: string
+	calcSelectCityHint: string
+	calcFillCargoHint: string
+	calcDisclaimer: string
+	calcBackToTracking: string
+	calcPlacesUnit: string
+	// Home hero + tabs
+	homeHeroBadge: string
+	homeHeroTitle: string
+	homeHeroSubtitle: string
+	tabTrack: string
+	tabCalc: string
+	tabTrackShort: string
+	tabCalcShort: string
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -361,6 +419,62 @@ export const translations: Record<Lang, Translations> = {
 		renameFolderButton: 'Переименовать',
 		saveFolderName: 'Сохранить',
 		openFolderButton: 'Открыть',
+		calcNavLink: 'Калькулятор',
+		calcTitle: 'Калькулятор доставки',
+		calcSubtitle: 'Рассчитайте ориентировочную стоимость и срок доставки груза из Алматы по России',
+		calcBadge: 'Расчёт стоимости',
+		calcOriginLabel: 'Откуда',
+		calcOriginValue: 'Алматы, Казахстан',
+		calcDestLabel: 'Куда',
+		calcDestPlaceholder: 'Выберите город назначения',
+		calcDestSearch: 'Начните вводить город…',
+		calcOtherCityOption: 'Другой город (оценка)',
+		calcCustomCityHint: 'Рассчитать как «{city}» (приблизительно)',
+		calcNoResults: 'Город не найден',
+		calcModeTotals: 'Знаю объём и вес',
+		calcModeDimensions: 'По габаритам мест',
+		calcVolumeLabel: 'Общий объём, м³',
+		calcWeightLabel: 'Общий вес, кг',
+		calcVolumePh: 'напр. 5',
+		calcWeightPh: 'напр. 1200',
+		calcUnitLabel: 'Единицы габаритов',
+		calcUnitMeters: 'метры',
+		calcUnitCm: 'см',
+		calcPlaceTitle: 'Место {n}',
+		calcDimLength: 'Длина',
+		calcDimWidth: 'Ширина',
+		calcDimHeight: 'Высота',
+		calcDimWeight: 'Вес места, кг',
+		calcDimQty: 'Кол-во, шт',
+		calcPlaceVolume: 'Объём: {v} м³ × {q} = {total} м³',
+		calcAddPlace: 'Добавить место',
+		calcRemove: 'Удалить',
+		calcResultTitle: 'Результат расчёта',
+		calcResCity: 'Город назначения',
+		calcResPlaces: 'Количество мест',
+		calcResVolume: 'Общий объём',
+		calcResWeight: 'Общий вес',
+		calcResPaidWeight: 'Расчётный вес',
+		calcResPrice: 'Ориентировочная стоимость',
+		calcResDays: 'Срок доставки',
+		calcBilledWeight: 'по весу',
+		calcBilledVolume: 'по объёму',
+		calcApproxNote: 'Приблизительно: города нет в справочнике тарифов',
+		calcExcludedTitle: 'Доставка недоступна',
+		calcExcludedDesc: 'На это направление перевозка не осуществляется',
+		calcEmptyHint: 'Заполните данные о грузе, чтобы увидеть расчёт',
+		calcSelectCityHint: 'Выберите город назначения',
+		calcFillCargoHint: 'Укажите объём и вес груза',
+		calcDisclaimer: 'Расчёт ориентировочный. Точную стоимость уточняйте у менеджера.',
+		calcBackToTracking: 'К отслеживанию',
+		calcPlacesUnit: 'шт',
+		homeHeroBadge: 'Грузоперевозки онлайн',
+		homeHeroTitle: 'Доставка и отслеживание грузов',
+		homeHeroSubtitle: 'Отслеживайте отправления в реальном времени и рассчитывайте ориентировочную стоимость доставки',
+		tabTrack: 'Отслеживание груза',
+		tabCalc: 'Калькулятор доставки',
+		tabTrackShort: 'Отслеживание',
+		tabCalcShort: 'Калькулятор',
 	},
 	kk: {
 		headerSubtitle: 'Логистика және жеткізу',
@@ -531,6 +645,62 @@ export const translations: Record<Lang, Translations> = {
 		renameFolderButton: 'Атауын өзгерту',
 		saveFolderName: 'Сақтау',
 		openFolderButton: 'Ашу',
+		calcNavLink: 'Калькулятор',
+		calcTitle: 'Жеткізу калькуляторы',
+		calcSubtitle: 'Алматыдан Ресей бойынша жүкті жеткізудің болжамды құны мен мерзімін есептеңіз',
+		calcBadge: 'Құнды есептеу',
+		calcOriginLabel: 'Қайдан',
+		calcOriginValue: 'Алматы, Қазақстан',
+		calcDestLabel: 'Қайда',
+		calcDestPlaceholder: 'Жеткізу қаласын таңдаңыз',
+		calcDestSearch: 'Қаланы енгізе бастаңыз…',
+		calcOtherCityOption: 'Басқа қала (болжам)',
+		calcCustomCityHint: '«{city}» ретінде есептеу (шамамен)',
+		calcNoResults: 'Қала табылмады',
+		calcModeTotals: 'Көлем мен салмақ',
+		calcModeDimensions: 'Габариттер бойынша',
+		calcVolumeLabel: 'Жалпы көлемі, м³',
+		calcWeightLabel: 'Жалпы салмағы, кг',
+		calcVolumePh: 'мыс. 5',
+		calcWeightPh: 'мыс. 1200',
+		calcUnitLabel: 'Габарит өлшемдері',
+		calcUnitMeters: 'метр',
+		calcUnitCm: 'см',
+		calcPlaceTitle: '{n}-орын',
+		calcDimLength: 'Ұзындығы',
+		calcDimWidth: 'Ені',
+		calcDimHeight: 'Биіктігі',
+		calcDimWeight: 'Орын салмағы, кг',
+		calcDimQty: 'Саны, дана',
+		calcPlaceVolume: 'Көлемі: {v} м³ × {q} = {total} м³',
+		calcAddPlace: 'Орын қосу',
+		calcRemove: 'Жою',
+		calcResultTitle: 'Есептеу нәтижесі',
+		calcResCity: 'Жеткізу қаласы',
+		calcResPlaces: 'Орын саны',
+		calcResVolume: 'Жалпы көлемі',
+		calcResWeight: 'Жалпы салмағы',
+		calcResPaidWeight: 'Есептік салмақ',
+		calcResPrice: 'Болжамды құны',
+		calcResDays: 'Жеткізу мерзімі',
+		calcBilledWeight: 'салмақ бойынша',
+		calcBilledVolume: 'көлем бойынша',
+		calcApproxNote: 'Шамамен: қала тариф анықтамалығында жоқ',
+		calcExcludedTitle: 'Жеткізу қолжетімсіз',
+		calcExcludedDesc: 'Бұл бағытқа тасымалдау жүзеге асырылмайды',
+		calcEmptyHint: 'Есептеуді көру үшін жүк деректерін толтырыңыз',
+		calcSelectCityHint: 'Жеткізу қаласын таңдаңыз',
+		calcFillCargoHint: 'Жүктің көлемі мен салмағын көрсетіңіз',
+		calcDisclaimer: 'Есеп болжамды. Нақты құнды менеджерден нақтылаңыз.',
+		calcBackToTracking: 'Бақылауға',
+		calcPlacesUnit: 'дана',
+		homeHeroBadge: 'Жүк тасымалы онлайн',
+		homeHeroTitle: 'Жүкті жеткізу және бақылау',
+		homeHeroSubtitle: 'Жөнелтілімдерді нақты уақытта бақылаңыз және жеткізудің болжамды құнын есептеңіз',
+		tabTrack: 'Жүкті бақылау',
+		tabCalc: 'Жеткізу калькуляторы',
+		tabTrackShort: 'Бақылау',
+		tabCalcShort: 'Калькулятор',
 	},
 }
 
