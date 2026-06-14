@@ -8,6 +8,7 @@ import {
 	EXCLUDED_PATTERNS,
 	FALLBACK_DIRECTION,
 	FALLBACK_ENABLED,
+	RUB_TO_KZT,
 	type Direction,
 	type TariffCurve,
 } from './config'
@@ -130,8 +131,11 @@ export function calcShipment(params: {
 	direction: Direction | null
 	cityName: string
 	totals: CargoTotals
+	/** курс ₽→₸; если не передан — используется запасной из конфига */
+	rate?: number
 }): CalcResult {
 	const { direction, cityName, totals } = params
+	const rate = params.rate && params.rate > 0 ? params.rate : RUB_TO_KZT
 
 	if (cityName && isExcluded(cityName)) {
 		return { ok: false, excluded: true, cityName }
@@ -148,7 +152,9 @@ export function calcShipment(params: {
 	if (totals.totalWeight <= 0 && totals.totalVolume <= 0) return { ok: false }
 
 	const pw = paidWeight(totals.totalWeight, totals.totalVolume)
-	const price = Math.round(priceFromCurve(dir.curve, pw.value))
+	// Кривая в рублях → переводим в тенге по актуальному курсу и округляем до 10 ₸
+	const priceRub = priceFromCurve(dir.curve, pw.value)
+	const price = Math.round((priceRub * rate) / 10) * 10
 
 	return {
 		ok: true,

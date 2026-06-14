@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Lock, Ruler, ClipboardList } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { ORIGIN_CITY, ORIGIN_COUNTRY } from '@/lib/calculator/config'
+import { ORIGIN_CITY, ORIGIN_COUNTRY, RUB_TO_KZT } from '@/lib/calculator/config'
 import { calcShipment, findDirection, sumPlaces, type CalcResult, type LengthUnit, type Place } from '@/lib/calculator/engine'
 import { CitySelect, type CitySelection } from './CitySelect'
 import { PlacesEditor } from './PlacesEditor'
@@ -24,6 +24,21 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 	const [weight, setWeight] = useState<number>(0)
 	const [unit, setUnit] = useState<LengthUnit>('m')
 	const [places, setPlaces] = useState<Place[]>([emptyPlace()])
+	const [rate, setRate] = useState<number>(RUB_TO_KZT)
+
+	// Подтягиваем актуальный курс ₽→₸ (Нацбанк РК); при ошибке остаётся запасной из конфига
+	useEffect(() => {
+		let active = true
+		fetch('/api/rate')
+			.then((r) => r.json())
+			.then((d) => {
+				if (active && d && typeof d.rate === 'number' && d.rate > 0) setRate(d.rate)
+			})
+			.catch(() => {})
+		return () => {
+			active = false
+		}
+	}, [])
 
 	const totals = useMemo(() => {
 		if (mode === 'dimensions') return sumPlaces(places, unit)
@@ -33,8 +48,8 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 	const result: CalcResult = useMemo(() => {
 		if (!selection) return { ok: false }
 		const direction = selection.code ? findDirection(selection.code) ?? null : null
-		return calcShipment({ direction, cityName: selection.name, totals })
-	}, [selection, totals])
+		return calcShipment({ direction, cityName: selection.name, totals, rate })
+	}, [selection, totals, rate])
 
 	const updatePlace = (index: number, patch: Partial<Place>) =>
 		setPlaces((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))
