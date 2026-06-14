@@ -82,7 +82,7 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 
 	return (
 		<div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-			<div className="p-6 sm:p-7 flex flex-col gap-5">
+			<div className="p-4 sm:p-7 flex flex-col gap-4 sm:gap-5">
 				{/* Status header */}
 				<div className="flex items-start gap-3">
 					<div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
@@ -105,32 +105,32 @@ export function CargoResultCard({ cargo, onNewSearch }: CargoResultCardProps) {
 				</div>
 
 				{/* Route */}
-				<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+				<div className="bg-slate-50 border border-slate-200 rounded-lg p-3 sm:p-4">
 					<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('routeLabel')}</p>
-					<div className="flex items-center gap-2">
+					<div className="flex items-start gap-1 sm:gap-2">
 						<div className="flex-1 min-w-0 text-center">
 							<Package className="w-4 h-4 text-slate-400 mx-auto mb-1.5" />
 							<p className="text-[10px] text-slate-500 font-medium uppercase mb-0.5">{t('fromLabel')}</p>
-							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.fromCity}</p>
+							<p className="text-[13px] sm:text-sm font-semibold text-slate-900 leading-tight break-words">{cargo.fromCity}</p>
 						</div>
 						<ArrowRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 						<div className="flex-1 min-w-0 text-center">
 							<MapPin className="w-4 h-4 text-orange-500 mx-auto mb-1.5" />
 							<p className="text-[10px] text-orange-600 font-medium uppercase mb-0.5">{t('currentLabel')}</p>
-							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.currentCity || cargo.fromCity}</p>
+							<p className="text-[13px] sm:text-sm font-semibold text-slate-900 leading-tight break-words">{cargo.currentCity || cargo.fromCity}</p>
 						</div>
 						<ArrowRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 						<div className="flex-1 min-w-0 text-center">
 							<CheckCircle2 className="w-4 h-4 text-slate-400 mx-auto mb-1.5" />
 							<p className="text-[10px] text-slate-500 font-medium uppercase mb-0.5">{t('toLabel')}</p>
-							<p className="text-sm font-semibold text-slate-900 truncate">{cargo.toCity}</p>
+							<p className="text-[13px] sm:text-sm font-semibold text-slate-900 leading-tight break-words">{cargo.toCity}</p>
 						</div>
 					</div>
 				</div>
 
 				{/* Details */}
 				{hasDetails && (
-					<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+					<div className="bg-slate-50 border border-slate-200 rounded-lg p-3 sm:p-4">
 						<p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('detailsLabel')}</p>
 						<div className="space-y-2">
 							{cargo.acceptanceDate && (
