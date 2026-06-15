@@ -47,8 +47,8 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 
 	const result: CalcResult = useMemo(() => {
 		if (!selection) return { ok: false }
-		const direction = selection.code ? findDirection(selection.code) ?? null : null
-		return calcShipment({ direction, cityName: selection.name, totals, rate })
+		const direction = findDirection(selection.code) ?? null
+		return calcShipment({ direction, totals, rate })
 	}, [selection, totals, rate])
 
 	const updatePlace = (index: number, patch: Partial<Place>) =>

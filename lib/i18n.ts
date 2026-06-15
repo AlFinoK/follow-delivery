@@ -230,6 +230,7 @@ export type Translations = {
 	calcResDays: string
 	calcBilledWeight: string
 	calcBilledVolume: string
+	calcTariffBasis: string
 	calcApproxNote: string
 	calcExcludedTitle: string
 	calcExcludedDesc: string
@@ -459,6 +460,7 @@ export const translations: Record<Lang, Translations> = {
 		calcResDays: 'Срок доставки',
 		calcBilledWeight: 'по весу',
 		calcBilledVolume: 'по объёму',
+		calcTariffBasis: 'Тарификация',
 		calcApproxNote: 'Приблизительно: города нет в справочнике тарифов',
 		calcExcludedTitle: 'Доставка недоступна',
 		calcExcludedDesc: 'На это направление перевозка не осуществляется',
@@ -685,6 +687,7 @@ export const translations: Record<Lang, Translations> = {
 		calcResDays: 'Жеткізу мерзімі',
 		calcBilledWeight: 'салмақ бойынша',
 		calcBilledVolume: 'көлем бойынша',
+		calcTariffBasis: 'Тарификация',
 		calcApproxNote: 'Шамамен: қала тариф анықтамалығында жоқ',
 		calcExcludedTitle: 'Жеткізу қолжетімсіз',
 		calcExcludedDesc: 'Бұл бағытқа тасымалдау жүзеге асырылмайды',

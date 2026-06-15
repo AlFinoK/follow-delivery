@@ -1,6 +1,6 @@
 'use client'
 
-import { Package, MapPin, Boxes, Weight, Truck, Clock, AlertTriangle, Info, Calculator } from 'lucide-react'
+import { Package, MapPin, Boxes, Weight, Truck, Clock, AlertTriangle, Calculator, Tag } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { CURRENCY_SYMBOL } from '@/lib/calculator/config'
 import type { CalcResult } from '@/lib/calculator/engine'
@@ -9,7 +9,7 @@ const ru = (n: number, digits = 0) =>
 	n.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits })
 
 export function ResultPanel({ result, showDisclaimer = true }: { result: CalcResult; showDisclaimer?: boolean }) {
-	const { t, tf } = useLang()
+	const { t } = useLang()
 
 	if (result.excluded) {
 		return (
@@ -79,9 +79,7 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 
 			<div className="px-5 py-3 divide-y divide-slate-50">
 				{rows.map(({ Icon, label, value }) => (
-					<div
-						key={label}
-						className="flex items-center justify-between gap-3 py-2">
+					<div key={label} className="flex items-center justify-between gap-3 py-2">
 						<span className="inline-flex items-center gap-2 text-sm text-slate-500">
 							<Icon className="w-4 h-4 text-slate-400" />
 							{label}
@@ -91,14 +89,11 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 				))}
 				<div className="flex items-center justify-between gap-3 py-2">
 					<span className="inline-flex items-center gap-2 text-sm text-slate-500">
-						<Weight className="w-4 h-4 text-slate-400" />
-						{t('calcResPaidWeight')}
+						<Tag className="w-4 h-4 text-slate-400" />
+						{t('calcTariffBasis')}
 					</span>
 					<span className="text-sm font-medium text-slate-900 text-right">
-						{ru(result.paidWeight ?? 0, 1)} кг
-						<span className="ml-1.5 text-[11px] font-normal text-slate-400">
-							({result.billedBy === 'volume' ? t('calcBilledVolume') : t('calcBilledWeight')})
-						</span>
+						{result.billedBy === 'volume' ? t('calcBilledVolume') : t('calcBilledWeight')}
 					</span>
 				</div>
 			</div>
@@ -125,13 +120,6 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 						</p>
 					</div>
 				</div>
-
-				{result.approximate && (
-					<p className="mt-3 inline-flex items-start gap-1.5 text-[11px] text-amber-700">
-						<Info className="w-3.5 h-3.5 mt-px shrink-0" />
-						{t('calcApproxNote')}
-					</p>
-				)}
 			</div>
 
 			{showDisclaimer && (

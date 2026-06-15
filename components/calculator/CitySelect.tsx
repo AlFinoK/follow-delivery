@@ -7,7 +7,7 @@ import { DIRECTIONS, type Direction } from '@/lib/calculator/config'
 import { isExcluded } from '@/lib/calculator/engine'
 
 export interface CitySelection {
-	code: string | null // код направления из справочника, либо null для произвольного города
+	code: string // код терминала-направления из справочника
 	name: string
 }
 
@@ -19,7 +19,7 @@ interface CitySelectProps {
 const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е')
 
 export function CitySelect({ value, onChange }: CitySelectProps) {
-	const { t, tf } = useLang()
+	const { t } = useLang()
 	const [open, setOpen] = useState(false)
 	const [query, setQuery] = useState('')
 	const boxRef = useRef<HTMLDivElement>(null)
@@ -35,21 +35,14 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 	const filtered = useMemo(() => {
 		const q = normalize(query)
 		if (!q) return DIRECTIONS
-		return DIRECTIONS.filter((d) => normalize(d.name).includes(q))
+		return DIRECTIONS.filter((d) => normalize(d.name).includes(q) || normalize(d.region).includes(q))
 	}, [query])
 
 	const trimmed = query.trim()
-	const showCustom =
-		trimmed.length >= 2 && !DIRECTIONS.some((d) => normalize(d.name) === normalize(trimmed))
 	const customExcluded = trimmed.length >= 2 && isExcluded(trimmed)
 
 	const selectDirection = (d: Direction) => {
 		onChange({ code: d.code, name: d.name })
-		setQuery('')
-		setOpen(false)
-	}
-	const selectCustom = () => {
-		onChange({ code: null, name: trimmed })
 		setQuery('')
 		setOpen(false)
 	}
@@ -109,14 +102,6 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 							<span>{t('calcExcludedDesc')}</span>
 						</div>
 					)}
-					{showCustom && !customExcluded && (
-						<button
-							type="button"
-							onClick={selectCustom}
-							className="w-full text-left px-3 py-2 text-sm text-orange-700 bg-orange-50/60 hover:bg-orange-50 transition-colors">
-							{tf('calcCustomCityHint', { city: trimmed })}
-						</button>
-					)}
 					{filtered.map((d) => (
 						<button
 							key={d.code}
@@ -124,10 +109,15 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 							onClick={() => selectDirection(d)}
 							className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 transition-colors">
 							<MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-							<span className="text-sm text-slate-700">{d.name}</span>
+							<span className="min-w-0 flex-1">
+								<span className="block text-sm text-slate-700 truncate">{d.name}</span>
+								{d.region && d.region !== d.name && (
+									<span className="block text-[11px] text-slate-400 truncate">{d.region}</span>
+								)}
+							</span>
 						</button>
 					))}
-					{filtered.length === 0 && !showCustom && (
+					{filtered.length === 0 && !customExcluded && (
 						<p className="px-3 py-3 text-sm text-slate-400 text-center">{t('calcNoResults')}</p>
 					)}
 				</div>

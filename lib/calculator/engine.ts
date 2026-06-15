@@ -1,16 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Движок расчёта (чистые функции). Логика повторяет модель ПЭК — см. config.ts.
+// Движок расчёта (чистые функции). Повторяет модель ПЭК:
+//   стоимость = max( тариф_по_весу(вес) , тариф_по_объёму(объём) )
+// Кривые тарифов сняты с боевого расчётчика ПЭК — см. config.ts / PEC_ANALYSIS.md
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
-	DENSITY_KG_PER_M3,
 	DIRECTIONS,
 	EXCLUDED_PATTERNS,
-	FALLBACK_DIRECTION,
-	FALLBACK_ENABLED,
 	RUB_TO_KZT,
+	V_GRID,
+	W_LIN_GRID,
+	W_STEP_GRID,
 	type Direction,
-	type TariffCurve,
+	type VolumeCurve,
+	type WeightCurve,
 } from './config'
 
 export type LengthUnit = 'm' | 'cm'
@@ -33,11 +36,11 @@ export interface CargoTotals {
 export interface CalcResult {
 	ok: boolean
 	excluded?: boolean
-	approximate?: boolean // цена приблизительная (город вне справочника)
 	cityName?: string
-	price?: number // ₽, склад-склад
-	days?: number // календарных дней
-	paidWeight?: number // расчётный (платный) вес, кг
+	region?: string
+	price?: number // ₸, склад-склад
+	priceRub?: number // ₽ до конвертации (для отладки/подписи)
+	days?: string // срок доставки, напр. «9–14»
 	billedBy?: 'weight' | 'volume' // что определило цену
 	totals?: CargoTotals
 }
@@ -70,43 +73,61 @@ export function sumPlaces(places: Place[], unit: LengthUnit): CargoTotals {
 	}
 }
 
-/** Платный вес = max(фактический вес, объёмный вес). Объёмный вес = объём × плотность. */
-export function paidWeight(totalWeight: number, totalVolume: number): { value: number; billedBy: 'weight' | 'volume' } {
-	const volumetric = totalVolume * DENSITY_KG_PER_M3
-	if (volumetric > totalWeight) return { value: volumetric, billedBy: 'volume' }
-	return { value: totalWeight, billedBy: 'weight' }
+/**
+ * Тариф по весу (₽). Воспроизводит структуру ПЭК:
+ * - ≤ 35 кг — ступенчатые минимальные тарифы: цена = значение в наименьшем
+ *   узле сетки [1,3,5,15,35], который ≥ веса (внутри бакета цена постоянна);
+ * - > 35 кг — кусочно-линейная интерполяция по узлам [35,50,…,20000];
+ * - > 20000 кг — продление по ставке последнего участка.
+ */
+export function priceByWeight(curve: WeightCurve, weight: number): number {
+	if (weight <= 0) return 0
+	if (weight <= W_STEP_GRID[W_STEP_GRID.length - 1]) {
+		for (const p of W_STEP_GRID) if (weight <= p) return curve[String(p)]
+		return curve[String(W_STEP_GRID[W_STEP_GRID.length - 1])]
+	}
+	const last = W_LIN_GRID[W_LIN_GRID.length - 1]
+	if (weight >= last) {
+		const prev = W_LIN_GRID[W_LIN_GRID.length - 2]
+		const rate = (curve[String(last)] - curve[String(prev)]) / (last - prev)
+		return curve[String(last)] + rate * (weight - last)
+	}
+	for (let i = 1; i < W_LIN_GRID.length; i++) {
+		const w0 = W_LIN_GRID[i - 1]
+		const w1 = W_LIN_GRID[i]
+		if (weight <= w1) {
+			const t = (weight - w0) / (w1 - w0)
+			return curve[String(w0)] + t * (curve[String(w1)] - curve[String(w0)])
+		}
+	}
+	return curve[String(last)]
 }
 
 /**
- * Цена по кривой направления для заданного платного веса.
- * - ниже первой точки → минимальный тариф (цена первой точки);
- * - между точками → линейная интерполяция;
- * - выше последней точки → продление по ставке последнего участка (₽/кг на «оптовом» хвосте).
+ * Тариф по объёму (₽). Кусочно-линейная интерполяция по узлам [0.1,…,20]:
+ * - < 0.1 м³ — линейно через ноль к первому узлу (малый объём → малая цена,
+ *   так что в max() побеждает вес — как и у ПЭК);
+ * - > 20 м³ — продление по ставке последнего участка.
  */
-export function priceFromCurve(curve: TariffCurve, pw: number): number {
-	const points = Object.keys(curve)
-		.map((k) => [Number(k), curve[k]] as [number, number])
-		.filter(([w, p]) => Number.isFinite(w) && Number.isFinite(p))
-		.sort((a, b) => a[0] - b[0])
-
-	if (points.length === 0) return 0
-	if (pw <= points[0][0]) return points[0][1]
-
-	const last = points[points.length - 1]
-	if (pw >= last[0]) {
-		const ratePerKg = last[1] / last[0] // на хвосте кривая линейна и проходит ~через 0
-		return ratePerKg * pw
+export function priceByVolume(curve: VolumeCurve, volume: number): number {
+	if (volume <= 0) return 0
+	const first = V_GRID[0]
+	if (volume <= first) return curve[String(first)] * (volume / first)
+	const last = V_GRID[V_GRID.length - 1]
+	if (volume >= last) {
+		const prev = V_GRID[V_GRID.length - 2]
+		const rate = (curve[String(last)] - curve[String(prev)]) / (last - prev)
+		return curve[String(last)] + rate * (volume - last)
 	}
-
-	for (let i = 1; i < points.length; i++) {
-		const [w0, p0] = points[i - 1]
-		const [w1, p1] = points[i]
-		if (pw <= w1) {
-			const t = (pw - w0) / (w1 - w0)
-			return p0 + t * (p1 - p0)
+	for (let i = 1; i < V_GRID.length; i++) {
+		const v0 = V_GRID[i - 1]
+		const v1 = V_GRID[i]
+		if (volume <= v1) {
+			const t = (volume - v0) / (v1 - v0)
+			return curve[String(v0)] + t * (curve[String(v1)] - curve[String(v0)])
 		}
 	}
-	return last[1]
+	return curve[String(last)]
 }
 
 const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е')
@@ -118,52 +139,43 @@ export function isExcluded(cityName: string): boolean {
 	return EXCLUDED_PATTERNS.some((pat) => n.includes(normalize(pat)))
 }
 
-/** Поиск направления по коду. */
+/** Поиск направления по коду терминала. */
 export function findDirection(code: string): Direction | undefined {
 	return DIRECTIONS.find((d) => d.code === code)
 }
 
+const formatDays = ([min, max]: [number, number]): string => (min === max ? `${min}` : `${min}–${max}`)
+
 /**
- * Главный расчёт. `direction` — выбранное направление (из справочника) либо null,
- * тогда (если задано имя города) используется приблизительная оценка.
+ * Главный расчёт. `direction` — выбранный город из справочника.
+ * Цена = max(по весу, по объёму) в ₽ → конвертация в ₸ → округление до 10 ₸.
  */
 export function calcShipment(params: {
 	direction: Direction | null
-	cityName: string
 	totals: CargoTotals
 	/** курс ₽→₸; если не передан — используется запасной из конфига */
 	rate?: number
 }): CalcResult {
-	const { direction, cityName, totals } = params
+	const { direction, totals } = params
 	const rate = params.rate && params.rate > 0 ? params.rate : RUB_TO_KZT
 
-	if (cityName && isExcluded(cityName)) {
-		return { ok: false, excluded: true, cityName }
-	}
-
-	let dir = direction
-	let approximate = false
-	if (!dir) {
-		if (!FALLBACK_ENABLED || !cityName.trim()) return { ok: false }
-		dir = { ...FALLBACK_DIRECTION, name: cityName }
-		approximate = true
-	}
-
+	if (!direction) return { ok: false }
 	if (totals.totalWeight <= 0 && totals.totalVolume <= 0) return { ok: false }
 
-	const pw = paidWeight(totals.totalWeight, totals.totalVolume)
-	// Кривая в рублях → переводим в тенге по актуальному курсу и округляем до 10 ₸
-	const priceRub = priceFromCurve(dir.curve, pw.value)
+	const byWeight = priceByWeight(direction.w, totals.totalWeight)
+	const byVolume = priceByVolume(direction.v, totals.totalVolume)
+	const billedBy: 'weight' | 'volume' = byVolume > byWeight ? 'volume' : 'weight'
+	const priceRub = Math.max(byWeight, byVolume)
 	const price = Math.round((priceRub * rate) / 10) * 10
 
 	return {
 		ok: true,
-		approximate,
-		cityName: dir.name || cityName,
+		cityName: direction.name,
+		region: direction.region,
 		price,
-		days: dir.days,
-		paidWeight: round(pw.value, 1),
-		billedBy: pw.billedBy,
+		priceRub: Math.round(priceRub),
+		days: formatDays(direction.days),
+		billedBy,
 		totals,
 	}
 }
