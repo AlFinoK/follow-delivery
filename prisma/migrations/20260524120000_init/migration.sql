@@ -1,8 +1,11 @@
-﻿-- CreateSchema
+﻿-- Идемпотентная стартовая миграция (baseline). Безопасна на БД, созданной через
+-- `prisma db push` (таблицы уже есть): IF NOT EXISTS пропускает существующие объекты.
+
+-- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateTable
-CREATE TABLE "Cargo" (
+CREATE TABLE IF NOT EXISTS "Cargo" (
     "id" TEXT NOT NULL,
     "trackingId" TEXT NOT NULL,
     "cargoNumber" INTEGER,
@@ -26,7 +29,7 @@ CREATE TABLE "Cargo" (
 );
 
 -- CreateTable
-CREATE TABLE "Folder" (
+CREATE TABLE IF NOT EXISTS "Folder" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -36,14 +39,18 @@ CREATE TABLE "Folder" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Cargo_trackingId_key" ON "Cargo"("trackingId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Cargo_trackingId_key" ON "Cargo"("trackingId");
 
 -- CreateIndex
-CREATE INDEX "Cargo_folderId_idx" ON "Cargo"("folderId");
+CREATE INDEX IF NOT EXISTS "Cargo_folderId_idx" ON "Cargo"("folderId");
 
 -- CreateIndex
-CREATE INDEX "Cargo_cargoNumber_idx" ON "Cargo"("cargoNumber");
+CREATE INDEX IF NOT EXISTS "Cargo_cargoNumber_idx" ON "Cargo"("cargoNumber");
 
--- AddForeignKey
-ALTER TABLE "Cargo" ADD CONSTRAINT "Cargo_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "Folder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- AddForeignKey (идемпотентно: PostgreSQL не поддерживает ADD CONSTRAINT IF NOT EXISTS)
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Cargo_folderId_fkey') THEN
+        ALTER TABLE "Cargo" ADD CONSTRAINT "Cargo_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "Folder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
 
