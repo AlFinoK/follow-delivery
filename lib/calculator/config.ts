@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import directionsData from './directions.json'
+import { resolveDistrict, type FederalDistrict } from './districts'
 
 /** Кривая «вес (кг) → цена (₽)». Сетка — W_GRID. */
 export type WeightCurve = Record<string, number>
@@ -33,6 +34,8 @@ export interface Direction {
 	w: WeightCurve
 	/** кривая «объём → цена», склад-склад */
 	v: VolumeCurve
+	/** федеральный округ (для региональной надбавки +30%) */
+	district: FederalDistrict | null
 }
 
 /**
@@ -59,11 +62,18 @@ export const RUB_TO_KZT = 5.8
 export const CURRENCY_SYMBOL = '₸'
 
 /**
+ * Минимальный тариф на доставку (ТЗ improves): что бы ни насчитал калькулятор —
+ * по любому направлению, объёму и весу — итог не может быть ниже этой суммы.
+ */
+export const MIN_PRICE_KZT = 90_000
+
+/**
  * Исключённые направления — НАШЕ бизнес-правило (у ПЭК часть из них возится).
  * Города из этого списка скрываются из справочника и недоступны для выбора.
  * Сопоставление по подстроке в названии, регистр не важен.
  */
 export const EXCLUDED_PATTERNS: string[] = [
+	'калининград', // ТЗ improves: исключить Калининград из направлений доставки
 	'днр',
 	'лнр',
 	'донецк',
@@ -85,7 +95,12 @@ export const EXCLUDED_PATTERNS: string[] = [
 
 const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е')
 
-/** Все направления (сид-данные сняты с ПЭК), кроме попавших в блок-лист. */
-export const DIRECTIONS: Direction[] = (directionsData as unknown as Direction[]).filter(
-	(d) => !EXCLUDED_PATTERNS.some((p) => normalize(d.name).includes(normalize(p)))
-)
+/**
+ * Все направления (сид-данные сняты с ПЭК), кроме попавших в блок-лист.
+ * Федеральный округ резолвится из региона/города на лету — единый источник
+ * правды в districts.ts, в directions.json округ не дублируется.
+ */
+type RawDirection = Omit<Direction, 'district'>
+export const DIRECTIONS: Direction[] = (directionsData as unknown as RawDirection[])
+	.filter((d) => !EXCLUDED_PATTERNS.some((p) => normalize(d.name).includes(normalize(p))))
+	.map((d) => ({ ...d, district: resolveDistrict(d.name, d.region) }))

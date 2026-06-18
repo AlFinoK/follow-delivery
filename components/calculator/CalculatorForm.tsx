@@ -1,32 +1,47 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { MapPin, Lock, Ruler, ClipboardList } from 'lucide-react'
+import { MapPin, Lock, Ruler, ClipboardList, LayoutGrid } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { ORIGIN_CITY, ORIGIN_COUNTRY, RUB_TO_KZT } from '@/lib/calculator/config'
-import { calcShipment, findDirection, sumPlaces, type CalcResult, type LengthUnit, type Place } from '@/lib/calculator/engine'
+import {
+	calcShipment,
+	calcPresetTotal,
+	findDirection,
+	sumPlaces,
+	type CalcResult,
+	type LengthUnit,
+	type Place,
+	type PresetSelection,
+} from '@/lib/calculator/engine'
+import type { Preset } from '@/lib/calculator/presets'
 import { CitySelect, type CitySelection } from './CitySelect'
 import { PlacesEditor } from './PlacesEditor'
+import { PresetPicker } from './PresetPicker'
 import { ResultPanel } from './ResultPanel'
+import { DecimalInput } from './DecimalInput'
 
-type Mode = 'totals' | 'dimensions'
+type Mode = 'presets' | 'dimensions' | 'totals'
 
-const MAX_INPUT = 1_000_000
-
-const emptyPlace = (): Place => ({ length: 0, width: 0, height: 0, weight: 0, quantity: 1 })
+let placeSeq = 0
+const emptyPlace = (): Place => ({ id: `place-${++placeSeq}`, length: 0, width: 0, height: 0, weight: 0, quantity: 1 })
 
 export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boolean } = {}) {
 	const { t } = useLang()
 
 	const [selection, setSelection] = useState<CitySelection | null>(null)
-	const [mode, setMode] = useState<Mode>('totals')
+	const [mode, setMode] = useState<Mode>('presets')
 	const [volume, setVolume] = useState<number>(0)
 	const [weight, setWeight] = useState<number>(0)
 	const [unit, setUnit] = useState<LengthUnit>('m')
 	const [places, setPlaces] = useState<Place[]>([emptyPlace()])
 	const [rate, setRate] = useState<number>(RUB_TO_KZT)
 
-	// Подтягиваем актуальный курс ₽→₸ (Нацбанк РК); при ошибке остаётся запасной из конфига
+	const [presets, setPresets] = useState<Preset[]>([])
+	const [presetsLoading, setPresetsLoading] = useState<boolean>(true)
+	const [quantities, setQuantities] = useState<Record<string, number>>({})
+
+	// Актуальный курс ₽→₸ (Нацбанк РК); при ошибке остаётся запасной из конфига
 	useEffect(() => {
 		let active = true
 		fetch('/api/rate')
@@ -40,31 +55,67 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 		}
 	}, [])
 
-	const totals = useMemo(() => {
-		if (mode === 'dimensions') return sumPlaces(places, unit)
-		return { totalVolume: volume || 0, totalWeight: weight || 0, totalPlaces: 1 }
-	}, [mode, places, unit, volume, weight])
+	// Пресеты грузов из админки
+	useEffect(() => {
+		let active = true
+		fetch('/api/presets')
+			.then((r) => (r.ok ? r.json() : []))
+			.then((d) => {
+				if (active && Array.isArray(d)) setPresets(d)
+			})
+			.catch(() => {})
+			.finally(() => {
+				if (active) setPresetsLoading(false)
+			})
+		return () => {
+			active = false
+		}
+	}, [])
+
+	const direction = useMemo(() => (selection ? findDirection(selection.code) ?? null : null), [selection])
+
+	const presetItems = useMemo<PresetSelection[]>(
+		() =>
+			presets
+				.filter((p) => (quantities[p.id] ?? 0) > 0)
+				.map((p) => ({
+					length: p.length,
+					width: p.width,
+					height: p.height,
+					weight: p.weight,
+					basePrice: p.basePrice,
+					quantity: quantities[p.id],
+				})),
+		[presets, quantities]
+	)
 
 	const result: CalcResult = useMemo(() => {
-		if (!selection) return { ok: false }
-		const direction = findDirection(selection.code) ?? null
-		return calcShipment({ direction, totals, rate })
-	}, [selection, totals, rate])
+		// город (а значит — округ для надбавки) нужен во всех режимах;
+		// для НП вне списка терминалов берём округ самого НП (override), тариф — по ближайшему городу
+		const dir = direction
+			? {
+					...direction,
+					name: selection?.name ?? direction.name,
+					district: selection && selection.district !== undefined ? selection.district : direction.district,
+				}
+			: null
+		if (mode === 'presets') {
+			return calcPresetTotal({ direction: dir, items: presetItems })
+		}
+		const totals = mode === 'dimensions' ? sumPlaces(places, unit) : { totalVolume: volume || 0, totalWeight: weight || 0, totalPlaces: 1 }
+		return calcShipment({ direction: dir, totals, rate })
+	}, [direction, selection, mode, presetItems, places, unit, volume, weight, rate])
 
 	const updatePlace = (index: number, patch: Partial<Place>) =>
 		setPlaces((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))
 	const addPlace = () => setPlaces((prev) => [...prev, emptyPlace()])
 	const removePlace = (index: number) => setPlaces((prev) => prev.filter((_, i) => i !== index))
+	const setQty = (id: string, qty: number) => setQuantities((prev) => ({ ...prev, [id]: Math.max(0, qty) }))
 
 	const numInput = (value: number, onChange: (v: number) => void, placeholder: string) => (
-		<input
-			type="number"
-			inputMode="decimal"
-			min={0}
-			max={MAX_INPUT}
-			step="any"
-			value={value === 0 ? '' : value}
-			onChange={(e) => onChange(e.target.value === '' ? 0 : Math.min(MAX_INPUT, Math.max(0, Number(e.target.value))))}
+		<DecimalInput
+			value={value}
+			onChange={onChange}
 			placeholder={placeholder}
 			className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-300 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 		/>
@@ -105,12 +156,21 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 
 				{/* Mode tabs */}
 				<div className="flex flex-col sm:flex-row gap-2 pt-1">
+					{tab('presets', LayoutGrid, t('calcModePresets'))}
+					{tab('dimensions', Ruler, t('calcModeCustom'))}
 					{tab('totals', ClipboardList, t('calcModeTotals'))}
-					{tab('dimensions', Ruler, t('calcModeDimensions'))}
 				</div>
 
 				{/* Inputs */}
-				{mode === 'totals' ? (
+				{mode === 'presets' ? (
+					<PresetPicker
+						presets={presets}
+						quantities={quantities}
+						onChange={setQty}
+						onCustomCargo={() => setMode('dimensions')}
+						loading={presetsLoading}
+					/>
+				) : mode === 'totals' ? (
 					<div className="grid grid-cols-2 gap-3">
 						<div>
 							<label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">

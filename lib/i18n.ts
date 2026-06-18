@@ -240,6 +240,63 @@ export type Translations = {
 	calcDisclaimer: string
 	calcBackToTracking: string
 	calcPlacesUnit: string
+	// Calculator — presets / regions / custom city
+	calcModePresets: string
+	calcModeCustom: string
+	calcKg: string
+	calcPresetsEmpty: string
+	calcPresetQtyLabel: string
+	calcPresetSelect: string
+	calcCustomCargoButton: string
+	calcCustomCargoHint: string
+	calcPresetSelectedCount: string
+	calcApproxBadge: string
+	calcCustomCityNamePh: string
+	calcNearestCityLabel: string
+	calcBackToCityList: string
+	calcNearestCityHint: string
+	calcOtherSettlement: string
+	calcSectionCities: string
+	calcSectionSettlements: string
+	calcSearchingPlaces: string
+	calcApproxHint: string
+	calcBilledPreset: string
+	calcResBasePrice: string
+	calcSurchargeLabel: string
+	calcMinTariffNote: string
+	// Admin — presets management
+	presetsNavLink: string
+	presetsTitle: string
+	presetsSubtitle: string
+	presetAddButton: string
+	presetSeedButton: string
+	presetCreated: string
+	presetUpdated: string
+	presetSaveError: string
+	presetDeleted: string
+	presetDeleteError: string
+	presetSeedDone: string
+	presetSeedError: string
+	presetsEmptyAdmin: string
+	presetsEmptyHint: string
+	presetHiddenBadge: string
+	presetHideAction: string
+	presetShowAction: string
+	presetDeleteTitle: string
+	presetConfirmDelete: string
+	presetNameLabel: string
+	presetCategoryLabel: string
+	presetSortLabel: string
+	presetLengthLabel: string
+	presetWidthLabel: string
+	presetHeightLabel: string
+	presetWeightLabel: string
+	presetBasePriceLabel: string
+	presetImageUrlLabel: string
+	presetActiveLabel: string
+	presetSaveButton: string
+	presetSearchPlaceholder: string
+	presetNothingFound: string
 	// Home hero + tabs
 	homeHeroBadge: string
 	homeHeroTitle: string
@@ -258,7 +315,7 @@ export const translations: Record<Lang, Translations> = {
 		realtimeBadge: 'Отслеживание в реальном времени',
 		heroTitle: 'Где ваш груз',
 		heroSubtitle: 'Введите трек-номер и получите актуальный статус доставки',
-		trackInputPlaceholder: 'Введите трек-номер...',
+		trackInputPlaceholder: 'Трек-номер или номер отправления...',
 		trackButton: 'Отследить груз',
 		searching: 'Поиск...',
 		featureInstant: 'Мгновенный поиск',
@@ -470,6 +527,61 @@ export const translations: Record<Lang, Translations> = {
 		calcDisclaimer: 'Расчёт ориентировочный. Точную стоимость уточняйте у менеджера.',
 		calcBackToTracking: 'К отслеживанию',
 		calcPlacesUnit: 'шт',
+		calcModePresets: 'Пресеты',
+		calcModeCustom: 'Свой груз',
+		calcKg: 'кг',
+		calcPresetsEmpty: 'Пресеты ещё не загружены',
+		calcPresetQtyLabel: 'Количество',
+		calcPresetSelect: 'Выбрать',
+		calcCustomCargoButton: 'Свой груз',
+		calcCustomCargoHint: 'Ввести свои размеры и вес',
+		calcPresetSelectedCount: 'Выбрано единиц: {count}',
+		calcApproxBadge: 'примерно',
+		calcCustomCityNamePh: 'Ваш населённый пункт (село, посёлок…)',
+		calcNearestCityLabel: 'Ближайший город (для тарифа)',
+		calcBackToCityList: 'Назад к списку городов',
+		calcNearestCityHint: 'Выберите ближайший город — по нему рассчитаем тариф',
+		calcOtherSettlement: 'Другой населённый пункт',
+		calcSectionCities: 'Города',
+		calcSectionSettlements: 'Населённые пункты',
+		calcSearchingPlaces: 'Ищем населённый пункт…',
+		calcApproxHint: 'Тариф рассчитан по ближайшему городу; надбавка — по округу населённого пункта',
+		calcBilledPreset: 'по прейскуранту',
+		calcResBasePrice: 'Базовая стоимость',
+		calcSurchargeLabel: 'Региональная надбавка',
+		calcMinTariffNote: 'Применён минимальный тариф {min} ₸',
+		presetsNavLink: 'Пресеты',
+		presetsTitle: 'Пресеты грузов',
+		presetsSubtitle: 'Готовая техника с фиксированной базовой ценой. К базовой цене добавляется +30% по федеральному округу назначения, итог — не ниже минимального тарифа.',
+		presetAddButton: 'Новый пресет',
+		presetSeedButton: 'Загрузить стандартные',
+		presetCreated: 'Пресет создан',
+		presetUpdated: 'Пресет обновлён',
+		presetSaveError: 'Ошибка при сохранении пресета',
+		presetDeleted: 'Пресет удалён',
+		presetDeleteError: 'Ошибка при удалении пресета',
+		presetSeedDone: 'Загружено пресетов: {count}',
+		presetSeedError: 'Ошибка при загрузке пресетов',
+		presetsEmptyAdmin: 'Пресетов пока нет',
+		presetsEmptyHint: 'Создайте пресет или загрузите стандартный набор',
+		presetHiddenBadge: 'Скрыт',
+		presetHideAction: 'Скрыть из калькулятора',
+		presetShowAction: 'Показать в калькуляторе',
+		presetDeleteTitle: 'Удалить пресет?',
+		presetConfirmDelete: 'Пресет будет удалён без возможности восстановления.',
+		presetNameLabel: 'Название',
+		presetCategoryLabel: 'Категория',
+		presetSortLabel: 'Порядок',
+		presetLengthLabel: 'Длина, см',
+		presetWidthLabel: 'Ширина, см',
+		presetHeightLabel: 'Высота, см',
+		presetWeightLabel: 'Вес, кг',
+		presetBasePriceLabel: 'Базовая цена, ₸',
+		presetImageUrlLabel: 'Ссылка на фото',
+		presetActiveLabel: 'Показывать в калькуляторе',
+		presetSaveButton: 'Сохранить',
+		presetSearchPlaceholder: 'Поиск по названию…',
+		presetNothingFound: 'Пресеты не найдены',
 		homeHeroBadge: 'Грузоперевозки онлайн',
 		homeHeroTitle: 'Доставка и отслеживание грузов',
 		homeHeroSubtitle: 'Отслеживайте отправления в реальном времени и рассчитывайте ориентировочную стоимость доставки',
@@ -485,7 +597,7 @@ export const translations: Record<Lang, Translations> = {
 		realtimeBadge: 'Нақты уақытта бақылау',
 		heroTitle: 'Жүгіңіз қайда',
 		heroSubtitle: 'Трек-нөмірді енгізіп, жеткізу мәртебесін алыңыз',
-		trackInputPlaceholder: 'Трек-нөмірді енгізіңіз...',
+		trackInputPlaceholder: 'Трек-нөмір немесе жөнелтім нөмірі...',
 		trackButton: 'Жүкті бақылау',
 		searching: 'Іздеу...',
 		featureInstant: 'Жылдам іздеу',
@@ -697,6 +809,61 @@ export const translations: Record<Lang, Translations> = {
 		calcDisclaimer: 'Есеп болжамды. Нақты құнды менеджерден нақтылаңыз.',
 		calcBackToTracking: 'Бақылауға',
 		calcPlacesUnit: 'дана',
+		calcModePresets: 'Пресеттер',
+		calcModeCustom: 'Өз жүгім',
+		calcKg: 'кг',
+		calcPresetsEmpty: 'Пресеттер әлі жүктелмеген',
+		calcPresetQtyLabel: 'Саны',
+		calcPresetSelect: 'Таңдау',
+		calcCustomCargoButton: 'Өз жүгім',
+		calcCustomCargoHint: 'Өз өлшемдеріңіз бен салмағыңызды енгізіңіз',
+		calcPresetSelectedCount: 'Таңдалған бірлік: {count}',
+		calcApproxBadge: 'шамамен',
+		calcCustomCityNamePh: 'Сіздің елді мекеніңіз (ауыл, кент…)',
+		calcNearestCityLabel: 'Жақын қала (тариф үшін)',
+		calcBackToCityList: 'Қалалар тізіміне қайту',
+		calcNearestCityHint: 'Жақын қаланы таңдаңыз — тариф сол бойынша есептеледі',
+		calcOtherSettlement: 'Басқа елді мекен',
+		calcSectionCities: 'Қалалар',
+		calcSectionSettlements: 'Елді мекендер',
+		calcSearchingPlaces: 'Елді мекенді іздеудеміз…',
+		calcApproxHint: 'Тариф ең жақын қала бойынша; үстеме — елді мекеннің округі бойынша',
+		calcBilledPreset: 'прейскурант бойынша',
+		calcResBasePrice: 'Базалық құны',
+		calcSurchargeLabel: 'Аймақтық үстеме',
+		calcMinTariffNote: 'Ең төмен тариф қолданылды: {min} ₸',
+		presetsNavLink: 'Пресеттер',
+		presetsTitle: 'Жүк пресеттері',
+		presetsSubtitle: 'Тіркелген базалық бағасы бар дайын техника. Базалық бағаға межелі федералдық округ бойынша +30% қосылады, қорытынды ең төмен тарифтен кем емес.',
+		presetAddButton: 'Жаңа пресет',
+		presetSeedButton: 'Стандартты жүктеу',
+		presetCreated: 'Пресет жасалды',
+		presetUpdated: 'Пресет жаңартылды',
+		presetSaveError: 'Пресетті сақтау кезінде қате',
+		presetDeleted: 'Пресет жойылды',
+		presetDeleteError: 'Пресетті жою кезінде қате',
+		presetSeedDone: 'Жүктелген пресеттер: {count}',
+		presetSeedError: 'Пресеттерді жүктеу кезінде қате',
+		presetsEmptyAdmin: 'Пресеттер әзірге жоқ',
+		presetsEmptyHint: 'Пресет жасаңыз немесе стандартты жинақты жүктеңіз',
+		presetHiddenBadge: 'Жасырын',
+		presetHideAction: 'Калькулятордан жасыру',
+		presetShowAction: 'Калькуляторда көрсету',
+		presetDeleteTitle: 'Пресетті жою керек пе?',
+		presetConfirmDelete: 'Пресет қалпына келтірілмей жойылады.',
+		presetNameLabel: 'Атауы',
+		presetCategoryLabel: 'Санаты',
+		presetSortLabel: 'Реті',
+		presetLengthLabel: 'Ұзындығы, см',
+		presetWidthLabel: 'Ені, см',
+		presetHeightLabel: 'Биіктігі, см',
+		presetWeightLabel: 'Салмағы, кг',
+		presetBasePriceLabel: 'Базалық баға, ₸',
+		presetImageUrlLabel: 'Фото сілтемесі',
+		presetActiveLabel: 'Калькуляторда көрсету',
+		presetSaveButton: 'Сақтау',
+		presetSearchPlaceholder: 'Атауы бойынша іздеу…',
+		presetNothingFound: 'Пресеттер табылмады',
 		homeHeroBadge: 'Жүк тасымалы онлайн',
 		homeHeroTitle: 'Жүкті жеткізу және бақылау',
 		homeHeroSubtitle: 'Жөнелтілімдерді нақты уақытта бақылаңыз және жеткізудің болжамды құнын есептеңіз',

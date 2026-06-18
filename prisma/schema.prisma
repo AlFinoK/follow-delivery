@@ -39,3 +39,24 @@ model Folder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Пресет груза для калькулятора (готовая техника: квадроциклы, мотоциклы и т.д.).
+// basePrice — фиксированная базовая стоимость в ₸; региональная надбавка (+30%)
+// и минимальный тариф применяются на стороне калькулятора.
+model CargoPreset {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  length    Float // см
+  width     Float // см
+  height    Float // см
+  weight    Float // кг
+  basePrice Float    @default(0) // ₸, базовая стоимость
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}

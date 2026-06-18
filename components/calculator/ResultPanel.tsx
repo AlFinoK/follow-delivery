@@ -1,15 +1,16 @@
 'use client'
 
-import { Package, MapPin, Boxes, Weight, Truck, Clock, AlertTriangle, Calculator, Tag } from 'lucide-react'
+import { Package, MapPin, Boxes, Weight, Truck, Clock, AlertTriangle, Calculator, Tag, Percent, ShieldAlert } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { CURRENCY_SYMBOL } from '@/lib/calculator/config'
+import { CURRENCY_SYMBOL, MIN_PRICE_KZT } from '@/lib/calculator/config'
+import { DISTRICT_LABELS_RU } from '@/lib/calculator/districts'
 import type { CalcResult } from '@/lib/calculator/engine'
 
 const ru = (n: number, digits = 0) =>
 	n.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits })
 
 export function ResultPanel({ result, showDisclaimer = true }: { result: CalcResult; showDisclaimer?: boolean }) {
-	const { t } = useLang()
+	const { t, tf } = useLang()
 
 	if (result.excluded) {
 		return (
@@ -93,9 +94,36 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 						{t('calcTariffBasis')}
 					</span>
 					<span className="text-sm font-medium text-slate-900 text-right">
-						{result.billedBy === 'volume' ? t('calcBilledVolume') : t('calcBilledWeight')}
+						{result.billedBy === 'preset'
+							? t('calcBilledPreset')
+							: result.billedBy === 'volume'
+								? t('calcBilledVolume')
+								: t('calcBilledWeight')}
 					</span>
 				</div>
+				{result.surchargeApplied && (
+					<>
+						<div className="flex items-center justify-between gap-3 py-2">
+							<span className="inline-flex items-center gap-2 text-sm text-slate-500">
+								<Boxes className="w-4 h-4 text-slate-400" />
+								{t('calcResBasePrice')}
+							</span>
+							<span className="text-sm font-medium text-slate-900 text-right">
+								{ru(result.basePrice ?? 0)} {CURRENCY_SYMBOL}
+							</span>
+						</div>
+						<div className="flex items-center justify-between gap-3 py-2">
+							<span className="inline-flex items-center gap-2 text-sm text-slate-500">
+								<Percent className="w-4 h-4 text-slate-400" />
+								{t('calcSurchargeLabel')}
+								{result.district && (
+									<span className="text-[11px] text-slate-400">({DISTRICT_LABELS_RU[result.district]})</span>
+								)}
+							</span>
+							<span className="text-sm font-semibold text-orange-600 text-right">+{result.surchargePct ?? 30}%</span>
+						</div>
+					</>
+				)}
 			</div>
 
 			{/* Price + days */}
@@ -120,6 +148,12 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 						</p>
 					</div>
 				</div>
+				{result.minApplied && (
+					<p className="mt-2.5 inline-flex items-start gap-1.5 text-[11px] text-orange-700/80">
+						<ShieldAlert className="w-3.5 h-3.5 mt-px shrink-0" />
+						{tf('calcMinTariffNote', { min: ru(MIN_PRICE_KZT) })}
+					</p>
+				)}
 			</div>
 
 			{showDisclaimer && (

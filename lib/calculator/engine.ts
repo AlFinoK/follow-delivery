@@ -7,6 +7,7 @@
 import {
 	DIRECTIONS,
 	EXCLUDED_PATTERNS,
+	MIN_PRICE_KZT,
 	RUB_TO_KZT,
 	V_GRID,
 	W_LIN_GRID,
@@ -15,11 +16,13 @@ import {
 	type VolumeCurve,
 	type WeightCurve,
 } from './config'
+import { DISTRICT_SURCHARGE, hasSurcharge, type FederalDistrict } from './districts'
 
 export type LengthUnit = 'm' | 'cm'
 
 /** Одно грузовое место (режим «по габаритам»). */
 export interface Place {
+	id?: string // стабильный ключ для React-списка (движок его игнорирует)
 	length: number // в выбранных единицах (м или см)
 	width: number
 	height: number
@@ -38,11 +41,35 @@ export interface CalcResult {
 	excluded?: boolean
 	cityName?: string
 	region?: string
-	price?: number // ₸, склад-склад
-	priceRub?: number // ₽ до конвертации (для отладки/подписи)
+	price?: number // ₸, склад-склад (итог: с надбавкой округа и мин. тарифом)
+	priceRub?: number // ₽ до конвертации (для отладки/подписи; нет в режиме пресетов)
+	basePrice?: number // ₸ до региональной надбавки
 	days?: string // срок доставки, напр. «9–14»
-	billedBy?: 'weight' | 'volume' // что определило цену
+	billedBy?: 'weight' | 'volume' | 'preset' // что определило цену
 	totals?: CargoTotals
+	district?: FederalDistrict | null // округ назначения
+	surchargeApplied?: boolean // применена ли надбавка +30%
+	surchargePct?: number // размер надбавки в % (для подписи)
+	minApplied?: boolean // цена подтянута до минимального тарифа
+}
+
+/**
+ * Финализация цены (₸): региональная надбавка округа (+30% для шести округов) и
+ * минимальный тариф. Округление до 10 ₸. Возвращает итог и флаги для подписи.
+ */
+function finalizePrice(
+	baseKzt: number,
+	district: FederalDistrict | null | undefined
+): { price: number; basePrice: number; surchargeApplied: boolean; minApplied: boolean } {
+	const basePrice = Math.round(baseKzt / 10) * 10
+	const surchargeApplied = hasSurcharge(district)
+	// надбавку считаем от округлённой базы; итог независимо округляется до 10 ₸,
+	// поэтому «база ×1,3» может расходиться с итогом на единицы тенге (в рамках правила округления)
+	let price = surchargeApplied ? basePrice * (1 + DISTRICT_SURCHARGE) : basePrice
+	price = Math.round(price / 10) * 10
+	const minApplied = price < MIN_PRICE_KZT
+	if (minApplied) price = MIN_PRICE_KZT
+	return { price, basePrice, surchargeApplied, minApplied }
 }
 
 const toMeters = (value: number, unit: LengthUnit): number => (unit === 'cm' ? value / 100 : value)
@@ -166,17 +193,79 @@ export function calcShipment(params: {
 	const byVolume = priceByVolume(direction.v, totals.totalVolume)
 	const billedBy: 'weight' | 'volume' = byVolume > byWeight ? 'volume' : 'weight'
 	const priceRub = Math.max(byWeight, byVolume)
-	const price = Math.round((priceRub * rate) / 10) * 10
+	const { price, basePrice, surchargeApplied, minApplied } = finalizePrice(priceRub * rate, direction.district)
 
 	return {
 		ok: true,
 		cityName: direction.name,
 		region: direction.region,
 		price,
+		basePrice,
 		priceRub: Math.round(priceRub),
 		days: formatDays(direction.days),
 		billedBy,
 		totals,
+		district: direction.district,
+		surchargeApplied,
+		surchargePct: surchargeApplied ? Math.round(DISTRICT_SURCHARGE * 100) : 0,
+		minApplied,
+	}
+}
+
+/** Одна выбранная единица техники-пресета (фиксированная цена + количество). */
+export interface PresetSelection {
+	length: number // см
+	width: number
+	height: number
+	weight: number // кг
+	basePrice: number // ₸ за единицу (без надбавки округа)
+	quantity: number
+}
+
+/**
+ * Расчёт по пресетам: итог = Σ(базовая цена × кол-во), далее +30% по округу
+ * назначения и не ниже минимального тарифа. Цена в ₸ (курс не применяется —
+ * базовая цена пресета уже в тенге).
+ */
+export function calcPresetTotal(params: { direction: Direction | null; items: PresetSelection[] }): CalcResult {
+	const { direction, items } = params
+	if (!direction) return { ok: false }
+
+	let base = 0
+	let totalVolume = 0
+	let totalWeight = 0
+	let totalPlaces = 0
+	for (const it of items) {
+		const qty = Math.max(0, Math.round(it.quantity || 0))
+		if (qty <= 0) continue
+		base += (it.basePrice || 0) * qty
+		totalVolume += ((it.length || 0) * (it.width || 0) * (it.height || 0)) / 1_000_000 * qty
+		totalWeight += (it.weight || 0) * qty
+		totalPlaces += qty
+	}
+
+	if (totalPlaces <= 0) return { ok: false }
+
+	const totals: CargoTotals = {
+		totalVolume: round(totalVolume, 4),
+		totalWeight: round(totalWeight, 2),
+		totalPlaces,
+	}
+	const { price, basePrice, surchargeApplied, minApplied } = finalizePrice(base, direction.district)
+
+	return {
+		ok: true,
+		cityName: direction.name,
+		region: direction.region,
+		price,
+		basePrice,
+		days: formatDays(direction.days),
+		billedBy: 'preset',
+		totals,
+		district: direction.district,
+		surchargeApplied,
+		surchargePct: surchargeApplied ? Math.round(DISTRICT_SURCHARGE * 100) : 0,
+		minApplied,
 	}
 }
 

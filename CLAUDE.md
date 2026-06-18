@@ -39,8 +39,13 @@ npm run start    # next start
 | [/admin](app/admin/page.tsx) | protected | Список грузов + фильтры + поиск + пагинация (8 на стр.) |
 | [/admin/cargo/new](app/admin/cargo/new/page.tsx) | protected | Создание груза |
 | [/admin/cargo/[id]](app/admin/cargo/[id]/page.tsx) | protected | Детали + edit-mode + удаление |
-| `/api/cargos` | API | `GET` (list или `?trackingId=` search), `POST` (create) |
+| `/api/cargos` | API | `GET` (list или `?trackingId=` search, в т.ч. по `cargoNumber`), `POST` (create) |
 | `/api/cargos/[id]` | API | `GET` / `PATCH` / `DELETE` по docId |
+| [/admin/presets](app/admin/presets/page.tsx) | protected | CRUD пресетов техники для калькулятора + кнопка сида |
+| `/api/presets` | API | `GET` (active; `?all=1`+auth — все), `POST` (create, auth) |
+| `/api/presets/[id]` | API | `PATCH` / `DELETE` (auth) |
+| `/api/presets/seed` | API | `POST` (auth) — залить `DEFAULT_PRESETS`, `?force=1` пересоздать |
+| `/api/places` | API | `GET ?q=` — поиск НП РФ (134k, in-memory), возвращает `{name,region,district,code}` |
 | `/api/auth/[...nextauth]` | API | NextAuth handler |
 
 Защита админки — [middleware.ts](middleware.ts), `withAuth` от NextAuth, matcher `['/admin/:path*', '/admin']`. При отсутствии сессии — редирект на `/login`.
@@ -154,6 +159,16 @@ Cargo {
 ### 9. SSR/CSR-расхождение
 
 Из-за i18n из `localStorage` все клиентские страницы используют `'use client'` + `mounted`-флаг + `suppressHydrationWarning` на html/body и корневых div. Серверных action / RSC-форм нет.
+
+### 10. Калькулятор: надбавка ФО, мин-тариф, пресеты (improves.docx)
+
+- **Федеральные округа** — [lib/calculator/districts.ts](lib/calculator/districts.ts). `resolveDistrict(name, region)` — ЕДИНСТВЕННЫЙ источник принадлежности города к округу (в `directions.json` округ НЕ дублируется, привязывается в `config.ts` при сборке `DIRECTIONS`). Надбавка **+30%** (`DISTRICT_SURCHARGE`) для округов из `SURCHARGE_DISTRICTS`: south, caucasus, volga, ural, central, northwest. siberia/fareast — без надбавки.
+- **`finalizePrice()`** в [engine.ts](lib/calculator/engine.ts) — общий хвост расчёта во ВСЕХ режимах: надбавка округа от округлённой базы → пол `MIN_PRICE_KZT` (90 000 ₸, [config.ts](lib/calculator/config.ts)). Возвращает флаги `surchargeApplied`/`minApplied`/`basePrice` для подписи в `ResultPanel`.
+- **Пресеты** — модель = ФИКС. базовая цена в ₸ (НЕ через кривые ПЭК, чтобы регион не учитывался дважды). `calcPresetTotal()` = Σ(base×qty) → `finalizePrice`. БД-модель `CargoPreset`, сид `DEFAULT_PRESETS` ([lib/calculator/presets.ts](lib/calculator/presets.ts)). **После изменения схемы — `npx prisma db push`, затем сид: либо `/admin/presets` → «Загрузить стандартные», либо CLI `node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-presets.mjs`.**
+  - ⚠️ **`.env` vs `.env.local`**: приложение (Next) читает `DATABASE_URL` из `.env.local` (приоритет), а `prisma` CLI — из `.env`. Если БД задана в `.env.local` (напр. порт 5433), `npx prisma db push` уйдёт не в ту базу. Перед push выставить нужный URL: `$env:DATABASE_URL=<из .env.local>; npx prisma db push`. Симптом «не та БД»: `GET /api/presets` отдаёт **500** (`P2021: table CargoPreset does not exist`).
+- **Дробный ввод** — [DecimalInput.tsx](components/calculator/DecimalInput.tsx): принимает запятую И точку, `max` опционален (валюту не зажимает). Использовать вместо `type=number` для размеров/веса/цены.
+- **Справочник НП РФ** — `lib/calculator/settlements.json` (~135k населённых пунктов из GeoNames, включая Крым/Севастополь; собран `scripts/build-settlements.mjs`: кириллическое имя (`pickRuName`: официальное поле name → экзоним → ближайший по транслитерации alt, без дореформенных вариантов) + регион→округ + ближайший город-терминал по координатам). Поиск — серверный `/api/places?q=` (in-memory, в клиентский бандл не кладётся). `CitySelect` ищет одновременно по терминалам (локально) и по НП (через `/api/places`); выбор НП даёт `{code: ближайший терминал, district: округ НП, approx:true}` — тариф по терминалу, надбавка +30% по округу самого НП (override в `CalculatorForm`). Крым/Севастополь в GeoNames лежат в дампе Украины (admin1 UA.11/UA.20) → отдельный источник в сборщике. Пересборка: GeoNames `RU.zip` + `UA.zip` → `node scripts/build-settlements.mjs <RU.txt>` (UA.txt подхватывается из той же папки). Проверка целостности: `scripts/check-settlements-integrity.mjs`.
+- Калькулятор скрыт с главной (`SHOW_CALCULATOR=false` в [app/page.tsx](app/page.tsx)); тестируется через `/admin/calculator`. Та же `CalculatorForm` на обеих страницах.
 
 ## Стиль
 

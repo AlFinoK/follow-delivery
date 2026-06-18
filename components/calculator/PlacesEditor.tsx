@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { placeVolume, type LengthUnit, type Place } from '@/lib/calculator/engine'
+import { DecimalInput } from './DecimalInput'
 
 interface PlacesEditorProps {
 	places: Place[]
@@ -14,7 +15,6 @@ interface PlacesEditorProps {
 }
 
 const fmt = (n: number) => Number(n.toFixed(3)).toString()
-const MAX_INPUT = 1_000_000
 
 export function PlacesEditor({ places, unit, onUnitChange, onUpdate, onAdd, onRemove }: PlacesEditorProps) {
 	const { t, tf } = useLang()
@@ -23,19 +23,16 @@ export function PlacesEditor({ places, unit, onUnitChange, onUpdate, onAdd, onRe
 		label: string,
 		value: number,
 		onChange: (v: number) => void,
-		placeholder = '0'
+		opts: { placeholder?: string; integer?: boolean } = {}
 	) => (
 		<div className="flex-1 min-w-0">
 			<label className="block text-[10px] font-medium text-slate-400 mb-1">{label}</label>
-			<input
-				type="number"
-				inputMode="decimal"
-				min={0}
-				max={MAX_INPUT}
-				step="any"
-				value={value === 0 ? '' : value}
-				onChange={(e) => onChange(e.target.value === '' ? 0 : Math.min(MAX_INPUT, Math.max(0, Number(e.target.value))))}
-				placeholder={placeholder}
+			<DecimalInput
+				value={value}
+				onChange={onChange}
+				integer={opts.integer}
+				placeholder={opts.placeholder ?? '0'}
+				ariaLabel={label}
 				className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-300 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 			/>
 		</div>
@@ -67,7 +64,7 @@ export function PlacesEditor({ places, unit, onUnitChange, onUpdate, onAdd, onRe
 				const vol = placeVolume(p, unit)
 				const total = vol * Math.max(0, p.quantity || 0)
 				return (
-					<div key={i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+					<div key={p.id ?? i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
 						<div className="flex items-center justify-between mb-2">
 							<span className="text-xs font-semibold text-slate-600">{tf('calcPlaceTitle', { n: i + 1 })}</span>
 							{places.length > 1 && (
@@ -87,7 +84,7 @@ export function PlacesEditor({ places, unit, onUnitChange, onUpdate, onAdd, onRe
 						</div>
 						<div className="flex gap-2">
 							{numField(t('calcDimWeight'), p.weight, (v) => onUpdate(i, { weight: v }))}
-							{numField(t('calcDimQty'), p.quantity, (v) => onUpdate(i, { quantity: Math.round(v) }), '1')}
+							{numField(t('calcDimQty'), p.quantity, (v) => onUpdate(i, { quantity: v }), { placeholder: '1', integer: true })}
 						</div>
 						{total > 0 && (
 							<p className="mt-2 text-[11px] text-slate-500">

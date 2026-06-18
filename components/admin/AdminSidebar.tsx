@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Home, Package, Folder, Calculator, Menu, X } from 'lucide-react'
+import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
 
@@ -13,7 +13,8 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 	const pathname = usePathname()
 	const isFolders = pathname.startsWith('/admin/folders')
 	const isCalc = pathname.startsWith('/admin/calculator')
-	const isCargos = !isFolders && !isCalc
+	const isPresets = pathname.startsWith('/admin/presets')
+	const isCargos = !isFolders && !isCalc && !isPresets
 
 	const linkCls = (active: boolean) =>
 		`inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -54,6 +55,10 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 				<Link href="/admin/calculator" onClick={onLinkClick} className={linkCls(isCalc)}>
 					<Calculator className="w-4 h-4" />
 					<span>{t('calcNavLink')}</span>
+				</Link>
+				<Link href="/admin/presets" onClick={onLinkClick} className={linkCls(isPresets)}>
+					<Boxes className="w-4 h-4" />
+					<span>{t('presetsNavLink')}</span>
 				</Link>
 			</nav>
 
