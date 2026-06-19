@@ -9,7 +9,6 @@ import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
 import { PresetForm, type PresetFormValues } from '@/components/admin/PresetForm'
-import { CURRENCY_SYMBOL } from '@/lib/calculator/config'
 import type { Preset } from '@/lib/calculator/presets'
 import type { Toast } from '@/components/Toast'
 
@@ -248,7 +247,6 @@ export default function PresetsPage() {
 													width: p.width,
 													height: p.height,
 													weight: p.weight,
-													basePrice: p.basePrice,
 													imageUrl: p.imageUrl ?? '',
 													sortOrder: p.sortOrder,
 													active: p.active,
@@ -283,10 +281,7 @@ export default function PresetsPage() {
 																)}
 															</div>
 															<p className="text-xs text-slate-500 mt-0.5">
-																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг ·{' '}
-																<span className="font-medium text-orange-600">
-																	{ru(p.basePrice)} {CURRENCY_SYMBOL}
-																</span>
+																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг
 															</p>
 														</div>
 													</div>

@@ -94,11 +94,7 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 						{t('calcTariffBasis')}
 					</span>
 					<span className="text-sm font-medium text-slate-900 text-right">
-						{result.billedBy === 'preset'
-							? t('calcBilledPreset')
-							: result.billedBy === 'volume'
-								? t('calcBilledVolume')
-								: t('calcBilledWeight')}
+						{result.billedBy === 'volume' ? t('calcBilledVolume') : t('calcBilledWeight')}
 					</span>
 				</div>
 				{result.surchargeApplied && (
@@ -120,7 +116,7 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 									<span className="text-[11px] text-slate-400">({DISTRICT_LABELS_RU[result.district]})</span>
 								)}
 							</span>
-							<span className="text-sm font-semibold text-orange-600 text-right">+{result.surchargePct ?? 30}%</span>
+							<span className="text-sm font-semibold text-orange-600 text-right">+{result.surchargePct ?? 0}%</span>
 						</div>
 					</>
 				)}

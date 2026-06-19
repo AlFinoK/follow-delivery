@@ -25,11 +25,13 @@ for (const f of ['.env.local', '.env']) {
 }
 
 const BASELINE = '20260524120000_init'
-// Явно прокидываем DATABASE_URL дочерним prisma-командам (чтобы локальный .env не перебил)
-const childEnv = { ...process.env }
+// Для миграций предпочитаем ПРЯМОЕ подключение (если БД за пулером pgbouncer —
+// migrate deploy не берёт advisory lock через пулер). Задать DIRECT_URL на Vercel.
+const migrateUrl = process.env.DIRECT_URL || process.env.DATABASE_URL
+const childEnv = { ...process.env, DATABASE_URL: migrateUrl }
 const run = (cmd) => execSync(cmd, { stdio: 'inherit', env: childEnv })
 try {
-	console.log('[deploy-migrate] target DB host =', process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : 'UNSET')
+	console.log('[deploy-migrate] migrate DB host =', migrateUrl ? new URL(migrateUrl).host : 'UNSET', process.env.DIRECT_URL ? '(DIRECT_URL)' : '')
 } catch {}
 
 let needBaseline = false
@@ -60,8 +62,16 @@ try {
 	await prisma.$disconnect()
 }
 
-if (needBaseline) {
-	console.log(`[deploy-migrate] existing db-push database detected → baselining ${BASELINE}`)
-	run(`npx prisma migrate resolve --applied ${BASELINE}`)
+// Fail-soft: ошибка миграции НЕ должна валить деплой (иначе Vercel оставит старый билд).
+// Если миграция не прошла — это видно в логах билда, а сайт всё равно задеплоится.
+try {
+	if (needBaseline) {
+		console.log(`[deploy-migrate] existing db-push database detected → baselining ${BASELINE}`)
+		run(`npx prisma migrate resolve --applied ${BASELINE}`)
+	}
+	run('npx prisma migrate deploy')
+	console.log('[deploy-migrate] OK')
+} catch (e) {
+	console.error('[deploy-migrate] МИГРАЦИЯ НЕ ПРИМЕНЕНА (деплой продолжится):', e.message?.split('\n')[0])
+	console.error('[deploy-migrate] если БД за пулером — задайте env DIRECT_URL (прямое подключение) на Vercel')
 }
-run('npx prisma migrate deploy')

@@ -13,7 +13,6 @@ export interface PresetFormValues {
 	width: number
 	height: number
 	weight: number
-	basePrice: number
 	imageUrl: string
 	sortOrder: number
 	active: boolean
@@ -36,7 +35,6 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	const [width, setWidth] = useState(initial?.width ?? 0)
 	const [height, setHeight] = useState(initial?.height ?? 0)
 	const [weight, setWeight] = useState(initial?.weight ?? 0)
-	const [basePrice, setBasePrice] = useState(initial?.basePrice ?? 0)
 	const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '')
 	const [sortOrder, setSortOrder] = useState(initial?.sortOrder ?? 0)
 	const [active, setActive] = useState(initial?.active ?? true)
@@ -48,7 +46,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	const submit = (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!name.trim()) return
-		onSubmit({ name: name.trim(), category: category.trim(), length, width, height, weight, basePrice, imageUrl: imageUrl.trim(), sortOrder, active })
+		onSubmit({ name: name.trim(), category: category.trim(), length, width, height, weight, imageUrl: imageUrl.trim(), sortOrder, active })
 	}
 
 	return (
@@ -89,15 +87,9 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 gap-3">
-				<div>
-					<label className={labelCls}>{t('presetWeightLabel')}</label>
-					<DecimalInput value={weight} onChange={setWeight} className={inputCls} />
-				</div>
-				<div>
-					<label className={labelCls}>{t('presetBasePriceLabel')}</label>
-					<DecimalInput value={basePrice} onChange={setBasePrice} className={inputCls} />
-				</div>
+			<div>
+				<label className={labelCls}>{t('presetWeightLabel')}</label>
+				<DecimalInput value={weight} onChange={setWeight} className={inputCls} />
 			</div>
 
 			<div>

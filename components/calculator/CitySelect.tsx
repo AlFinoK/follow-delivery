@@ -5,21 +5,20 @@ import { MapPin, ChevronDown, Search, X, AlertTriangle, Building2, Home } from '
 import { useLang } from '@/contexts/LangContext'
 import { DIRECTIONS, type Direction } from '@/lib/calculator/config'
 import { isExcluded } from '@/lib/calculator/engine'
-import type { FederalDistrict } from '@/lib/calculator/districts'
 import { Spinner } from '@/components/Spinner'
 
 export interface CitySelection {
 	code: string // код города-терминала (база тарифа)
 	name: string // отображаемое название
 	approx?: boolean // НП вне списка терминалов — тариф по ближайшему городу
-	district?: FederalDistrict | null // округ НП (override для надбавки +30%)
+	surcharge?: number // доля региональной надбавки по области НП (override)
 }
 
 interface Place {
 	name: string
 	region: string
-	district: FederalDistrict | null
 	code: string
+	surcharge: number
 }
 
 interface CitySelectProps {
@@ -94,7 +93,7 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 		setOpen(false)
 	}
 	const selectPlace = (p: Place) => {
-		onChange({ code: p.code, name: p.name, district: p.district, approx: true })
+		onChange({ code: p.code, name: p.name, surcharge: p.surcharge, approx: true })
 		setQuery('')
 		setOpen(false)
 	}

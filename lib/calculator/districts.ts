@@ -33,23 +33,8 @@ export const DISTRICT_LABELS_RU: Record<FederalDistrict, string> = {
 	fareast: 'Дальневосточный ФО',
 }
 
-/** Округа, к которым применяется надбавка +30%. */
-export const SURCHARGE_DISTRICTS: ReadonlySet<FederalDistrict> = new Set<FederalDistrict>([
-	'south',
-	'caucasus',
-	'volga',
-	'ural',
-	'central',
-	'northwest',
-])
-
-/** Размер региональной надбавки (доля): +30%. */
-export const DISTRICT_SURCHARGE = 0.3
-
-/** Применяется ли надбавка к указанному округу. */
-export function hasSurcharge(district?: FederalDistrict | null): boolean {
-	return !!district && SURCHARGE_DISTRICTS.has(district)
-}
+// Региональная надбавка теперь зависит от области (см. resolveSurcharge внизу файла),
+// а не от плоских +30% по округу (правки improves2.0).
 
 const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ')
 
@@ -225,4 +210,90 @@ export function resolveDistrict(name: string, region: string): FederalDistrict |
 	if (n && CITY_DISTRICT[n]) return CITY_DISTRICT[n]
 	if (n && REGION_DISTRICT[n]) return REGION_DISTRICT[n]
 	return null
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Региональная надбавка (improves2.0). Базовая ставка по округу + исключения по
+// конкретным областям. Доля прибавляется к базовой стоимости в finalizePrice().
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Базовая надбавка по округу (если область не переопределена ниже). */
+const DISTRICT_DEFAULT_SURCHARGE: Record<FederalDistrict, number> = {
+	central: 0.2,
+	northwest: 0, // в СЗФО надбавка только у перечисленных областей
+	south: 0.2,
+	caucasus: 0.25,
+	volga: 0.2,
+	ural: 0.2,
+	siberia: 0,
+	fareast: 0,
+}
+
+/**
+ * Переопределение надбавки по области/городу (ключи нормализованы, как в REGION_DISTRICT).
+ * Для областей, НЕ указанных здесь, действует базовая ставка округа.
+ */
+const REGION_SURCHARGE: Record<string, number> = {
+	// Центральный — исключения: базовая ставка (0%)
+	'московская область': 0,
+	'московская обл.': 0,
+	москва: 0,
+	'орловская область': 0,
+	орел: 0,
+	'рязанская область': 0,
+	рязань: 0,
+	'тверская область': 0,
+	тверь: 0,
+	'тульская область': 0,
+	тула: 0,
+	'калужская область': 0,
+	калуга: 0,
+	'липецкая область': 0,
+	липецк: 0,
+	'ярославская область': 0,
+	ярославль: 0,
+	'костромская область': 0,
+	кострома: 0,
+	'ивановская область': 0,
+	иваново: 0,
+
+	// Уральский — исключения: базовая ставка (0%)
+	'свердловская область': 0,
+	екатеринбург: 0,
+	'челябинская область': 0,
+	челябинск: 0,
+	'курганская область': 0,
+	курган: 0,
+	'тюменская область': 0,
+	тюмень: 0,
+
+	// Южный — Крым и Севастополь (+30%), остальной ЮФО — базовая 20%
+	'республика крым': 0.3,
+	севастополь: 0.3,
+
+	// Северо-Западный — по областям
+	'ленинградская область': 0.1,
+	'архангельская область': 0.35,
+	архангельск: 0.35,
+	'мурманская область': 0.25,
+	мурманск: 0.25,
+	'вологодская область': 0.2,
+	вологда: 0.2,
+	'новгородская область': 0.1,
+	'великий новгород': 0.1,
+	'псковская область': 0.15,
+	псков: 0.15,
+}
+
+/**
+ * Доля региональной надбавки (0.2 = +20%) по названию/региону НП.
+ * Сначала точное переопределение области/города, иначе базовая ставка округа.
+ */
+export function resolveSurcharge(name: string, region: string): number {
+	const r = normalize(region || '')
+	if (r && r in REGION_SURCHARGE) return REGION_SURCHARGE[r]
+	const n = normalize(name || '')
+	if (n && n in REGION_SURCHARGE) return REGION_SURCHARGE[n]
+	const district = resolveDistrict(name, region)
+	return district ? DISTRICT_DEFAULT_SURCHARGE[district] : 0
 }

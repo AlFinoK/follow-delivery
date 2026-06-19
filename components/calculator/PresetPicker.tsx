@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import { Bike, Truck, Package, Minus, Plus, Check, PencilRuler, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { CURRENCY_SYMBOL } from '@/lib/calculator/config'
 import type { Preset } from '@/lib/calculator/presets'
 import { Spinner } from '@/components/Spinner'
 
@@ -100,9 +99,6 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 													<p className="text-sm font-semibold text-slate-900 leading-tight">{p.name}</p>
 													<p className="text-[11px] text-slate-500 mt-0.5">
 														{ru(p.length)}×{ru(p.width)}×{ru(p.height)} {t('calcUnitCm')} · {ru(p.weight)} {t('calcKg')}
-													</p>
-													<p className="text-[12px] font-semibold text-orange-600 mt-1">
-														{ru(p.basePrice)} {CURRENCY_SYMBOL}
 													</p>
 												</div>
 											</div>

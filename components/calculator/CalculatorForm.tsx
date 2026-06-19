@@ -6,13 +6,11 @@ import { useLang } from '@/contexts/LangContext'
 import { ORIGIN_CITY, ORIGIN_COUNTRY, RUB_TO_KZT } from '@/lib/calculator/config'
 import {
 	calcShipment,
-	calcPresetTotal,
 	findDirection,
 	sumPlaces,
 	type CalcResult,
 	type LengthUnit,
 	type Place,
-	type PresetSelection,
 } from '@/lib/calculator/engine'
 import type { Preset } from '@/lib/calculator/presets'
 import { CitySelect, type CitySelection } from './CitySelect'
@@ -74,7 +72,9 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 
 	const direction = useMemo(() => (selection ? findDirection(selection.code) ?? null : null), [selection])
 
-	const presetItems = useMemo<PresetSelection[]>(
+	// Пресеты считаются ТЕМ ЖЕ движком, что и «Свой груз» (improves2.0): габариты+вес → тариф.
+	// Поэтому пресет и «Свой груз» с теми же размерами дают одинаковую стоимость.
+	const presetPlaces = useMemo<Place[]>(
 		() =>
 			presets
 				.filter((p) => (quantities[p.id] ?? 0) > 0)
@@ -83,28 +83,29 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 					width: p.width,
 					height: p.height,
 					weight: p.weight,
-					basePrice: p.basePrice,
 					quantity: quantities[p.id],
 				})),
 		[presets, quantities]
 	)
 
 	const result: CalcResult = useMemo(() => {
-		// город (а значит — округ для надбавки) нужен во всех режимах;
-		// для НП вне списка терминалов берём округ самого НП (override), тариф — по ближайшему городу
+		// город (а значит — надбавка) нужен во всех режимах; для НП вне списка терминалов
+		// берём надбавку самого НП (override), тариф — по ближайшему городу-терминалу
 		const dir = direction
 			? {
 					...direction,
 					name: selection?.name ?? direction.name,
-					district: selection && selection.district !== undefined ? selection.district : direction.district,
+					surcharge: selection && selection.surcharge !== undefined ? selection.surcharge : direction.surcharge,
 				}
 			: null
-		if (mode === 'presets') {
-			return calcPresetTotal({ direction: dir, items: presetItems })
-		}
-		const totals = mode === 'dimensions' ? sumPlaces(places, unit) : { totalVolume: volume || 0, totalWeight: weight || 0, totalPlaces: 1 }
+		const totals =
+			mode === 'presets'
+				? sumPlaces(presetPlaces, 'cm') // габариты пресетов — в сантиметрах
+				: mode === 'dimensions'
+					? sumPlaces(places, unit)
+					: { totalVolume: volume || 0, totalWeight: weight || 0, totalPlaces: 1 }
 		return calcShipment({ direction: dir, totals, rate })
-	}, [direction, selection, mode, presetItems, places, unit, volume, weight, rate])
+	}, [direction, selection, mode, presetPlaces, places, unit, volume, weight, rate])
 
 	const updatePlace = (index: number, patch: Partial<Place>) =>
 		setPlaces((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))

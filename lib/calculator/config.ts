@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import directionsData from './directions.json'
-import { resolveDistrict, type FederalDistrict } from './districts'
+import { resolveDistrict, resolveSurcharge, type FederalDistrict } from './districts'
 
 /** Кривая «вес (кг) → цена (₽)». Сетка — W_GRID. */
 export type WeightCurve = Record<string, number>
@@ -34,8 +34,10 @@ export interface Direction {
 	w: WeightCurve
 	/** кривая «объём → цена», склад-склад */
 	v: VolumeCurve
-	/** федеральный округ (для региональной надбавки +30%) */
+	/** федеральный округ (для подписи) */
 	district: FederalDistrict | null
+	/** доля региональной надбавки (0.2 = +20%) — improves2.0 */
+	surcharge: number
 }
 
 /**
@@ -100,7 +102,7 @@ const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е')
  * Федеральный округ резолвится из региона/города на лету — единый источник
  * правды в districts.ts, в directions.json округ не дублируется.
  */
-type RawDirection = Omit<Direction, 'district'>
+type RawDirection = Omit<Direction, 'district' | 'surcharge'>
 export const DIRECTIONS: Direction[] = (directionsData as unknown as RawDirection[])
 	.filter((d) => !EXCLUDED_PATTERNS.some((p) => normalize(d.name).includes(normalize(p))))
-	.map((d) => ({ ...d, district: resolveDistrict(d.name, d.region) }))
+	.map((d) => ({ ...d, district: resolveDistrict(d.name, d.region), surcharge: resolveSurcharge(d.name, d.region) }))

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import settlements from '@/lib/calculator/settlements.json'
+import { resolveSurcharge } from '@/lib/calculator/districts'
 
 // Справочник населённых пунктов РФ (GeoNames, собран scripts/build-settlements.mjs).
 // items: [name, regionIdx, districtIdx, codeIdx, population]
@@ -37,11 +38,13 @@ export async function GET(req: NextRequest) {
 
 	const out = chosen.map((i) => {
 		const [name, ri, di, ci] = data.items[i]
+		const region = data.regions[ri]
 		return {
 			name,
-			region: data.regions[ri],
+			region,
 			district: data.districts[di],
 			code: data.codes[ci],
+			surcharge: resolveSurcharge(name, region), // доля надбавки по области НП
 		}
 	})
 	return NextResponse.json(out)
