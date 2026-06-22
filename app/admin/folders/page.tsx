@@ -129,27 +129,29 @@ export default function FoldersPage() {
 						{showCreate && (
 							<form onSubmit={handleCreate} className="mb-5 p-4 bg-slate-50 border border-slate-200 rounded-lg">
 								<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('newFolderTitle')}</p>
-								<div className="flex gap-2">
+								<div className="flex flex-col sm:flex-row gap-2">
 									<input
 										type="text"
 										value={newName}
 										onChange={(e) => setNewName(e.target.value)}
 										placeholder={t('folderNamePlaceholder')}
 										autoFocus
-										className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
+										className="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 									/>
-									<button
-										type="submit"
-										disabled={creating || !newName.trim()}
-										className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
-										{creating ? <Spinner className="w-4 h-4 text-white" /> : t('saveFolderName')}
-									</button>
-									<button
-										type="button"
-										onClick={() => { setShowCreate(false); setNewName('') }}
-										className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
-										{t('cancelButton')}
-									</button>
+									<div className="flex gap-2">
+										<button
+											type="submit"
+											disabled={creating || !newName.trim()}
+											className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
+											{creating ? <Spinner className="w-4 h-4 text-white" /> : t('saveFolderName')}
+										</button>
+										<button
+											type="button"
+											onClick={() => { setShowCreate(false); setNewName('') }}
+											className="flex-1 sm:flex-initial px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
+											{t('cancelButton')}
+										</button>
+									</div>
 								</div>
 							</form>
 						)}
@@ -184,11 +186,9 @@ export default function FoldersPage() {
 						)}
 					</div>
 
-					<div className="mt-8 text-center text-slate-400 text-xs">
-						<p>{t('adminFooter')}</p>
-					</div>
 				</div>
 			</main>
+			<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)

@@ -5,6 +5,7 @@ import { Bike, Truck, Package, Minus, Plus, Check, PencilRuler, Search, ChevronL
 import { useLang } from '@/contexts/LangContext'
 import type { Preset } from '@/lib/calculator/presets'
 import { Spinner } from '@/components/Spinner'
+import { DecimalInput } from './DecimalInput'
 
 interface PresetPickerProps {
 	presets: Preset[]
@@ -16,7 +17,7 @@ interface PresetPickerProps {
 
 const ru = (n: number) => n.toLocaleString('ru-RU')
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').trim()
-const PAGE_SIZE = 6
+const PAGE_SIZE = 4
 
 function CategoryIcon({ category }: { category: string | null }) {
 	const cls = 'w-7 h-7 text-slate-300'
@@ -76,18 +77,18 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 						<p className="text-sm text-slate-400 text-center py-6">{t('presetNothingFound')}</p>
 					) : (
 						<>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 								{pageItems.map((p) => {
 									const qty = quantities[p.id] ?? 0
 									const selected = qty > 0
 									return (
 										<div
 											key={p.id}
-											className={`rounded-xl border p-3 transition-all ${
+											className={`rounded-xl border p-2.5 transition-all ${
 												selected ? 'border-orange-400 bg-orange-50/50 ring-1 ring-orange-200' : 'border-slate-200 bg-white'
 											}`}>
-											<div className="flex gap-3">
-												<div className="w-16 h-16 shrink-0 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center">
+											<div className="flex gap-2.5">
+												<div className="w-14 h-14 shrink-0 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center">
 													{p.imageUrl ? (
 														// eslint-disable-next-line @next/next/no-img-element
 														<img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -96,7 +97,7 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 													)}
 												</div>
 												<div className="min-w-0 flex-1">
-													<p className="text-sm font-semibold text-slate-900 leading-tight">{p.name}</p>
+													<p className="text-sm font-semibold text-slate-900 leading-tight break-words">{p.name}</p>
 													<p className="text-[11px] text-slate-500 mt-0.5">
 														{ru(p.length)}×{ru(p.width)}×{ru(p.height)} {t('calcUnitCm')} · {ru(p.weight)} {t('calcKg')}
 													</p>
@@ -114,7 +115,14 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 															className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
 															<Minus className="w-3.5 h-3.5" />
 														</button>
-														<span className="w-8 text-center text-sm font-semibold text-slate-900">{qty}</span>
+														<DecimalInput
+															value={qty}
+															onChange={(v) => onChange(p.id, v)}
+															integer
+															min={1}
+															ariaLabel={t('calcPresetQtyLabel')}
+															className="w-12 px-1 py-1 text-center text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10"
+														/>
 														<button
 															type="button"
 															aria-label="+"

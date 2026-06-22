@@ -30,9 +30,9 @@ interface CargoData {
 
 type Tab = 'track' | 'calc'
 
-// Калькулятор временно скрыт с главной — менеджеры тестируют его через /admin/calculator.
-// Чтобы показать калькулятор всем пользователям, поставить true.
-const SHOW_CALCULATOR = false
+// Калькулятор открыт всем пользователям (final-improves: выпуск в общий доступ).
+// Пресеты доступны клиентам в публичном калькуляторе (вкладка «Пресеты»).
+const SHOW_CALCULATOR = true
 
 export default function Home() {
 	const { t } = useLang()
@@ -166,11 +166,11 @@ export default function Home() {
 
 			{/* ── Right: dashboard ── */}
 			<section className="relative flex flex-col xl:min-h-screen">
-				<div className="flex-1 flex flex-col xl:justify-center px-5 sm:px-8 xl:px-14 py-10 sm:py-14">
-					<div className="w-full max-w-3xl mx-auto">
+				<div className="flex-1 flex flex-col px-5 sm:px-8 xl:px-14 py-6 sm:py-8">
+					<div className={`w-full mx-auto flex-1 flex flex-col ${SHOW_CALCULATOR && tab === 'calc' ? 'max-w-5xl' : 'max-w-3xl'}`}>
 						{/* Segmented tabs (hidden while the calculator is gated) */}
 						{SHOW_CALCULATOR && (
-						<div className="flex justify-center xl:justify-start mb-6">
+						<div className="flex justify-center mb-6">
 							<div className="flex w-full sm:w-auto sm:inline-flex items-center bg-slate-100 rounded-xl p-1">
 								{tabs.map(({ id, Icon, label, short }) => {
 									const active = tab === id
@@ -193,10 +193,14 @@ export default function Home() {
 
 						)}
 
-						{/* Tab content */}
-						<div key={tab} className="ltt-fade-up">
+						{/* Tab content — табы сверху; поиск груза центрируем по вертикали,
+						    калькулятор оставляем у верха (он высокий и должен влезать без скролла) */}
+						<div
+							key={tab}
+							className={`flex-1 flex flex-col ltt-fade-up${tab === 'track' || !SHOW_CALCULATOR ? ' justify-center' : ''}`}>
+
 							{!SHOW_CALCULATOR || tab === 'track' ? (
-								<div className="max-w-md mx-auto">
+								<div className="w-full max-w-md mx-auto">
 									{!cargo ? (
 										<div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_50px_-20px_rgba(15,23,42,0.22)] p-5 sm:p-6">
 											<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">

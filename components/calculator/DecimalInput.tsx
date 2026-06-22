@@ -90,6 +90,7 @@ export function DecimalInput({
 			inputMode="decimal"
 			value={text}
 			onChange={(e) => handle(e.target.value)}
+			onFocus={(e) => e.currentTarget.select()}
 			placeholder={placeholder}
 			aria-label={ariaLabel}
 			className={className}

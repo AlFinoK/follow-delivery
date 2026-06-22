@@ -182,7 +182,9 @@ function pickRuName(c) {
 	const alts = (c[3] || '').split(',').map((a) => a.trim()).filter((a) => a && RU_ONLY.test(a))
 	if (alts.length === 0) return ''
 	const target = normLat(c[2] || c[1])
-	const archaic = (s) => /ъ$/.test(s) // дореформенная орфография (Новосибирьскъ) — хвостовой ъ
+	// неrussian/дореформенная орфография: хвостовой ъ (Новосибирьскъ);
+	// мягкий знак при к/г/х/ц на конце — «Мурманскь»; украинское «-ськ/-цьк» — «Мурманськ»
+	const archaic = (s) => /ъ$/.test(s) || /[кгхц]ь$/.test(s) || /ьк$/.test(s)
 	let best = alts[0]
 	let bestScore = -1
 	let bestArch = 1

@@ -52,11 +52,9 @@ export default function Admin() {
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 					<div className="max-w-4xl mx-auto">
 						<CargoList onError={(msg) => addToast(msg, 'error')} />
-						<div className="mt-8 text-center text-slate-400 text-xs">
-							<p>{t('adminFooter')}</p>
-						</div>
 					</div>
 				</main>
+				<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)

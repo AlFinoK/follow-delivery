@@ -137,7 +137,7 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 	return (
 		<div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 			{/* Form */}
-			<div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4">
+			<div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3.5">
 				{/* Origin (fixed) */}
 				<div>
 					<label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">

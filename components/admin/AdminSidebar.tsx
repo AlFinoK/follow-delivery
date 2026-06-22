@@ -7,8 +7,9 @@ import { usePathname } from 'next/navigation'
 import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
+import { ConfirmModal } from '@/components/admin/ConfirmModal'
 
-function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
+function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLogout: () => void }) {
 	const { t } = useLang()
 	const pathname = usePathname()
 	const isFolders = pathname.startsWith('/admin/folders')
@@ -22,11 +23,6 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 				? 'bg-orange-50 text-orange-700'
 				: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
 		}`
-
-	const handleLogout = () => {
-		sessionStorage.setItem('pendingToast', JSON.stringify({ message: t('loggedOut'), type: 'success' }))
-		signOut({ callbackUrl: '/login' })
-	}
 
 	return (
 		<div className="flex flex-col h-full">
@@ -74,7 +70,7 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 					<span>{t('goHome')}</span>
 				</a>
 				<button
-					onClick={handleLogout}
+					onClick={onLogout}
 					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-left">
 					<LogOut className="w-4 h-4" />
 					<span>{t('logout')}</span>
@@ -85,8 +81,21 @@ function SidebarBody({ onLinkClick }: { onLinkClick?: () => void }) {
 }
 
 export function AdminSidebar() {
+	const { t } = useLang()
 	const [drawerOpen, setDrawerOpen] = useState(false)
+	const [confirmLogout, setConfirmLogout] = useState(false)
 	const pathname = usePathname()
+
+	// Логаут через подтверждение (чтобы случайный клик не разлогинивал)
+	const requestLogout = () => {
+		setDrawerOpen(false)
+		setConfirmLogout(true)
+	}
+	const doLogout = () => {
+		setConfirmLogout(false)
+		sessionStorage.setItem('pendingToast', JSON.stringify({ message: t('loggedOut'), type: 'success' }))
+		signOut({ callbackUrl: '/login' })
+	}
 
 	// Close drawer on route change
 	useEffect(() => { setDrawerOpen(false) }, [pathname])
@@ -104,7 +113,7 @@ export function AdminSidebar() {
 		<>
 			{/* Desktop sidebar */}
 			<aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex-col z-30">
-				<SidebarBody />
+				<SidebarBody onLogout={requestLogout} />
 			</aside>
 
 			{/* Mobile topbar */}
@@ -138,10 +147,21 @@ export function AdminSidebar() {
 							aria-label="Закрыть меню">
 							<X className="w-5 h-5" />
 						</button>
-						<SidebarBody onLinkClick={() => setDrawerOpen(false)} />
+						<SidebarBody onLinkClick={() => setDrawerOpen(false)} onLogout={requestLogout} />
 					</aside>
 				</div>
 			)}
+
+			<ConfirmModal
+				isOpen={confirmLogout}
+				title={t('confirmLogoutTitle')}
+				description={t('confirmLogoutDesc')}
+				confirmLabel={t('logout')}
+				cancelLabel={t('cancelButton')}
+				tone="danger"
+				onConfirm={doLogout}
+				onCancel={() => setConfirmLogout(false)}
+			/>
 		</>
 	)
 }

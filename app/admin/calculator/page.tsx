@@ -33,12 +33,9 @@ export default function AdminCalculatorPage() {
 						</div>
 
 						<CalculatorForm showDisclaimer={false} />
-
-						<div className="mt-8 text-center text-slate-400 text-xs">
-							<p>{t('adminFooter')}</p>
-						</div>
 					</div>
 				</main>
+				<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)
