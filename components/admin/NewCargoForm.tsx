@@ -2,6 +2,7 @@
 
 import { memo, useState } from 'react'
 import { useLang } from '@/contexts/LangContext'
+import { useRepos } from '@/lib/data/useRepos'
 import { getCurrencySymbol } from '@/lib/format'
 import { INPUT_CLS } from './constants'
 import { CitySelect, StatusSelect, PaymentSelect, CurrencySelect } from './Selects'
@@ -25,6 +26,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 
 export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wide }: NewCargoFormProps) {
 	const { t, tf } = useLang()
+	const repo = useRepos()
 	const [fromCity, setFromCity] = useState('')
 	const [toCity, setToCity] = useState('')
 	const [cargoNumber, setCargoNumber] = useState('')
@@ -52,27 +54,22 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 		setLoading(true)
 		try {
 			const normalizedId = generateId().toUpperCase().trim()
-			const res = await fetch('/api/cargos', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					id: normalizedId,
-					cargoNumber: cargoNumber.trim() ? Number(cargoNumber.trim()) : null,
-					name: cargoName.trim() || null,
-					fromCity: fromCity.trim(),
-					currentCity: fromCity.trim(),
-					toCity: toCity.trim(),
-					status,
-					acceptanceDate: acceptanceDate || null,
-					shipmentDate: shipmentDate || null,
-					deliveryTimeframe: deliveryTimeframe || null,
-					deliveryAmount: deliveryAmount ? Number(deliveryAmount) : null,
-					paymentStatus,
-					partialPaymentDetail: paymentStatus === 'partial' ? partialPaymentDetail || null : null,
-					currency,
-				}),
+			await repo.cargos.create({
+				id: normalizedId,
+				cargoNumber: cargoNumber.trim() ? Number(cargoNumber.trim()) : null,
+				name: cargoName.trim() || null,
+				fromCity: fromCity.trim(),
+				currentCity: fromCity.trim(),
+				toCity: toCity.trim(),
+				status,
+				acceptanceDate: acceptanceDate || null,
+				shipmentDate: shipmentDate || null,
+				deliveryTimeframe: deliveryTimeframe || null,
+				deliveryAmount: deliveryAmount ? Number(deliveryAmount) : null,
+				paymentStatus,
+				partialPaymentDetail: paymentStatus === 'partial' ? partialPaymentDetail || null : null,
+				currency,
 			})
-			if (!res.ok) throw new Error()
 			addToast(tf('cargoCreated', { id: normalizedId }), 'success')
 			setFromCity('')
 			setToCity('')

@@ -7,6 +7,9 @@
 		"build": "node scripts/deploy-migrate.mjs && next build",
 		"start": "next start",
 		"lint": "next lint",
+		"test": "vitest run",
+		"test:isolation": "node scripts/check-demo-isolation.mjs",
+		"test:all": "node scripts/check-demo-isolation.mjs && vitest run",
 		"postinstall": "prisma generate"
 	},
 	"dependencies": {
@@ -28,6 +31,7 @@
 		"eslint-config-next": "16.1.6",
 		"prisma": "^6.0.0",
 		"tailwindcss": "^4",
-		"typescript": "^5"
+		"typescript": "^5",
+		"vitest": "^4.1.10"
 	}
 }

@@ -24,7 +24,17 @@ type Mode = 'presets' | 'dimensions' | 'totals'
 let placeSeq = 0
 const emptyPlace = (): Place => ({ id: `place-${++placeSeq}`, length: 0, width: 0, height: 0, weight: 0, quantity: 1 })
 
-export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boolean } = {}) {
+export function CalculatorForm({
+	showDisclaimer = true,
+	onResult,
+	prefill,
+}: {
+	showDisclaimer?: boolean
+	// Мост наружу: родитель получает итог расчёта (для «Суммы к оплате» накладной)
+	onResult?: (r: CalcResult) => void
+	// Обратный мост: параметры груза из накладной → калькулятор (режим «Итого»)
+	prefill?: { mode?: 'totals'; volume?: number; weight?: number }
+} = {}) {
 	const { t } = useLang()
 
 	const [selection, setSelection] = useState<CitySelection | null>(null)
@@ -106,6 +116,25 @@ export function CalculatorForm({ showDisclaimer = true }: { showDisclaimer?: boo
 					: { totalVolume: volume || 0, totalWeight: weight || 0, totalPlaces: 1 }
 		return calcShipment({ direction: dir, totals, rate })
 	}, [direction, selection, mode, presetPlaces, places, unit, volume, weight, rate])
+
+	// Сообщаем родителю актуальный результат (мост в «Сумму к оплате»).
+	// Зависимость только от result — берём текущий onResult из замыкания.
+	useEffect(() => {
+		onResult?.(result)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [result])
+
+	// Приём габаритов из накладной. Родитель перемонтирует форму (key) с новым prefill,
+	// поэтому эффект отрабатывает один раз при монтировании.
+	useEffect(() => {
+		if (!prefill) return
+		if (prefill.mode === 'totals') {
+			setMode('totals')
+			if (typeof prefill.volume === 'number') setVolume(prefill.volume)
+			if (typeof prefill.weight === 'number') setWeight(prefill.weight)
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [prefill])
 
 	const updatePlace = (index: number, patch: Partial<Place>) =>
 		setPlaces((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))

@@ -4,20 +4,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Plus, Search, X, ChevronLeft, ChevronRight, Inbox, SearchX } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
+import { useBasePath } from '@/contexts/DemoContext'
+import { useRepos } from '@/lib/data/useRepos'
+import type { CargosResponse } from '@/lib/data/types'
 import { Spinner } from '@/components/Spinner'
 import { CargoListCard } from './CargoListCard'
 import { CargoSkeleton } from './CargoSkeleton'
-import type { Cargo } from './types'
 
 type StatusKey = 'all' | 'waiting' | 'transit' | 'arrived'
-
-interface CargosResponse {
-	items: Cargo[]
-	total: number
-	page: number
-	pageSize: number
-	counts: { all: number; waiting: number; transit: number; arrived: number }
-}
 
 interface CargoListProps {
 	onError: (message: string) => void
@@ -28,6 +22,8 @@ export function CargoList({ onError }: CargoListProps) {
 	const router = useRouter()
 	const pathname = usePathname()
 	const searchParams = useSearchParams()
+	const base = useBasePath()
+	const repo = useRepos()
 
 	const urlSearchQuery = searchParams.get('q') ?? ''
 	const rawStatus = searchParams.get('status')
@@ -57,20 +53,14 @@ export function CargoList({ onError }: CargoListProps) {
 		if (!silent) setLoading(true)
 		else setRefreshing(true)
 		try {
-			const params = new URLSearchParams()
-			if (statusFilter !== 'all') params.set('status', statusFilter)
-			if (urlSearchQuery.trim()) params.set('q', urlSearchQuery.trim())
-			if (page > 1) params.set('page', String(page))
-			const res = await fetch(`/api/cargos?${params.toString()}`)
-			if (!res.ok) throw new Error()
-			setData(await res.json())
+			setData(await repo.cargos.list({ status: statusFilter, q: urlSearchQuery, page }))
 		} catch {
 			onError(t('loadError'))
 		} finally {
 			if (!silent) setLoading(false)
 			else setRefreshing(false)
 		}
-	}, [statusFilter, urlSearchQuery, page, onError, t])
+	}, [statusFilter, urlSearchQuery, page, onError, t, repo])
 
 	useEffect(() => { void fetchPage(data != null) /* первый раз — c лоадером, потом silent */ // eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [statusFilter, urlSearchQuery, page])
@@ -127,7 +117,7 @@ export function CargoList({ onError }: CargoListProps) {
 					</p>
 				</div>
 				<button
-					onClick={() => router.push('/admin/cargo/new')}
+					onClick={() => router.push(`${base}/admin/cargo/new`)}
 					className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-semibold text-sm transition-colors shrink-0">
 					<Plus className="w-4 h-4" />
 					<span className="hidden sm:inline">{t('createCargoButton')}</span>
