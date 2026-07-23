@@ -33,20 +33,20 @@ export function Stepper({
 									active
 										? 'bg-orange-500 border-orange-500 text-white'
 										: done
-											? 'bg-orange-50 border-orange-500 text-orange-600 group-hover:bg-orange-100'
-											: 'bg-white border-slate-200 text-slate-400'
+											? 'bg-orange-50 dark:bg-orange-500/10 border-orange-500 text-orange-600 dark:text-orange-400 group-hover:bg-orange-100'
+											: 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-zinc-500'
 								}`}>
 								{done ? <Check className="w-4 h-4" /> : i + 1}
 							</span>
 							<span
 								className={`text-sm font-medium whitespace-nowrap hidden md:inline ${
-									active ? 'text-slate-900' : done ? 'text-slate-600 group-hover:text-slate-900' : 'text-slate-400'
+									active ? 'text-slate-900 dark:text-zinc-100' : done ? 'text-slate-600 dark:text-zinc-300 group-hover:text-slate-900' : 'text-slate-400 dark:text-zinc-500'
 								}`}>
 								{label}
 							</span>
 						</button>
 						{i < steps.length - 1 && (
-							<span className={`h-0.5 w-4 sm:w-8 shrink-0 rounded ${i < current ? 'bg-orange-400' : 'bg-slate-200'}`} />
+							<span className={`h-0.5 w-4 sm:w-8 shrink-0 rounded ${i < current ? 'bg-orange-400' : 'bg-slate-200 dark:bg-zinc-700'}`} />
 						)}
 					</Fragment>
 				)

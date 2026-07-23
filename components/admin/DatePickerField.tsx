@@ -59,9 +59,9 @@ function RdpDropdown(props: DropdownProps) {
 				ref={triggerRef}
 				type="button"
 				onClick={toggle}
-				className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors">
+				className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm font-semibold text-slate-900 dark:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
 				{selected?.label ?? String(value ?? '')}
-				<ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+				<ChevronDown className={`w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
 
 			{open && rect && (
@@ -76,7 +76,7 @@ function RdpDropdown(props: DropdownProps) {
 						maxHeight: dropMaxHeight,
 						zIndex: 9999,
 					}}
-					className="bg-white border border-slate-200 rounded-lg shadow-lg overflow-y-auto py-1">
+					className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-y-auto py-1">
 					{options.map((opt) => {
 						const isSelected = String(opt.value) === String(value)
 						return (
@@ -87,10 +87,10 @@ function RdpDropdown(props: DropdownProps) {
 								onClick={() => choose(opt.value)}
 								className={`w-full text-left px-3 py-1.5 text-sm transition-colors flex items-center justify-between gap-3 ${
 									isSelected
-										? 'bg-orange-50 text-orange-700 font-semibold'
+										? 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 font-semibold'
 										: opt.disabled
-											? 'text-slate-300 cursor-not-allowed'
-											: 'text-slate-700 hover:bg-slate-50'
+											? 'text-slate-300 dark:text-zinc-600 cursor-not-allowed'
+											: 'text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800/60'
 								}`}>
 								{opt.label}
 								{isSelected && <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />}
@@ -143,17 +143,17 @@ export const DatePickerField = memo(function DatePickerField({
 				onClick={handleToggle}
 				className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
 					open
-						? 'bg-white border-orange-500 ring-2 ring-orange-500/15'
-						: 'bg-white border-slate-200 hover:border-slate-300'
+						? 'bg-white dark:bg-zinc-900 border-orange-500 ring-2 ring-orange-500/15'
+						: 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600'
 				}`}>
-				<span className={selected ? 'text-slate-900' : 'text-slate-400'}>
+				<span className={selected ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500'}>
 					{selected ? formatDate(value) : t('notSpecified')}
 				</span>
-				<Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+				<Calendar className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
 			</button>
 			{open && (
 				<div
-					className={`absolute ${upward ? 'bottom-full mb-2' : 'top-full mt-2'} left-0 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-2`}>
+					className={`absolute ${upward ? 'bottom-full mb-2' : 'top-full mt-2'} left-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 p-2`}>
 					<DayPicker
 						mode="single"
 						selected={selected}

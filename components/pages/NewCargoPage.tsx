@@ -30,7 +30,7 @@ export function NewCargoPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-slate-50">
+		<div className="min-h-screen bg-slate-50 dark:bg-zinc-950">
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
@@ -45,11 +45,11 @@ export function NewCargoPage() {
 						<div className="flex items-center justify-between gap-3 mb-5">
 							<button
 								onClick={() => router.back()}
-								className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors">
+								className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
 								<ArrowLeft className="w-4 h-4" />
 								{t('backToList')}
 							</button>
-							<h1 className="text-lg font-semibold text-slate-900">{t('newCargoTitle')}</h1>
+							<h1 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('newCargoTitle')}</h1>
 						</div>
 
 						<NewCargoForm onCreated={handleCreated} addToast={addToast} wide />

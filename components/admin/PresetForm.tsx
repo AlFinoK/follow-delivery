@@ -40,8 +40,8 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	const [active, setActive] = useState(initial?.active ?? true)
 
 	const inputCls =
-		'w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm'
-	const labelCls = 'block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1'
+		'w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm'
+	const labelCls = 'block text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-1'
 
 	const submit = (e: React.FormEvent) => {
 		e.preventDefault()
@@ -50,7 +50,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	}
 
 	return (
-		<form onSubmit={submit} className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col gap-3">
+		<form onSubmit={submit} className="p-4 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg flex flex-col gap-3">
 			<div>
 				<label className={labelCls}>{t('presetNameLabel')}</label>
 				<input type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus className={inputCls} />
@@ -103,7 +103,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 				/>
 			</div>
 
-			<label className="inline-flex items-center gap-2 text-sm text-slate-700 select-none cursor-pointer">
+			<label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-200 select-none cursor-pointer">
 				<span className="relative inline-flex w-4 h-4 shrink-0">
 					<input
 						type="checkbox"
@@ -111,7 +111,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 						onChange={(e) => setActive(e.target.checked)}
 						className="peer absolute inset-0 z-10 m-0 opacity-0 cursor-pointer"
 					/>
-					<span className="absolute inset-0 rounded border border-slate-300 bg-white transition-colors peer-checked:bg-orange-500 peer-checked:border-orange-500" />
+					<span className="absolute inset-0 rounded border border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 transition-colors peer-checked:bg-orange-500 peer-checked:border-orange-500" />
 					<Check className="absolute inset-0 m-auto w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" strokeWidth={3} />
 				</span>
 				{t('presetActiveLabel')}
@@ -127,7 +127,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 				<button
 					type="button"
 					onClick={onCancel}
-					className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
+					className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 text-slate-700 dark:text-zinc-200 font-semibold rounded-lg transition-colors text-sm">
 					{t('cancelButton')}
 				</button>
 			</div>

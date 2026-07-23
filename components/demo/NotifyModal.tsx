@@ -15,33 +15,33 @@ export function NotifyModal({
 }) {
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-			<div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
-				<div className="flex items-center gap-3 p-4 border-b border-slate-100">
-					<span className="w-9 h-9 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+			<div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+				<div className="flex items-center gap-3 p-4 border-b border-slate-100 dark:border-zinc-800">
+					<span className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-500/15 text-green-600 dark:text-green-300 flex items-center justify-center shrink-0">
 						<MessageSquare className="w-5 h-5" />
 					</span>
 					<div className="flex-1 min-w-0">
-						<p className="font-semibold text-slate-900">Уведомление отправлено</p>
-						<p className="text-xs text-slate-500">Демо — реальная отправка не производится</p>
+						<p className="font-semibold text-slate-900 dark:text-zinc-100">Уведомление отправлено</p>
+						<p className="text-xs text-slate-500 dark:text-zinc-400">Демо — реальная отправка не производится</p>
 					</div>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-slate-400 hover:text-slate-600 shrink-0">
+						className="text-slate-400 dark:text-zinc-500 hover:text-slate-600 shrink-0">
 						<X className="w-5 h-5" />
 					</button>
 				</div>
 				<div className="p-4 space-y-3 text-sm">
-					<div className="flex items-center gap-2 text-slate-600">
+					<div className="flex items-center gap-2 text-slate-600 dark:text-zinc-300">
 						<Check className="w-4 h-4 text-green-500 shrink-0" />
 						<span>
 							Канал: <b>SMS</b> → <b>{phone || '—'}</b>
 						</span>
 					</div>
-					<div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-700 whitespace-pre-wrap">
+					<div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg p-3 text-slate-700 dark:text-zinc-200 whitespace-pre-wrap">
 						{text}
 					</div>
-					<p className="text-xs text-slate-400">
+					<p className="text-xs text-slate-400 dark:text-zinc-500">
 						Лог: дата · номер накладной · статус доставки сообщения (записывается в проде).
 					</p>
 				</div>

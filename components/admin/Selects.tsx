@@ -13,13 +13,13 @@ const ALL_CITIES = [...CITIES_KZ, ...CITIES_RU_LIST]
 const CHECK = <Check className="w-4 h-4 text-orange-500 shrink-0" />
 
 const DROPDOWN_CLS = (upward: boolean) =>
-	`absolute ${upward ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden`
+	`absolute ${upward ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 right-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 overflow-hidden`
 
 const OPTION_CLS = (selected: boolean) =>
 	`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
 		selected
-			? 'bg-orange-50 text-orange-700 font-semibold'
-			: 'text-slate-700 hover:bg-slate-50'
+			? 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 font-semibold'
+			: 'text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800/60'
 	}`
 
 export function CitySelect({
@@ -27,11 +27,13 @@ export function CitySelect({
 	onChange,
 	placeholder,
 	required,
+	invalid = false,
 }: {
 	value: string
 	onChange: (val: string) => void
 	placeholder?: string
 	required?: boolean
+	invalid?: boolean
 }) {
 	const { t } = useLang()
 	const { open, upward, toggle, setOpen, ref } = useDropdown(260)
@@ -52,8 +54,8 @@ export function CitySelect({
 	}
 	return (
 		<div ref={ref} className="relative flex flex-col gap-2">
-			<DropdownTrigger open={open} onClick={toggle}>
-				<span className={value || custom ? 'text-slate-900' : 'text-slate-400'}>
+			<DropdownTrigger open={open} onClick={toggle} invalid={invalid && !custom}>
+				<span className={value || custom ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500'}>
 					{custom ? t('otherCity') : value || placeholder || t('selectCity')}
 				</span>
 			</DropdownTrigger>
@@ -62,7 +64,7 @@ export function CitySelect({
 					<div className="max-h-60 overflow-y-auto">
 						{cities.map(({ name, list }) => (
 							<div key={name}>
-								<div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 sticky top-0">
+								<div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider bg-slate-50 dark:bg-zinc-800/40 border-b border-slate-200 dark:border-zinc-700 sticky top-0">
 									{name}
 								</div>
 								{list.map((city) => (
@@ -78,12 +80,12 @@ export function CitySelect({
 							</div>
 						))}
 					</div>
-					<div className="border-t border-slate-200">
+					<div className="border-t border-slate-200 dark:border-zinc-700">
 						<button
 							type="button"
 							onClick={selectCustom}
-							className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors font-medium flex items-center gap-2">
-							<Pencil className="w-3.5 h-3.5 text-slate-400" />
+							className="w-full text-left px-3 py-2 text-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors font-medium flex items-center gap-2">
+							<Pencil className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
 							{t('otherCity')}
 						</button>
 					</div>
@@ -97,7 +99,11 @@ export function CitySelect({
 					placeholder={t('enterCityManually')}
 					autoFocus
 					required={required}
-					className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
+					className={`w-full px-3 py-2 bg-white dark:bg-zinc-800 border rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all text-sm font-medium ${
+						invalid && !value
+							? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
+							: 'border-slate-200 dark:border-zinc-700 focus:border-orange-500 focus:ring-orange-500/10'
+					}`}
 				/>
 			)}
 			{required && !custom && (
@@ -107,6 +113,88 @@ export function CitySelect({
 					value={value}
 					onChange={() => {}}
 					className="absolute opacity-0 h-0 w-0 pointer-events-none"
+				/>
+			)}
+		</div>
+	)
+}
+
+export function CountrySelect({
+	value,
+	onChange,
+	placeholder,
+	required,
+	invalid = false,
+}: {
+	value: string
+	onChange: (val: string) => void
+	placeholder?: string
+	required?: boolean
+	invalid?: boolean
+}) {
+	const { t } = useLang()
+	const { open, upward, toggle, setOpen, ref } = useDropdown(170)
+	// value хранится в каноничном виде («Казахстан»/«Россия»), label — с флагом
+	const countries = [
+		{ value: 'Казахстан', label: t('countryKZ') },
+		{ value: 'Россия', label: t('countryRU') },
+		{ value: 'Беларусь', label: t('countryBY') },
+	]
+	const [custom, setCustom] = useState(() => value !== '' && !countries.some((c) => c.value === value))
+	const selectedLabel = countries.find((c) => c.value === value)?.label
+	const selectCountry = (c: string) => {
+		setCustom(false)
+		onChange(c)
+		setOpen(false)
+	}
+	const selectCustom = () => {
+		setCustom(true)
+		onChange('')
+		setOpen(false)
+	}
+	return (
+		<div ref={ref} className="relative flex flex-col gap-2">
+			<DropdownTrigger open={open} onClick={toggle} invalid={invalid && !custom}>
+				<span className={value || custom ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500'}>
+					{custom ? t('otherCountry') : selectedLabel || value || placeholder || t('selectCountry')}
+				</span>
+			</DropdownTrigger>
+			{open && (
+				<div className={DROPDOWN_CLS(upward)}>
+					{countries.map((c) => (
+						<button
+							key={c.value}
+							type="button"
+							onClick={() => selectCountry(c.value)}
+							className={OPTION_CLS(value === c.value && !custom)}>
+							{c.label}
+							{value === c.value && !custom && CHECK}
+						</button>
+					))}
+					<div className="border-t border-slate-200 dark:border-zinc-700">
+						<button
+							type="button"
+							onClick={selectCustom}
+							className="w-full text-left px-3 py-2 text-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors font-medium flex items-center gap-2">
+							<Pencil className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+							{t('otherCountry')}
+						</button>
+					</div>
+				</div>
+			)}
+			{custom && (
+				<input
+					type="text"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={t('enterCountryManually')}
+					autoFocus
+					required={required}
+					className={`w-full px-3 py-2 bg-white dark:bg-zinc-800 border rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all text-sm font-medium ${
+						invalid && !value
+							? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
+							: 'border-slate-200 dark:border-zinc-700 focus:border-orange-500 focus:ring-orange-500/10'
+					}`}
 				/>
 			)}
 		</div>
@@ -125,7 +213,7 @@ export function StatusSelect({ value, onChange }: { value: string; onChange: (va
 	return (
 		<div ref={ref} className="relative">
 			<DropdownTrigger open={open} onClick={toggle}>
-				<span className="text-slate-900">{selected?.label}</span>
+				<span className="text-slate-900 dark:text-zinc-100">{selected?.label}</span>
 			</DropdownTrigger>
 			{open && (
 				<div className={DROPDOWN_CLS(upward)}>
@@ -160,7 +248,7 @@ export function PaymentSelect({ value, onChange }: { value: string; onChange: (v
 	return (
 		<div ref={ref} className="relative">
 			<DropdownTrigger open={open} onClick={toggle}>
-				<span className="text-slate-900">{selected.label}</span>
+				<span className="text-slate-900 dark:text-zinc-100">{selected.label}</span>
 			</DropdownTrigger>
 			{open && (
 				<div className={DROPDOWN_CLS(upward)}>
@@ -194,7 +282,7 @@ export function CurrencySelect({ value, onChange }: { value: string; onChange: (
 	return (
 		<div ref={ref} className="relative">
 			<DropdownTrigger open={open} onClick={toggle}>
-				<span className="text-slate-900">{selected.label}</span>
+				<span className="text-slate-900 dark:text-zinc-100">{selected.label}</span>
 			</DropdownTrigger>
 			{open && (
 				<div className={DROPDOWN_CLS(upward)}>

@@ -28,6 +28,10 @@ export interface Place {
 	height: number
 	weight: number // вес одного места, кг
 	quantity: number // количество одинаковых мест
+	// Поля админ-режима (страница «Создать накладную», правка 1). Движок расчёта их
+	// не использует — они нужны только для переноса в накладную/сводку логистам.
+	name?: string // название техники
+	unitCost?: number // себестоимость за 1 шт, ₸
 }
 
 export interface CargoTotals {

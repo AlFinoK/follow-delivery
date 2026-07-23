@@ -75,11 +75,11 @@ export const CargoCard = memo(function CargoCard({
 	const currencySymbol = getCurrencySymbol(cargo.currency || 'KZT')
 
 	return (
-		<div className="bg-gray-50 rounded-xl p-5 sm:p-6 border border-orange-100 hover:shadow-md transition-all">
+		<div className="bg-gray-50 dark:bg-zinc-800/40 rounded-xl p-5 sm:p-6 border border-orange-100 dark:border-orange-500/20 hover:shadow-md transition-all">
 
 			{/* NAME */}
-			<div className="mb-4 pb-4 border-b border-orange-100">
-				<p className="text-orange-600 text-xs font-bold mb-2">{t('cargoNameCardLabel')}</p>
+			<div className="mb-4 pb-4 border-b border-orange-100 dark:border-orange-500/20">
+				<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-2">{t('cargoNameCardLabel')}</p>
 				{editingName ? (
 					<div className="flex flex-col gap-2">
 						<input
@@ -104,13 +104,13 @@ export const CargoCard = memo(function CargoCard({
 							setEditingName(true)
 							setEditingNameValue(cargo.name ?? '')
 						}}
-						className="w-full text-left text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors px-3 py-2 bg-white border-2 border-orange-200 rounded-lg hover:border-orange-300">
+						className="w-full text-left text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors px-3 py-2 bg-white dark:bg-zinc-900 border-2 border-orange-200 dark:border-orange-500/30 rounded-lg hover:border-orange-300">
 						{cargo.name ? (
 							<span>
 								{cargo.name} <span className="text-orange-400">✎</span>
 							</span>
 						) : (
-							<span className="text-gray-400 italic">
+							<span className="text-gray-400 dark:text-zinc-500 italic">
 								{t('noName')} <span className="text-orange-400 not-italic">✎</span>
 							</span>
 						)}
@@ -119,30 +119,30 @@ export const CargoCard = memo(function CargoCard({
 			</div>
 
 			{/* TRACK */}
-			<div className="mb-4 pb-4 border-b border-orange-100">
-				<p className="text-orange-600 text-xs font-bold mb-2">{t('trackCardLabel')}</p>
+			<div className="mb-4 pb-4 border-b border-orange-100 dark:border-orange-500/20">
+				<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-2">{t('trackCardLabel')}</p>
 				<button
 					onClick={() => onCopy(cargo.id)}
 					className={`w-full px-3 py-2 rounded-lg font-mono text-xs sm:text-sm break-all transition-all ${
-						isCopied ? 'bg-emerald-500 text-white' : 'bg-white border-2 border-orange-200 text-gray-900 hover:bg-orange-50'
+						isCopied ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-zinc-900 border-2 border-orange-200 dark:border-orange-500/30 text-gray-900 dark:text-zinc-100 hover:bg-orange-50'
 					}`}>
 					{isCopied ? t('copied') : cargo.id}
 				</button>
 			</div>
 
 			{/* ROUTE */}
-			<div className="mb-4 pb-4 border-b border-orange-100 space-y-3">
+			<div className="mb-4 pb-4 border-b border-orange-100 dark:border-orange-500/20 space-y-3">
 				<div className="flex items-start gap-2">
 					<span className="text-lg flex-shrink-0">📤</span>
 					<div className="flex-1 min-w-0">
-						<p className="text-orange-600 text-xs font-bold">{t('fromCardLabel')}</p>
-						<p className="text-gray-900 font-semibold text-sm truncate">{cargo.fromCity}</p>
+						<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('fromCardLabel')}</p>
+						<p className="text-gray-900 dark:text-zinc-100 font-semibold text-sm truncate">{cargo.fromCity}</p>
 					</div>
 				</div>
 				<div className="flex items-start gap-2">
 					<span className="text-lg flex-shrink-0">📍</span>
 					<div className="flex-1 min-w-0">
-						<p className="text-orange-600 text-xs font-bold">{t('currentLocationLabel')}</p>
+						<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('currentLocationLabel')}</p>
 						{editingCity ? (
 							<div className="mt-1 flex flex-col gap-2">
 								<CitySelect value={editingCityValue} onChange={setEditingCityValue} placeholder={t('selectCity')} />
@@ -160,7 +160,7 @@ export const CargoCard = memo(function CargoCard({
 									setEditingCity(true)
 									setEditingCityValue(cargo.currentCity)
 								}}
-								className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-1 block">
+								className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-1 block">
 								{cargo.currentCity} <span className="text-orange-400">✎</span>
 							</button>
 						)}
@@ -169,22 +169,22 @@ export const CargoCard = memo(function CargoCard({
 				<div className="flex items-start gap-2">
 					<span className="text-lg flex-shrink-0">📥</span>
 					<div className="flex-1 min-w-0">
-						<p className="text-orange-600 text-xs font-bold">{t('toCardLabel')}</p>
-						<p className="text-gray-900 font-semibold text-sm truncate">{cargo.toCity}</p>
+						<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('toCardLabel')}</p>
+						<p className="text-gray-900 dark:text-zinc-100 font-semibold text-sm truncate">{cargo.toCity}</p>
 					</div>
 				</div>
 			</div>
 
 			{/* DETAILS */}
-			<div className="mb-4 pb-4 border-b border-orange-100">
-				<p className="text-orange-600 text-xs font-bold mb-3">{t('detailsLabel')}</p>
+			<div className="mb-4 pb-4 border-b border-orange-100 dark:border-orange-500/20">
+				<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-3">{t('detailsLabel')}</p>
 				<div className="space-y-3">
 
 					{/* Acceptance Date */}
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">📅</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold">{t('acceptanceDateLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('acceptanceDateLabel')}</p>
 							{isEditing('acceptanceDate') ? (
 								<div className="mt-1">
 									<DatePickerField
@@ -196,13 +196,13 @@ export const CargoCard = memo(function CargoCard({
 							) : (
 								<button
 									onClick={() => startEditField('acceptanceDate', toInputDate(cargo.acceptanceDate))}
-									className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
+									className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
 									{cargo.acceptanceDate ? (
 										<span>
 											{formatDate(cargo.acceptanceDate)} <span className="text-orange-400">✎</span>
 										</span>
 									) : (
-										<span className="text-gray-400 italic">
+										<span className="text-gray-400 dark:text-zinc-500 italic">
 											{t('notSpecified')} <span className="text-orange-400 not-italic">✎</span>
 										</span>
 									)}
@@ -215,7 +215,7 @@ export const CargoCard = memo(function CargoCard({
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">🚀</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold">{t('shipmentDateLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('shipmentDateLabel')}</p>
 							{isEditing('shipmentDate') ? (
 								<div className="mt-1">
 									<DatePickerField
@@ -227,13 +227,13 @@ export const CargoCard = memo(function CargoCard({
 							) : (
 								<button
 									onClick={() => startEditField('shipmentDate', toInputDate(cargo.shipmentDate))}
-									className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
+									className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
 									{cargo.shipmentDate ? (
 										<span>
 											{formatDate(cargo.shipmentDate)} <span className="text-orange-400">✎</span>
 										</span>
 									) : (
-										<span className="text-gray-400 italic">
+										<span className="text-gray-400 dark:text-zinc-500 italic">
 											{t('notSpecified')} <span className="text-orange-400 not-italic">✎</span>
 										</span>
 									)}
@@ -246,7 +246,7 @@ export const CargoCard = memo(function CargoCard({
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">🕐</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold">{t('deliveryTimeframeLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('deliveryTimeframeLabel')}</p>
 							{isEditing('deliveryTimeframe') ? (
 								<div className="mt-1">
 									<TimeframeInput
@@ -258,13 +258,13 @@ export const CargoCard = memo(function CargoCard({
 							) : (
 								<button
 									onClick={() => startEditField('deliveryTimeframe', cargo.deliveryTimeframe || '')}
-									className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
+									className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
 									{cargo.deliveryTimeframe ? (
 										<span>
 											{displayTimeframe(cargo.deliveryTimeframe, t)} <span className="text-orange-400">✎</span>
 										</span>
 									) : (
-										<span className="text-gray-400 italic">
+										<span className="text-gray-400 dark:text-zinc-500 italic">
 											{t('notSpecified')} <span className="text-orange-400 not-italic">✎</span>
 										</span>
 									)}
@@ -277,7 +277,7 @@ export const CargoCard = memo(function CargoCard({
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">💰</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold">{t('deliveryAmountLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('deliveryAmountLabel')}</p>
 							{isEditing('deliveryAmount') ? (
 								<div className="mt-1">
 									<div className="flex items-center gap-2">
@@ -290,20 +290,20 @@ export const CargoCard = memo(function CargoCard({
 											autoFocus
 											className={`${EDIT_INPUT_CLS} flex-1`}
 										/>
-										<span className="text-gray-500 text-base font-bold flex-shrink-0">{currencySymbol}</span>
+										<span className="text-gray-500 dark:text-zinc-400 text-base font-bold flex-shrink-0">{currencySymbol}</span>
 									</div>
 									<EditActions onSave={saveField} onCancel={() => setEditingField(null)} />
 								</div>
 							) : (
 								<button
 									onClick={() => startEditField('deliveryAmount', cargo.deliveryAmount?.toString() ?? '')}
-									className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
+									className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
 									{cargo.deliveryAmount != null ? (
 										<span>
 											{cargo.deliveryAmount.toLocaleString()} {currencySymbol} <span className="text-orange-400">✎</span>
 										</span>
 									) : (
-										<span className="text-gray-400 italic">
+										<span className="text-gray-400 dark:text-zinc-500 italic">
 											{t('notSpecified')} <span className="text-orange-400 not-italic">✎</span>
 										</span>
 									)}
@@ -316,7 +316,7 @@ export const CargoCard = memo(function CargoCard({
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">💱</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold mb-1">{t('currencyLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-1">{t('currencyLabel')}</p>
 							<CurrencySelect value={cargo.currency || 'KZT'} onChange={(v) => onUpdateCurrency(cargo.docId, v)} />
 						</div>
 					</div>
@@ -325,7 +325,7 @@ export const CargoCard = memo(function CargoCard({
 					<div className="flex items-start gap-2">
 						<span className="text-sm flex-shrink-0 mt-0.5">💳</span>
 						<div className="flex-1 min-w-0">
-							<p className="text-orange-600 text-xs font-bold mb-1">{t('paymentStatusLabel')}</p>
+							<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-1">{t('paymentStatusLabel')}</p>
 							<PaymentSelect value={cargo.paymentStatus || 'none'} onChange={(v) => onUpdatePaymentStatus(cargo.docId, v)} />
 						</div>
 					</div>
@@ -334,7 +334,7 @@ export const CargoCard = memo(function CargoCard({
 					{cargo.paymentStatus === 'partial' && (
 						<div className="flex items-start gap-2 pl-6">
 							<div className="flex-1 min-w-0">
-								<p className="text-orange-600 text-xs font-bold">{t('partialPaymentDetailLabel')}</p>
+								<p className="text-orange-600 dark:text-orange-400 text-xs font-bold">{t('partialPaymentDetailLabel')}</p>
 								{isEditing('partialPaymentDetail') ? (
 									<div className="mt-1">
 										<div className="flex items-center gap-2">
@@ -347,14 +347,14 @@ export const CargoCard = memo(function CargoCard({
 												autoFocus
 												className={`${EDIT_INPUT_CLS} flex-1`}
 											/>
-											<span className="text-gray-500 text-base font-bold flex-shrink-0">{currencySymbol}</span>
+											<span className="text-gray-500 dark:text-zinc-400 text-base font-bold flex-shrink-0">{currencySymbol}</span>
 										</div>
 										<EditActions onSave={saveField} onCancel={() => setEditingField(null)} />
 									</div>
 								) : (
 									<button
 										onClick={() => startEditField('partialPaymentDetail', cargo.partialPaymentDetail ?? '')}
-										className="text-gray-900 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
+										className="text-gray-900 dark:text-zinc-100 font-semibold text-sm hover:text-orange-600 transition-colors mt-0.5 block">
 										{cargo.partialPaymentDetail ? (
 											<span>
 												{!isNaN(Number(cargo.partialPaymentDetail))
@@ -363,7 +363,7 @@ export const CargoCard = memo(function CargoCard({
 												{currencySymbol} <span className="text-orange-400">✎</span>
 											</span>
 										) : (
-											<span className="text-gray-400 italic">
+											<span className="text-gray-400 dark:text-zinc-500 italic">
 												{t('notSpecified')} <span className="text-orange-400 not-italic">✎</span>
 											</span>
 										)}
@@ -377,7 +377,7 @@ export const CargoCard = memo(function CargoCard({
 
 			{/* STATUS */}
 			<div className="mb-4">
-				<p className="text-orange-600 text-xs font-bold mb-2">{t('statusCardLabel')}</p>
+				<p className="text-orange-600 dark:text-orange-400 text-xs font-bold mb-2">{t('statusCardLabel')}</p>
 				<StatusSelect value={cargo.status} onChange={(v) => onUpdateStatus(cargo.docId, v)} />
 			</div>
 

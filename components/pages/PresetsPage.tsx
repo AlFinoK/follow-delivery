@@ -143,7 +143,7 @@ export function PresetsPage() {
 	if (!minLoadDone || loading) return <PageLoader />
 
 	return (
-		<div className="min-h-screen bg-slate-50" suppressHydrationWarning>
+		<div className="min-h-screen bg-slate-50 dark:bg-zinc-950" suppressHydrationWarning>
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
@@ -155,19 +155,19 @@ export function PresetsPage() {
 
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 					<div className="max-w-4xl mx-auto">
-						<div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200">
+						<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-zinc-700">
 							{/* Header */}
 							<div className="flex items-center justify-between gap-3 mb-1">
 								<div>
-									<h2 className="text-lg font-semibold text-slate-900">{t('presetsTitle')}</h2>
-									<p className="text-slate-500 text-xs mt-0.5">{tf('totalCount', { total: presets.length })}</p>
+									<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('presetsTitle')}</h2>
+									<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">{tf('totalCount', { total: presets.length })}</p>
 								</div>
 								<div className="flex items-center gap-2 shrink-0">
 									{presets.length === 0 && (
 										<button
 											onClick={handleSeed}
 											disabled={seeding}
-											className="inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50">
+											className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 text-slate-700 dark:text-zinc-200 px-3 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50">
 											{seeding ? <Spinner className="w-4 h-4" /> : <DownloadCloud className="w-4 h-4" />}
 											<span className="hidden sm:inline">{t('presetSeedButton')}</span>
 										</button>
@@ -181,7 +181,7 @@ export function PresetsPage() {
 								</div>
 							</div>
 
-							<p className="text-slate-400 text-xs mb-4">{t('presetsSubtitle')}</p>
+							<p className="text-slate-400 dark:text-zinc-500 text-xs mb-4">{t('presetsSubtitle')}</p>
 
 							{/* Create form */}
 							{showCreate && (
@@ -193,13 +193,13 @@ export function PresetsPage() {
 							{/* Поиск */}
 							{presets.length > 0 && (
 								<div className="relative mb-4">
-									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+									<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500 pointer-events-none" />
 									<input
 										type="text"
 										value={query}
 										onChange={(e) => { setQuery(e.target.value); setPage(1) }}
 										placeholder={t('presetSearchPlaceholder')}
-										className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
+										className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 									/>
 								</div>
 							)}
@@ -207,12 +207,12 @@ export function PresetsPage() {
 							{/* List */}
 							{presets.length === 0 && !showCreate ? (
 								<div className="text-center py-12">
-									<Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-									<p className="text-slate-600 font-medium text-sm">{t('presetsEmptyAdmin')}</p>
-									<p className="text-slate-400 text-xs mt-1">{t('presetsEmptyHint')}</p>
+									<Package className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+									<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('presetsEmptyAdmin')}</p>
+									<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('presetsEmptyHint')}</p>
 								</div>
 							) : filtered.length === 0 ? (
-								<p className="text-center py-10 text-sm text-slate-400">{t('presetNothingFound')}</p>
+								<p className="text-center py-10 text-sm text-slate-400 dark:text-zinc-500">{t('presetNothingFound')}</p>
 							) : (
 								<div className="space-y-2">
 									{pageItems.map((p) =>
@@ -237,12 +237,12 @@ export function PresetsPage() {
 										) : (
 											<div
 												key={p.id}
-												className={`bg-white rounded-lg p-3.5 border transition-all ${
-													p.active ? 'border-slate-200' : 'border-slate-200 opacity-60'
+												className={`bg-white dark:bg-zinc-900 rounded-lg p-3.5 border transition-all ${
+													p.active ? 'border-slate-200 dark:border-zinc-700' : 'border-slate-200 dark:border-zinc-700 opacity-60'
 												}`}>
 												<div className="flex items-center justify-between gap-3">
 													<div className="flex items-center gap-3 min-w-0 flex-1">
-														<div className="w-10 h-10 shrink-0 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center overflow-hidden">
+														<div className="w-10 h-10 shrink-0 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 flex items-center justify-center overflow-hidden">
 															{p.imageUrl ? (
 																// eslint-disable-next-line @next/next/no-img-element
 																<img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -252,14 +252,14 @@ export function PresetsPage() {
 														</div>
 														<div className="min-w-0 flex-1">
 															<div className="flex items-center gap-2">
-																<p className="font-semibold text-slate-900 text-sm truncate">{p.name}</p>
+																<p className="font-semibold text-slate-900 dark:text-zinc-100 text-sm truncate">{p.name}</p>
 																{!p.active && (
-																	<span className="shrink-0 text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">
+																	<span className="shrink-0 text-[10px] font-medium text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 rounded px-1.5 py-0.5">
 																		{t('presetHiddenBadge')}
 																	</span>
 																)}
 															</div>
-															<p className="text-xs text-slate-500 mt-0.5">
+															<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
 																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг
 															</p>
 														</div>
@@ -268,19 +268,19 @@ export function PresetsPage() {
 														<button
 															onClick={() => toggleActive(p)}
 															title={p.active ? t('presetHideAction') : t('presetShowAction')}
-															className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+															className="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
 															{p.active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
 														</button>
 														<button
 															onClick={() => { setEditingId(p.id); setShowCreate(false) }}
 															title={t('editButton')}
-															className="p-2 rounded-lg text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors">
+															className="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors">
 															<Pencil className="w-4 h-4" />
 														</button>
 														<button
 															onClick={() => setDeleteId(p.id)}
 															title={t('deleteButton')}
-															className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+															className="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/15 transition-colors">
 															<Trash2 className="w-4 h-4" />
 														</button>
 													</div>
@@ -297,16 +297,16 @@ export function PresetsPage() {
 												aria-label="prev"
 												disabled={safePage <= 1}
 												onClick={() => setPage(Math.max(1, safePage - 1))}
-												className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+												className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
 												<ChevronLeft className="w-4 h-4" />
 											</button>
-											<span className="text-xs text-slate-500">{tf('pageOf', { page: safePage, pages })}</span>
+											<span className="text-xs text-slate-500 dark:text-zinc-400">{tf('pageOf', { page: safePage, pages })}</span>
 											<button
 												type="button"
 												aria-label="next"
 												disabled={safePage >= pages}
 												onClick={() => setPage(Math.min(pages, safePage + 1))}
-												className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+												className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
 												<ChevronRight className="w-4 h-4" />
 											</button>
 										</div>
@@ -316,7 +316,7 @@ export function PresetsPage() {
 						</div>
 					</div>
 				</main>
-				<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
+				<footer className="text-center text-slate-400 dark:text-zinc-500 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 
 			<ConfirmModal

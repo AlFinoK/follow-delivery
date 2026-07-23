@@ -39,7 +39,7 @@ export function AdminCargosPage() {
 	if (!mounted) return <div suppressHydrationWarning />
 
 	return (
-		<div className="min-h-screen bg-slate-50" suppressHydrationWarning>
+		<div className="min-h-screen bg-slate-50 dark:bg-zinc-950" suppressHydrationWarning>
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
@@ -54,7 +54,7 @@ export function AdminCargosPage() {
 						<CargoList onError={(msg) => addToast(msg, 'error')} />
 					</div>
 				</main>
-				<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
+				<footer className="text-center text-slate-400 dark:text-zinc-500 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)

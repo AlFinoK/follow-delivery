@@ -35,14 +35,14 @@ export function ConfirmModal({
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
 			<div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 			<div
-				className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6 border border-slate-200"
+				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-sm p-6 border border-slate-200 dark:border-zinc-700"
 				onClick={(e) => e.stopPropagation()}>
-				<h3 className="text-base font-semibold text-slate-900 mb-1">{title}</h3>
-				{description && <p className="text-sm text-slate-500 mb-5">{description}</p>}
+				<h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100 mb-1">{title}</h3>
+				{description && <p className="text-sm text-slate-500 dark:text-zinc-400 mb-5">{description}</p>}
 				<div className="flex gap-2">
 					<button
 						onClick={onCancel}
-						className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors">
+						className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 rounded-lg transition-colors">
 						{cancelLabel ?? t('cancelButton')}
 					</button>
 					<button

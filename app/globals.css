@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Тёмная тема включается классом .dark на контейнере админки (scoped, не на <html>),
+   поэтому главная/трекинг всегда светлые. Вариант dark: срабатывает по предку .dark. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
 	--background: #f8fafc; /* slate-50 */
 	--foreground: #0f172a; /* slate-900 */
@@ -202,4 +206,92 @@ button {
 
 .rdp-root .rdp-dropdown_root:hover .rdp-caption_label {
 	background-color: #f1f5f9;
+}
+
+/* ─── react-phone-number-input — под тему LTT ───
+   Границу/фон рисует внешняя обёртка .ltt-phone, само поле — прозрачное.
+   !important — чтобы выиграть у стилей библиотеки независимо от порядка импорта. */
+.ltt-phone .PhoneInput {
+	flex: 1;
+	display: flex;
+	align-items: center;
+}
+.ltt-phone .PhoneInputInput {
+	border: none !important;
+	outline: none !important;
+	background: transparent !important;
+	font-size: 0.875rem;
+	color: #0f172a;
+	min-width: 0;
+}
+.ltt-phone .PhoneInputInput::placeholder {
+	color: #cbd5e1; /* slate-300 */
+}
+.ltt-phone .PhoneInputCountry {
+	position: relative;
+	margin: 0;
+}
+/* Флаг, стрелку и список стран рисует наш CountrySelect — родные элементы прячем */
+.ltt-phone .PhoneInputCountryIcon,
+.ltt-phone .PhoneInputCountrySelectArrow {
+	display: none !important;
+}
+
+/* ─── Тёмная тема (нейтральный zinc, класс .dark на <html> в админке) ─── */
+/* Базовый фон страницы + тёмный скроллбар (нативные контролы — через color-scheme) */
+.dark body {
+	background: #09090b; /* zinc-950 */
+}
+.dark ::-webkit-scrollbar-thumb {
+	background: #3f3f46; /* zinc-700 */
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+	background: #52525b; /* zinc-600 */
+}
+
+/* Телефон: текст/плейсхолдер поля под тёмный фон */
+.dark .ltt-phone .PhoneInputInput {
+	color: #e4e4e7; /* zinc-200 */
+}
+.dark .ltt-phone .PhoneInputInput::placeholder {
+	color: #71717a; /* zinc-500 */
+}
+
+/* Календарь react-day-picker (акцент остаётся оранжевым) */
+.dark .rdp-root {
+	color: #e4e4e7;
+}
+.dark .rdp-root .rdp-day {
+	color: #d4d4d8;
+}
+.dark .rdp-root .rdp-weekday {
+	color: #71717a !important;
+}
+.dark .rdp-root .rdp-caption_label {
+	color: #e4e4e7;
+}
+.dark .rdp-root .rdp-dropdown_root:hover .rdp-caption_label {
+	background-color: #27272a;
+}
+.dark .rdp-root .rdp-day_button:hover:not([disabled]) {
+	background-color: #27272a !important;
+	color: #f4f4f5 !important;
+}
+.dark .rdp-root .rdp-button_previous,
+.dark .rdp-root .rdp-button_next {
+	color: #d4d4d8 !important;
+}
+.dark .rdp-root .rdp-button_previous:hover:not([disabled]),
+.dark .rdp-root .rdp-button_next:hover:not([disabled]) {
+	background-color: #27272a !important;
+	color: #f4f4f5 !important;
+}
+.dark .rdp-root .rdp-today:not(.rdp-selected) .rdp-day_button {
+	color: #fb923c !important; /* orange-400 */
+}
+.dark .rdp-root .rdp-outside .rdp-day_button {
+	color: #52525b !important;
+}
+.dark .rdp-root .rdp-disabled .rdp-day_button {
+	color: #3f3f46 !important;
 }

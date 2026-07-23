@@ -20,7 +20,7 @@ const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').trim()
 const PAGE_SIZE = 4
 
 function CategoryIcon({ category }: { category: string | null }) {
-	const cls = 'w-7 h-7 text-slate-300'
+	const cls = 'w-7 h-7 text-slate-300 dark:text-zinc-600'
 	if (category === 'Мото' || category === 'Электро') return <Bike className={cls} />
 	if (category === 'Квадроцикл' || category === 'Трицикл') return <Truck className={cls} />
 	return <Package className={cls} />
@@ -49,7 +49,7 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center py-10 text-slate-400">
+			<div className="flex items-center justify-center py-10 text-slate-400 dark:text-zinc-500">
 				<Spinner className="w-5 h-5 text-orange-500" />
 			</div>
 		)
@@ -58,23 +58,23 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 	return (
 		<div className="flex flex-col gap-3">
 			{presets.length === 0 ? (
-				<p className="text-sm text-slate-400 text-center py-6">{t('calcPresetsEmpty')}</p>
+				<p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-6">{t('calcPresetsEmpty')}</p>
 			) : (
 				<>
 					{/* Поиск */}
 					<div className="relative">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500 pointer-events-none" />
 						<input
 							type="text"
 							value={query}
 							onChange={(e) => onSearch(e.target.value)}
 							placeholder={t('presetSearchPlaceholder')}
-							className="w-full pl-10 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
+							className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 						/>
 					</div>
 
 					{filtered.length === 0 ? (
-						<p className="text-sm text-slate-400 text-center py-6">{t('presetNothingFound')}</p>
+						<p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-6">{t('presetNothingFound')}</p>
 					) : (
 						<>
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -85,10 +85,10 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 										<div
 											key={p.id}
 											className={`rounded-xl border p-2.5 transition-all ${
-												selected ? 'border-orange-400 bg-orange-50/50 ring-1 ring-orange-200' : 'border-slate-200 bg-white'
+												selected ? 'border-orange-400 bg-orange-50/50 dark:bg-orange-500/10 ring-1 ring-orange-200 dark:ring-orange-500/30' : 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
 											}`}>
 											<div className="flex gap-2.5">
-												<div className="w-14 h-14 shrink-0 rounded-lg bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center">
+												<div className="w-14 h-14 shrink-0 rounded-lg bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 overflow-hidden flex items-center justify-center">
 													{p.imageUrl ? (
 														// eslint-disable-next-line @next/next/no-img-element
 														<img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -97,8 +97,8 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 													)}
 												</div>
 												<div className="min-w-0 flex-1">
-													<p className="text-sm font-semibold text-slate-900 leading-tight break-words">{p.name}</p>
-													<p className="text-[11px] text-slate-500 mt-0.5">
+													<p className="text-sm font-semibold text-slate-900 dark:text-zinc-100 leading-tight break-words">{p.name}</p>
+													<p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
 														{ru(p.length)}×{ru(p.width)}×{ru(p.height)} {t('calcUnitCm')} · {ru(p.weight)} {t('calcKg')}
 													</p>
 												</div>
@@ -106,13 +106,13 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 
 											{selected ? (
 												<div className="mt-2.5 flex items-center justify-between">
-													<span className="text-[11px] text-slate-500">{t('calcPresetQtyLabel')}</span>
+													<span className="text-[11px] text-slate-500 dark:text-zinc-400">{t('calcPresetQtyLabel')}</span>
 													<div className="inline-flex items-center gap-1">
 														<button
 															type="button"
 															aria-label="−"
 															onClick={() => onChange(p.id, Math.max(0, qty - 1))}
-															className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
+															className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
 															<Minus className="w-3.5 h-3.5" />
 														</button>
 														<DecimalInput
@@ -121,13 +121,13 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 															integer
 															min={1}
 															ariaLabel={t('calcPresetQtyLabel')}
-															className="w-12 px-1 py-1 text-center text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10"
+															className="w-12 px-1 py-1 text-center text-sm font-semibold text-slate-900 dark:text-zinc-100 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10"
 														/>
 														<button
 															type="button"
 															aria-label="+"
 															onClick={() => onChange(p.id, qty + 1)}
-															className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors">
+															className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
 															<Plus className="w-3.5 h-3.5" />
 														</button>
 													</div>
@@ -136,7 +136,7 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 												<button
 													type="button"
 													onClick={() => onChange(p.id, 1)}
-													className="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 hover:border-orange-300 hover:text-orange-600 transition-colors">
+													className="mt-2.5 w-full inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 text-[12px] font-medium text-slate-600 dark:text-zinc-300 hover:border-orange-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
 													<Plus className="w-3.5 h-3.5" />
 													{t('calcPresetSelect')}
 												</button>
@@ -154,16 +154,16 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 										aria-label="prev"
 										disabled={safePage <= 1}
 										onClick={() => setPage(Math.max(1, safePage - 1))}
-										className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+										className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
 										<ChevronLeft className="w-4 h-4" />
 									</button>
-									<span className="text-xs text-slate-500">{tf('pageOf', { page: safePage, pages })}</span>
+									<span className="text-xs text-slate-500 dark:text-zinc-400">{tf('pageOf', { page: safePage, pages })}</span>
 									<button
 										type="button"
 										aria-label="next"
 										disabled={safePage >= pages}
 										onClick={() => setPage(Math.min(pages, safePage + 1))}
-										className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+										className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
 										<ChevronRight className="w-4 h-4" />
 									</button>
 								</div>
@@ -177,15 +177,15 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 			<button
 				type="button"
 				onClick={onCustomCargo}
-				className="rounded-xl border border-dashed border-slate-300 p-3 flex items-center justify-center gap-2 text-slate-500 hover:border-orange-400 hover:text-orange-600 transition-colors">
+				className="rounded-xl border border-dashed border-slate-300 dark:border-zinc-600 p-3 flex items-center justify-center gap-2 text-slate-500 dark:text-zinc-400 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
 				<PencilRuler className="w-5 h-5" />
 				<span className="text-sm font-medium">{t('calcCustomCargoButton')}</span>
-				<span className="text-[11px] text-slate-400 hidden sm:inline">· {t('calcCustomCargoHint')}</span>
+				<span className="text-[11px] text-slate-400 dark:text-zinc-500 hidden sm:inline">· {t('calcCustomCargoHint')}</span>
 			</button>
 
 			{/* Итого по выбранным единицам */}
 			{selectedCount > 0 && (
-				<p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+				<p className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
 					<Check className="w-3.5 h-3.5 text-orange-500" />
 					{tf('calcPresetSelectedCount', { count: selectedCount })}
 				</p>

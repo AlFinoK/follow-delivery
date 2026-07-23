@@ -37,10 +37,10 @@ export function LogistSummary({ waybill }: { waybill: Waybill }) {
 
 	return (
 		<div>
-			<p className="text-xs text-slate-500 mb-3">
+			<p className="text-xs text-slate-500 dark:text-zinc-400 mb-3">
 				Сводка собирается автоматически из накладной (Блок №1). Формат — по образцу заказчика.
 			</p>
-			<pre className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto max-h-[420px]">
+			<pre className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto max-h-[420px]">
 				{summary}
 			</pre>
 			<div className="flex flex-wrap gap-2 mt-3">
@@ -55,12 +55,12 @@ export function LogistSummary({ waybill }: { waybill: Waybill }) {
 					type="button"
 					onClick={send}
 					disabled={!waybill.receiver.phone.trim()}
-					className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-orange-300 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+					className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
 					<Send className="w-4 h-4" />
 					Отправить логисту
 				</button>
 			</div>
-			<p className="text-[11px] text-slate-400 mt-2">
+			<p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-2">
 				Демо: «Отправить» открывает WhatsApp. В проде канал согласуется (WhatsApp Business API / Telegram / e-mail).
 			</p>
 		</div>

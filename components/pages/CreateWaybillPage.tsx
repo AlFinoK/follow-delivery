@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Save, FileDown, Bell, RotateCcw, FlaskConical, ChevronLeft, ChevronRight, Info, Calculator } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { useRepos } from '@/lib/data/useRepos'
 import type { CalcResult } from '@/lib/calculator/engine'
-import { CalculatorForm } from '@/components/calculator/CalculatorForm'
+import { CalculatorForm, type CalcCargoSnapshot } from '@/components/calculator/CalculatorForm'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { ToastItem, type Toast } from '@/components/Toast'
@@ -21,16 +21,17 @@ import {
 	nextWaybillNumber,
 	notificationText,
 	totalWeight,
+	validateWaybill,
 	type Role,
 	type Waybill,
 } from '@/lib/demo/waybill'
 
-// Страница «Создать груз» (ТЗ v2.0) в виде пошагового мастера (визард).
-// 4 шага; на каждом — часть формы. Данные накладной питают калькулятор и сводку
-// логистам. При «Сохранить» накладная кладётся в демо-стор (появляется в списке/поиске).
-// В проде переедет на /admin/cargo/create с реальным репозиторием и ролью из сессии.
+// Страница «Создать накладную» (ТЗ v2.0 + правки) в виде пошагового мастера (визард).
+// 3 шага; на каждом — часть формы. Шаги «Груз» и «Оплата и расчёт» объединены (правка 1).
+// Данные калькулятора копируются в накладную/сводку логистам (правка 2). При «Сохранить»
+// накладная кладётся в демо-стор. В проде переедет на реальный репозиторий и роль из сессии.
 
-const STEPS = ['Отправитель и получатель', 'Груз', 'Оплата и расчёт', 'Итог и отправка']
+const STEPS = ['Отправитель и получатель', 'Груз, оплата и расчёт', 'Итог и отправка']
 
 export function CreateWaybillPage() {
 	const { t } = useLang()
@@ -46,10 +47,21 @@ export function CreateWaybillPage() {
 	const [prefill, setPrefill] = useState<{ volume?: number; weight?: number; mode?: 'totals' }>({})
 	const [step, setStep] = useState(0)
 	const [maxStep, setMaxStep] = useState(0)
+	const [showErrors, setShowErrors] = useState(false) // подсветка обязательных полей после «Сохранить»
+	const numberInit = useRef(false) // номер присваиваем ровно один раз (StrictMode-safe)
 
 	useEffect(() => {
 		setMounted(true)
-		setWaybill((w) => (w.acceptanceDate ? w : { ...w, acceptanceDate: new Date().toISOString().slice(0, 10) }))
+		// Дата приёма — текущая (SSR-safe) и номер накладной присваивается сразу при
+		// заполнении (правка 3): номера с 3000 и не повторяются. nextWaybillNumber() имеет
+		// побочный эффект (sessionStorage), поэтому зовём его ВНЕ апдейтера и один раз.
+		const today = new Date().toISOString().slice(0, 10)
+		const assigned = numberInit.current ? null : ((numberInit.current = true), nextWaybillNumber())
+		setWaybill((w) => ({
+			...w,
+			acceptanceDate: w.acceptanceDate || today,
+			number: w.number ?? assigned,
+		}))
 		const timer = setTimeout(() => setMinLoadDone(true), 444)
 		return () => clearTimeout(timer)
 	}, [])
@@ -82,10 +94,38 @@ export function CreateWaybillPage() {
 		setCalcKey((k) => k + 1)
 		addToast('Вес и объём переданы в калькулятор')
 	}
+	// Копирование данных калькулятора → накладная (правка 2): позиции с названием техники
+	// и себестоимостью + стоимость доставки. Сводка логистам строится из накладной, поэтому
+	// объём/вес/название/себестоимость/доставка появляются в ней автоматически.
+	const copyCalcToWaybill = (snap: CalcCargoSnapshot) => {
+		setWaybill((w) => ({
+			...w,
+			positions:
+				snap.positions.length > 0
+					? snap.positions.map((p, i) => ({
+							id: `pos-calc-${Date.now()}-${i}`,
+							name: p.name,
+							quantity: p.quantity,
+							length: p.length,
+							width: p.width,
+							height: p.height,
+							weight: p.weight,
+							price: p.price,
+						}))
+					: w.positions,
+			manualVolume: false, // объём считается из габаритов позиций
+			amount: snap.price > 0 ? snap.price : w.amount,
+		}))
+		addToast('Данные калькулятора скопированы в накладную')
+	}
 
 	const save = async () => {
-		if (!waybill.receiver.fullName.trim() || !waybill.receiver.phone.trim()) {
-			addToast('Заполните ФИО и телефон получателя', 'error')
+		// Нормальная валидация: обязательные поля + формат телефона (правка)
+		const errors = validateWaybill(waybill)
+		if (errors.length) {
+			setShowErrors(true)
+			goTo(errors[0].step)
+			addToast(errors[0].message, 'error')
 			return
 		}
 		const number = waybill.number ?? nextWaybillNumber()
@@ -121,7 +161,8 @@ export function CreateWaybillPage() {
 	}
 
 	const reset = () => {
-		setWaybill({ ...initialWaybill(), acceptanceDate: new Date().toISOString().slice(0, 10) })
+		// Новая накладная — сразу с новым номером (правка 3)
+		setWaybill({ ...initialWaybill(), acceptanceDate: new Date().toISOString().slice(0, 10), number: nextWaybillNumber() })
 		setCreatedDocId(null)
 		setStep(0)
 		setMaxStep(0)
@@ -141,7 +182,7 @@ export function CreateWaybillPage() {
 
 	return (
 		<div
-			className="min-h-screen bg-slate-50"
+			className="min-h-screen bg-slate-50 dark:bg-zinc-950"
 			suppressHydrationWarning>
 			<AdminSidebar />
 
@@ -167,33 +208,35 @@ export function CreateWaybillPage() {
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 					<div className="max-w-4xl mx-auto">
 						{/* Демо-уведомление */}
-						<div className="mb-5 flex items-center gap-2 text-xs sm:text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+						<div className="mb-5 flex items-center gap-2 text-xs sm:text-sm bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-amber-800 dark:text-amber-300 rounded-lg px-3 py-2">
 							<FlaskConical className="w-4 h-4 shrink-0 text-amber-500" />
 							<span>Демо-режим: данные не сохраняются в базу. Прототип для согласования по ТЗ v2.0.</span>
 						</div>
 
 						{/* Header */}
-						<div className="mb-5 flex flex-wrap items-start gap-3">
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-2.5">
-									<h2 className="text-lg font-semibold text-slate-900">Создать груз</h2>
+						<div className="mb-5 flex flex-col sm:flex-row sm:flex-wrap sm:items-start gap-3">
+							<div className="w-full sm:w-auto sm:flex-1 min-w-0">
+								<div className="flex items-center gap-2.5 flex-wrap">
+									<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">Создать накладную</h2>
 									{waybill.number && (
-										<span className="text-sm font-semibold text-orange-600 bg-orange-50 border border-orange-100 rounded-md px-2 py-0.5">
+										<span className="text-sm font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 rounded-md px-2 py-0.5">
 											№{waybill.number}
 										</span>
 									)}
 								</div>
-								<p className="text-slate-500 text-xs mt-0.5">Шаг {step + 1} из {STEPS.length} · {STEPS[step]}</p>
+								<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">Шаг {step + 1} из {STEPS.length} · {STEPS[step]}</p>
 							</div>
-							<RoleSwitcher
-								role={role}
-								onChange={setRole}
-							/>
+							<div className="self-start">
+								<RoleSwitcher
+									role={role}
+									onChange={setRole}
+								/>
+							</div>
 						</div>
 
 						{/* Роль «Логист» — только просмотр */}
 						{!canEdit && (
-							<div className="mb-4 flex items-center gap-2 text-[13px] bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3.5 py-2.5">
+							<div className="mb-4 flex items-center gap-2 text-[13px] bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-300 rounded-lg px-3.5 py-2.5">
 								<Info className="w-4 h-4 shrink-0" />
 								Роль «Логист»: форма доступна только для просмотра. Редактирование — у Оператора / Администратора.
 							</div>
@@ -210,49 +253,44 @@ export function CreateWaybillPage() {
 						</div>
 
 						{/* Контент текущего шага */}
-						<div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+						<div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-sm p-5 sm:p-6">
 							{step === 0 && (
 								<WaybillForm
 									value={waybill}
 									onChange={setWaybill}
 									readOnly={!canEdit}
 									only={['sender', 'receiver']}
+									showErrors={showErrors}
 								/>
 							)}
 
 							{step === 1 && (
-								<WaybillForm
-									value={waybill}
-									onChange={setWaybill}
-									readOnly={!canEdit}
-									only={['cargo']}
-								/>
-							)}
-
-							{step === 2 && (
 								<div className="flex flex-col gap-6">
 									<WaybillForm
 										value={waybill}
 										onChange={setWaybill}
 										readOnly={!canEdit}
-										only={['payment']}
+										only={['cargo', 'payment']}
+										showErrors={showErrors}
 									/>
-									<div className="pt-6 border-t border-slate-100">
+									<div className="pt-6 border-t border-slate-100 dark:border-zinc-800">
 										<div className="flex items-center justify-between gap-3 mb-4">
 											<div className="flex items-center gap-3 min-w-0">
-												<span className="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+												<span className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
 													<Calculator className="w-[18px] h-[18px]" />
 												</span>
 												<div className="min-w-0">
-													<h3 className="text-[15px] font-semibold text-slate-900 leading-tight">Калькулятор стоимости</h3>
-													<p className="text-xs text-slate-400 mt-0.5">Итог подставится в «Сумму к оплате»</p>
+													<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 leading-tight">Калькулятор стоимости</h3>
+													<p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
+														Итог → «Сумма к оплате». Кнопка «{t('calcCopyToWaybill')}» переносит габариты, название и себестоимость в накладную.
+													</p>
 												</div>
 											</div>
 											{canEdit && (
 												<button
 													type="button"
 													onClick={fillCalcFromWaybill}
-													className="text-xs font-medium text-orange-600 hover:text-orange-700 whitespace-nowrap shrink-0">
+													className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 whitespace-nowrap shrink-0">
 													Заполнить из накладной →
 												</button>
 											)}
@@ -262,26 +300,29 @@ export function CreateWaybillPage() {
 											showDisclaimer={false}
 											prefill={prefill}
 											onResult={onCalcResult}
+											captureCargo={canEdit}
+											onCopyCargo={copyCalcToWaybill}
 										/>
 									</div>
 								</div>
 							)}
 
-							{step === 3 && (
+							{step === 2 && (
 								<div className="flex flex-col gap-6">
 									<WaybillForm
 										value={waybill}
 										onChange={setWaybill}
 										readOnly={!canEdit}
 										only={['header', 'extras']}
+										showErrors={showErrors}
 									/>
-									<div className="pt-6 border-t border-slate-100">
-										<h3 className="text-[15px] font-semibold text-slate-900 mb-1">Данные для логистов</h3>
-										<p className="text-xs text-slate-400 mb-4">Автосводка по накладной — скопировать или отправить</p>
+									<div className="pt-6 border-t border-slate-100 dark:border-zinc-800">
+										<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 mb-1">Данные для логистов</h3>
+										<p className="text-xs text-slate-400 dark:text-zinc-500 mb-4">Автосводка по накладной — скопировать или отправить</p>
 										<LogistSummary waybill={waybill} />
 									</div>
 									{canEdit && (
-										<div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
+										<div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-zinc-800">
 											<button
 												type="button"
 												onClick={save}
@@ -291,19 +332,19 @@ export function CreateWaybillPage() {
 											<button
 												type="button"
 												onClick={() => openWaybillPrint(waybill)}
-												className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-orange-300 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
+												className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
 												<FileDown className="w-4 h-4" /> Скачать PDF
 											</button>
 											<button
 												type="button"
 												onClick={sendNotify}
-												className="inline-flex items-center gap-2 bg-white border border-slate-200 hover:border-orange-300 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
+												className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
 												<Bell className="w-4 h-4" /> Уведомить клиента
 											</button>
 											<button
 												type="button"
 												onClick={reset}
-												className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium px-3 py-2.5 rounded-lg text-sm transition-colors ml-auto">
+												className="inline-flex items-center gap-2 text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 font-medium px-3 py-2.5 rounded-lg text-sm transition-colors ml-auto">
 												<RotateCcw className="w-4 h-4" /> Очистить
 											</button>
 										</div>
@@ -318,7 +359,7 @@ export function CreateWaybillPage() {
 								type="button"
 								onClick={back}
 								disabled={step === 0}
-								className="inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+								className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
 								<ChevronLeft className="w-4 h-4" /> Назад
 							</button>
 							{step < STEPS.length - 1 && (
@@ -332,7 +373,7 @@ export function CreateWaybillPage() {
 						</div>
 					</div>
 				</main>
-				<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
+				<footer className="text-center text-slate-400 dark:text-zinc-500 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)

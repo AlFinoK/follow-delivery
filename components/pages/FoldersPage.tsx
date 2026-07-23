@@ -94,7 +94,7 @@ export function FoldersPage() {
 	if (!minLoadDone || loading) return <PageLoader />
 
 	return (
-		<div className="min-h-screen bg-slate-50" suppressHydrationWarning>
+		<div className="min-h-screen bg-slate-50 dark:bg-zinc-950" suppressHydrationWarning>
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
@@ -106,12 +106,12 @@ export function FoldersPage() {
 
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 				<div className="max-w-4xl mx-auto">
-					<div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200">
+					<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-zinc-700">
 						{/* Header */}
 						<div className="flex items-center justify-between gap-3 mb-4">
 							<div>
-								<h2 className="text-lg font-semibold text-slate-900">{t('foldersTitle')}</h2>
-								<p className="text-slate-500 text-xs mt-0.5">{tf('totalCount', { total: folders.length })}</p>
+								<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('foldersTitle')}</h2>
+								<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">{tf('totalCount', { total: folders.length })}</p>
 							</div>
 							<button
 								onClick={() => setShowCreate((v) => !v)}
@@ -123,8 +123,8 @@ export function FoldersPage() {
 
 						{/* Create form */}
 						{showCreate && (
-							<form onSubmit={handleCreate} className="mb-5 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-								<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('newFolderTitle')}</p>
+							<form onSubmit={handleCreate} className="mb-5 p-4 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg">
+								<p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2">{t('newFolderTitle')}</p>
 								<div className="flex flex-col sm:flex-row gap-2">
 									<input
 										type="text"
@@ -132,7 +132,7 @@ export function FoldersPage() {
 										onChange={(e) => setNewName(e.target.value)}
 										placeholder={t('folderNamePlaceholder')}
 										autoFocus
-										className="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
+										className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 									/>
 									<div className="flex gap-2">
 										<button
@@ -144,7 +144,7 @@ export function FoldersPage() {
 										<button
 											type="button"
 											onClick={() => { setShowCreate(false); setNewName('') }}
-											className="flex-1 sm:flex-initial px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg transition-colors text-sm">
+											className="flex-1 sm:flex-initial px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 text-slate-700 dark:text-zinc-200 font-semibold rounded-lg transition-colors text-sm">
 											{t('cancelButton')}
 										</button>
 									</div>
@@ -155,9 +155,9 @@ export function FoldersPage() {
 						{/* List */}
 						{folders.length === 0 ? (
 							<div className="text-center py-12">
-								<Folder className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-								<p className="text-slate-600 font-medium text-sm">{t('noFolders')}</p>
-								<p className="text-slate-400 text-xs mt-1">{t('createFirstFolder')}</p>
+								<Folder className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+								<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('noFolders')}</p>
+								<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('createFirstFolder')}</p>
 							</div>
 						) : (
 							<div className="space-y-2">
@@ -165,16 +165,16 @@ export function FoldersPage() {
 									<button
 										key={f.id}
 										onClick={() => router.push(`${base}/admin/folders/${f.id}`)}
-										className="w-full text-left bg-white rounded-lg p-3.5 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all group cursor-pointer">
+										className="w-full text-left bg-white dark:bg-zinc-900 rounded-lg p-3.5 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all group cursor-pointer">
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex items-center gap-3 min-w-0 flex-1">
 												<FolderOpen className="w-5 h-5 text-orange-500 shrink-0" />
 												<div className="min-w-0 flex-1">
-													<p className="font-semibold text-slate-900 text-sm truncate group-hover:text-orange-600 transition-colors">{f.name}</p>
-													<p className="text-xs text-slate-500 mt-0.5">{tf('foldersCount', { count: f.cargoCount })}</p>
+													<p className="font-semibold text-slate-900 dark:text-zinc-100 text-sm truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">{f.name}</p>
+													<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{tf('foldersCount', { count: f.cargoCount })}</p>
 												</div>
 											</div>
-											<ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+											<ChevronRight className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
 										</div>
 									</button>
 								))}
@@ -184,7 +184,7 @@ export function FoldersPage() {
 
 				</div>
 			</main>
-			<footer className="text-center text-slate-400 text-xs py-4 px-4">{t('adminFooter')}</footer>
+			<footer className="text-center text-slate-400 dark:text-zinc-500 text-xs py-4 px-4">{t('adminFooter')}</footer>
 			</div>
 		</div>
 	)

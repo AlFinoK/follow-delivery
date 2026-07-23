@@ -21,8 +21,8 @@ export function CollapsibleBlock({
 }) {
 	const [open, setOpen] = useState(defaultOpen)
 	return (
-		<section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-			<div className="flex items-center gap-3 p-4 sm:p-5 border-b border-slate-100">
+		<section className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 shadow-sm overflow-hidden">
+			<div className="flex items-center gap-3 p-4 sm:p-5 border-b border-slate-100 dark:border-zinc-800">
 				<span className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center text-sm">
 					{badge}
 				</span>
@@ -31,11 +31,11 @@ export function CollapsibleBlock({
 					onClick={() => setOpen((v) => !v)}
 					className="flex-1 flex items-center gap-2 text-left min-w-0">
 					<span className="min-w-0">
-						<span className="block font-semibold text-slate-900 truncate">{title}</span>
-						{subtitle && <span className="block text-xs text-slate-500 truncate">{subtitle}</span>}
+						<span className="block font-semibold text-slate-900 dark:text-zinc-100 truncate">{title}</span>
+						{subtitle && <span className="block text-xs text-slate-500 dark:text-zinc-400 truncate">{subtitle}</span>}
 					</span>
 					<ChevronDown
-						className={`w-5 h-5 text-slate-400 shrink-0 ml-auto transition-transform ${open ? 'rotate-180' : ''}`}
+						className={`w-5 h-5 text-slate-400 dark:text-zinc-500 shrink-0 ml-auto transition-transform ${open ? 'rotate-180' : ''}`}
 					/>
 				</button>
 				{right && <div className="shrink-0">{right}</div>}

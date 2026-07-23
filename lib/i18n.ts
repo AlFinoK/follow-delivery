@@ -4,6 +4,8 @@ export type Translations = {
 	// Header/Nav
 	headerSubtitle: string
 	goHome: string
+	themeDark: string
+	themeLight: string
 	logout: string
 	// Main hero
 	realtimeBadge: string
@@ -55,6 +57,7 @@ export type Translations = {
 	statusFormLabel: string
 	creating: string
 	createCargoButton: string
+	createWaybillButton: string
 	// Admin cargo list
 	cargosTitle: string
 	foundCount: string
@@ -83,6 +86,9 @@ export type Translations = {
 	selectCity: string
 	otherCity: string
 	enterCityManually: string
+	selectCountry: string
+	otherCountry: string
+	enterCountryManually: string
 	// Admin status options
 	statusOptionWaiting: string
 	statusOptionInTransit: string
@@ -90,6 +96,7 @@ export type Translations = {
 	// Admin country names
 	countryKZ: string
 	countryRU: string
+	countryBY: string
 	// Admin toasts
 	loadError: string
 	fillAllFields: string
@@ -251,6 +258,10 @@ export type Translations = {
 	calcPresetSelect: string
 	calcCustomCargoButton: string
 	calcCustomCargoHint: string
+	calcCargoName: string
+	calcCargoUnitCost: string
+	calcCopyToWaybill: string
+	calcFromPreset: string
 	calcPresetSelectedCount: string
 	calcApproxBadge: string
 	calcCustomCityNamePh: string
@@ -313,6 +324,8 @@ export const translations: Record<Lang, Translations> = {
 	ru: {
 		headerSubtitle: 'Логистика и доставка',
 		goHome: 'На главную',
+		themeDark: 'Тёмная тема',
+		themeLight: 'Светлая тема',
 		logout: 'Выйти',
 		realtimeBadge: 'Отслеживание в реальном времени',
 		heroTitle: 'Где ваш груз',
@@ -355,6 +368,7 @@ export const translations: Record<Lang, Translations> = {
 		statusFormLabel: 'СТАТУС',
 		creating: 'Создание...',
 		createCargoButton: 'Создать груз',
+		createWaybillButton: 'Создать накладную',
 		cargosTitle: 'Грузы',
 		foundCount: 'Найдено: {found} из {total}',
 		totalCount: 'Всего: {total}',
@@ -379,11 +393,15 @@ export const translations: Record<Lang, Translations> = {
 		selectCity: 'Выберите город',
 		otherCity: 'Другой город',
 		enterCityManually: 'Введите название города',
+		selectCountry: 'Выберите страну',
+		otherCountry: 'Другая страна',
+		enterCountryManually: 'Введите название страны',
 		statusOptionWaiting: 'Ожидает отправления',
 		statusOptionInTransit: 'В пути',
 		statusOptionArrived: 'Прибыл',
 		countryKZ: '🇰🇿 Казахстан',
 		countryRU: '🇷🇺 Россия',
+		countryBY: '🇧🇾 Беларусь',
 		loadError: 'Ошибка при загрузке грузов',
 		fillAllFields: 'Заполните все поля',
 		cargoCreated: 'Груз создан! ID: {id}',
@@ -539,6 +557,10 @@ export const translations: Record<Lang, Translations> = {
 		calcPresetSelect: 'Выбрать',
 		calcCustomCargoButton: 'Свой груз',
 		calcCustomCargoHint: 'Ввести свои размеры и вес',
+		calcCargoName: 'Название техники',
+		calcCargoUnitCost: 'Себестоимость (шт), ₸',
+		calcCopyToWaybill: 'Скопировать в накладную',
+		calcFromPreset: 'Добавить из шаблона',
 		calcPresetSelectedCount: 'Выбрано единиц: {count}',
 		calcApproxBadge: 'примерно',
 		calcCustomCityNamePh: 'Ваш населённый пункт (село, посёлок…)',
@@ -597,6 +619,8 @@ export const translations: Record<Lang, Translations> = {
 	kk: {
 		headerSubtitle: 'Логистика және жеткізу',
 		goHome: 'Басты бетке',
+		themeDark: 'Қараңғы тақырып',
+		themeLight: 'Ашық тақырып',
 		logout: 'Шығу',
 		realtimeBadge: 'Нақты уақытта бақылау',
 		heroTitle: 'Жүгіңіз қайда',
@@ -639,6 +663,7 @@ export const translations: Record<Lang, Translations> = {
 		statusFormLabel: 'МӘРТЕБЕ',
 		creating: 'Жасалуда...',
 		createCargoButton: 'Жүк жасау',
+		createWaybillButton: 'Жүкқұжат жасау',
 		cargosTitle: 'Жүктер',
 		foundCount: 'Табылды: {found} / {total}',
 		totalCount: 'Барлығы: {total}',
@@ -663,11 +688,15 @@ export const translations: Record<Lang, Translations> = {
 		selectCity: 'Қаланы таңдаңыз',
 		otherCity: 'Басқа қала',
 		enterCityManually: 'Қала атауын енгізіңіз',
+		selectCountry: 'Елді таңдаңыз',
+		otherCountry: 'Басқа ел',
+		enterCountryManually: 'Ел атауын енгізіңіз',
 		statusOptionWaiting: 'Жөнелтілуін күтуде',
 		statusOptionInTransit: 'Жолда',
 		statusOptionArrived: 'Жетті',
 		countryKZ: '🇰🇿 Қазақстан',
 		countryRU: '🇷🇺 Ресей',
+		countryBY: '🇧🇾 Беларусь',
 		loadError: 'Жүктерді жүктеу кезінде қате',
 		fillAllFields: 'Барлық өрістерді толтырыңыз',
 		cargoCreated: 'Жүк жасалды! ID: {id}',
@@ -823,6 +852,10 @@ export const translations: Record<Lang, Translations> = {
 		calcPresetSelect: 'Таңдау',
 		calcCustomCargoButton: 'Өз жүгім',
 		calcCustomCargoHint: 'Өз өлшемдеріңіз бен салмағыңызды енгізіңіз',
+		calcCargoName: 'Техника атауы',
+		calcCargoUnitCost: 'Өзіндік құны (дана), ₸',
+		calcCopyToWaybill: 'Жүкқұжатқа көшіру',
+		calcFromPreset: 'Үлгіден қосу',
 		calcPresetSelectedCount: 'Таңдалған бірлік: {count}',
 		calcApproxBadge: 'шамамен',
 		calcCustomCityNamePh: 'Сіздің елді мекеніңіз (ауыл, кент…)',

@@ -2,16 +2,7 @@
 // окне и вызывает печать браузера (Сохранить как PDF). В проде — серверный
 // @react-pdf/renderer со встроенным кириллическим шрифтом.
 
-import {
-	effectiveVolume,
-	fmtDecimal,
-	fmtDims,
-	fmtMoney,
-	STATUS_LABELS,
-	totalWeight,
-	trimNum,
-	type Waybill,
-} from '@/lib/demo/waybill'
+import { fmtMoney, STATUS_LABELS, type Waybill } from '@/lib/demo/waybill'
 
 export function openWaybillPrint(w: Waybill) {
 	const win = window.open('', '_blank', 'width=820,height=1000')
@@ -32,19 +23,6 @@ function buildHtml(w: Waybill): string {
 		w.sender.type === 'company'
 			? `${esc(w.sender.companyName)}${w.sender.companyTin ? ` (ИНН/БИН ${esc(w.sender.companyTin)})` : ''}${w.sender.contactPerson ? `, контакт: ${esc(w.sender.contactPerson)}` : ''}`
 			: esc(w.sender.fullName)
-
-	const positionsRows = w.positions
-		.filter((p) => p.name || p.length || p.weight)
-		.map(
-			(p) => `<tr>
-				<td>${esc(p.name)}</td>
-				<td class="c">${trimNum(p.quantity)}</td>
-				<td class="c">${fmtDims(p)} см</td>
-				<td class="c">${trimNum(p.weight)} кг</td>
-				<td class="r">${fmtMoney(p.price)} ₸</td>
-			</tr>`
-		)
-		.join('')
 
 	const row = (label: string, value: string) =>
 		value ? `<tr><td class="lbl">${label}</td><td>${value}</td></tr>` : ''
@@ -82,14 +60,6 @@ function buildHtml(w: Waybill): string {
 
 <h2>Получатель</h2>
 <table>${row('ФИО', esc(w.receiver.fullName))}${row('Телефон', esc(w.receiver.phone))}${row('ИНН / ИИН', esc(w.receiver.tin))}${row('Паспорт', esc(w.receiver.passport))}${row('Адрес доставки', esc(w.receiver.address))}${row('Город / страна', `${esc(w.receiver.city)}, ${esc(w.receiver.country)}`)}</table>
-
-<h2>Груз${w.nature ? ` — ${esc(w.nature)}` : ''}</h2>
-<table>
-	<tr><th>Наименование</th><th class="c">Кол-во</th><th class="c">Габариты</th><th class="c">Вес места</th><th class="r">Стоимость</th></tr>
-	${positionsRows || '<tr><td colspan="5" class="c">—</td></tr>'}
-</table>
-<div class="totals"><span>Общий объём: <b>${fmtDecimal(effectiveVolume(w))} м³</b></span><span>Общий вес: <b>${fmtDecimal(totalWeight(w.positions), 1)} кг</b></span></div>
-<table>${row('Соответствие упаковки', w.packagingOk ? 'Да' : 'Нет')}${row('Спец-инструкция', esc(w.specialInstructions))}</table>
 
 <h2>Оплата</h2>
 <table>${row('Кто оплачивает', w.payer === 'sender' ? 'Отправитель' : 'Получатель')}${row('Способ оплаты', w.payMethod === 'cash' ? 'Наличный расчёт' : 'Безналичный расчёт')}${row('Сумма к оплате', `${fmtMoney(w.amount)} ₸`)}</table>

@@ -14,11 +14,11 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 
 	if (result.excluded) {
 		return (
-			<div className="rounded-2xl border border-red-200 bg-red-50 p-5 flex items-start gap-3">
+			<div className="rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/15 p-5 flex items-start gap-3">
 				<AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
 				<div>
-					<p className="text-sm font-semibold text-red-700">{t('calcExcludedTitle')}</p>
-					<p className="text-sm text-red-600/90 mt-0.5">{t('calcExcludedDesc')}</p>
+					<p className="text-sm font-semibold text-red-700 dark:text-red-300">{t('calcExcludedTitle')}</p>
+					<p className="text-sm text-red-600/90 dark:text-red-300 mt-0.5">{t('calcExcludedDesc')}</p>
 				</div>
 			</div>
 		)
@@ -32,24 +32,24 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 			{ Icon: Weight, label: t('calcResWeight') },
 		]
 		return (
-			<div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-				<div className="px-5 pt-4 pb-3 border-b border-slate-100">
-					<p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{t('calcResultTitle')}</p>
+			<div className="rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
+				<div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
+					<p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wide">{t('calcResultTitle')}</p>
 				</div>
 				<div className="px-5 py-3 divide-y divide-slate-50">
 					{ghostRows.map(({ Icon, label }) => (
 						<div key={label} className="flex items-center justify-between gap-3 py-2.5">
-							<span className="inline-flex items-center gap-2 text-sm text-slate-400">
-								<Icon className="w-4 h-4 text-slate-300" />
+							<span className="inline-flex items-center gap-2 text-sm text-slate-400 dark:text-zinc-500">
+								<Icon className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
 								{label}
 							</span>
-							<span className="text-sm text-slate-300">—</span>
+							<span className="text-sm text-slate-300 dark:text-zinc-600">—</span>
 						</div>
 					))}
 				</div>
-				<div className="px-5 py-6 bg-slate-50/60 border-t border-slate-100 flex flex-col items-center text-center">
-					<Calculator className="w-7 h-7 text-slate-300 mb-2" />
-					<p className="text-sm text-slate-400 max-w-[240px]">{t('calcEmptyHint')}</p>
+				<div className="px-5 py-6 bg-slate-50/60 dark:bg-zinc-800/40 border-t border-slate-100 dark:border-zinc-800 flex flex-col items-center text-center">
+					<Calculator className="w-7 h-7 text-slate-300 dark:text-zinc-600 mb-2" />
+					<p className="text-sm text-slate-400 dark:text-zinc-500 max-w-[240px]">{t('calcEmptyHint')}</p>
 				</div>
 			</div>
 		)
@@ -73,79 +73,79 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 					: 'text-2xl sm:text-3xl'
 
 	return (
-		<div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-			<div className="px-5 pt-4 pb-3 border-b border-slate-100">
-				<p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{t('calcResultTitle')}</p>
+		<div className="rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
+			<div className="px-5 pt-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
+				<p className="text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wide">{t('calcResultTitle')}</p>
 			</div>
 
 			<div className="px-5 py-3 divide-y divide-slate-50">
 				{rows.map(({ Icon, label, value }) => (
 					<div key={label} className="flex items-center justify-between gap-3 py-2">
-						<span className="inline-flex items-center gap-2 text-sm text-slate-500">
-							<Icon className="w-4 h-4 text-slate-400" />
+						<span className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
+							<Icon className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
 							{label}
 						</span>
-						<span className="text-sm font-medium text-slate-900 text-right">{value}</span>
+						<span className="text-sm font-medium text-slate-900 dark:text-zinc-100 text-right">{value}</span>
 					</div>
 				))}
 				<div className="flex items-center justify-between gap-3 py-2">
-					<span className="inline-flex items-center gap-2 text-sm text-slate-500">
-						<Tag className="w-4 h-4 text-slate-400" />
+					<span className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
+						<Tag className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
 						{t('calcTariffBasis')}
 					</span>
-					<span className="text-sm font-medium text-slate-900 text-right">
+					<span className="text-sm font-medium text-slate-900 dark:text-zinc-100 text-right">
 						{result.billedBy === 'volume' ? t('calcBilledVolume') : t('calcBilledWeight')}
 					</span>
 				</div>
 				{result.surchargeApplied && (
 					<>
 						<div className="flex items-center justify-between gap-3 py-2">
-							<span className="inline-flex items-center gap-2 text-sm text-slate-500">
-								<Boxes className="w-4 h-4 text-slate-400" />
+							<span className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
+								<Boxes className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
 								{t('calcResBasePrice')}
 							</span>
-							<span className="text-sm font-medium text-slate-900 text-right">
+							<span className="text-sm font-medium text-slate-900 dark:text-zinc-100 text-right">
 								{ru(result.basePrice ?? 0)} {CURRENCY_SYMBOL}
 							</span>
 						</div>
 						<div className="flex items-center justify-between gap-3 py-2">
-							<span className="inline-flex items-center gap-2 text-sm text-slate-500">
-								<Percent className="w-4 h-4 text-slate-400" />
+							<span className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
+								<Percent className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
 								{t('calcSurchargeLabel')}
 								{result.district && (
-									<span className="text-[11px] text-slate-400">({DISTRICT_LABELS_RU[result.district]})</span>
+									<span className="text-[11px] text-slate-400 dark:text-zinc-500">({DISTRICT_LABELS_RU[result.district]})</span>
 								)}
 							</span>
-							<span className="text-sm font-semibold text-orange-600 text-right">+{result.surchargePct ?? 0}%</span>
+							<span className="text-sm font-semibold text-orange-600 dark:text-orange-400 text-right">+{result.surchargePct ?? 0}%</span>
 						</div>
 					</>
 				)}
 			</div>
 
 			{/* Price + days */}
-			<div className="px-5 py-4 bg-gradient-to-br from-orange-50 to-amber-50 border-t border-orange-100">
+			<div className="px-5 py-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-500/10 dark:to-amber-500/10 border-t border-orange-100 dark:border-orange-500/20">
 				<div className="flex items-start justify-between gap-3">
 					<div className="min-w-0 flex-1">
-						<p className="text-[11px] font-semibold text-orange-700/80 uppercase tracking-wide mb-1 leading-snug min-h-[2rem]">
+						<p className="text-[11px] font-semibold text-orange-700/80 dark:text-orange-300 uppercase tracking-wide mb-1 leading-snug min-h-[2rem]">
 							{t('calcResPrice')}
 						</p>
-						<p className={`${priceSize} font-bold text-slate-900 tracking-tight leading-tight whitespace-nowrap`}>
+						<p className={`${priceSize} font-bold text-slate-900 dark:text-zinc-100 tracking-tight leading-tight whitespace-nowrap`}>
 							{priceText}
 						</p>
 					</div>
 					<div className="flex flex-col items-end shrink-0">
-						<p className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 whitespace-nowrap">
+						<p className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-zinc-200 whitespace-nowrap">
 							<Truck className="w-4 h-4 text-orange-500" />
 							{result.days} {t('unitDays')}
 						</p>
-						<p className="inline-flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">
+						<p className="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5 whitespace-nowrap">
 							<Clock className="w-3 h-3" />
 							{t('calcResDays')}
 						</p>
 					</div>
 				</div>
 				{result.minApplied && (
-					<p className="mt-2.5 inline-flex items-start gap-1.5 text-[11px] text-orange-700/80">
+					<p className="mt-2.5 inline-flex items-start gap-1.5 text-[11px] text-orange-700/80 dark:text-orange-300">
 						<ShieldAlert className="w-3.5 h-3.5 mt-px shrink-0" />
 						{tf('calcMinTariffNote', { min: ru(MIN_PRICE_KZT) })}
 					</p>
@@ -153,8 +153,8 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 			</div>
 
 			{showDisclaimer && (
-				<div className="px-5 py-2.5 bg-slate-50/70 border-t border-slate-100">
-					<p className="text-[11px] text-slate-400 leading-relaxed">{t('calcDisclaimer')}</p>
+				<div className="px-5 py-2.5 bg-slate-50/70 dark:bg-zinc-800/40 border-t border-slate-100 dark:border-zinc-800">
+					<p className="text-[11px] text-slate-400 dark:text-zinc-500 leading-relaxed">{t('calcDisclaimer')}</p>
 				</div>
 			)}
 		</div>

@@ -70,11 +70,11 @@ export const TimeframeInput = memo(function TimeframeInput({
 				value={numStr}
 				onChange={(e) => emit(e.target.value, safeUnit)}
 				placeholder="1"
-				className="flex-1 min-w-0 px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
+				className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
 			/>
 			<div ref={triggerRef} className="flex-1 min-w-0 relative">
 				<DropdownTrigger open={open} onClick={toggle}>
-					<span className="text-slate-900 truncate">{selectedUnit.label}</span>
+					<span className="text-slate-900 dark:text-zinc-100 truncate">{selectedUnit.label}</span>
 				</DropdownTrigger>
 
 				{open && rect && (
@@ -88,7 +88,7 @@ export const TimeframeInput = memo(function TimeframeInput({
 							width: dropdownWidth,
 							zIndex: 9999,
 						}}
-						className="bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+						className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-hidden">
 						{units.map((opt) => (
 							<button
 								key={opt.value}
@@ -100,8 +100,8 @@ export const TimeframeInput = memo(function TimeframeInput({
 								}}
 								className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
 									safeUnit === opt.value
-										? 'bg-orange-50 text-orange-700 font-semibold'
-										: 'text-slate-700 hover:bg-slate-50'
+										? 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 font-semibold'
+										: 'text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800/60'
 								}`}>
 								{opt.label}
 								{safeUnit === opt.value && CHECK}

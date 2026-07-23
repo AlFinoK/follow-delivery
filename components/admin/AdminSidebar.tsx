@@ -8,6 +8,7 @@ import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X, FilePlus } f
 import { useLang } from '@/contexts/LangContext'
 import { useBasePath } from '@/contexts/DemoContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
 
 function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLogout: () => void }) {
@@ -23,8 +24,8 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 	const linkCls = (active: boolean) =>
 		`inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
 			active
-				? 'bg-orange-50 text-orange-700'
-				: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+				? 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300'
+				: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800'
 		}`
 
 	return (
@@ -33,11 +34,11 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 			<Link
 				href={`${base}/admin`}
 				onClick={onLinkClick}
-				className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-200">
+				className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-200 dark:border-zinc-800">
 				<img src="/logo.png" alt="Leader Trans Team" className="w-9 h-9 object-contain" />
 				<div className="leading-tight min-w-0">
-					<p className="text-sm font-semibold text-slate-900 truncate">Leader Trans Team</p>
-					<p className="text-[11px] text-slate-500">{t('adminNavSubtitle')}</p>
+					<p className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">Leader Trans Team</p>
+					<p className="text-[11px] text-slate-500 dark:text-zinc-400">{t('adminNavSubtitle')}</p>
 				</div>
 			</Link>
 
@@ -47,11 +48,11 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 					<Package className="w-4 h-4" />
 					<span>{t('cargosTitle')}</span>
 				</Link>
-				{/* «Создать груз» (мультиблок по ТЗ) — пока доступна только в демо-песочнице */}
+				{/* «Создать накладную» (мультиблок по ТЗ, правка 7) — пока только в демо-песочнице */}
 				{base && (
 					<Link href={`${base}/admin/cargo/create`} onClick={onLinkClick} className={linkCls(isCreate)}>
 						<FilePlus className="w-4 h-4" />
-						<span>{t('createCargoButton')}</span>
+						<span>{t('createWaybillButton')}</span>
 					</Link>
 				)}
 				<Link href={`${base}/admin/folders`} onClick={onLinkClick} className={linkCls(isFolders)}>
@@ -69,19 +70,20 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 			</nav>
 
 			{/* Footer area */}
-			<div className="border-t border-slate-200 px-3 py-3 flex flex-col gap-1">
+			<div className="border-t border-slate-200 dark:border-zinc-800 px-3 py-3 flex flex-col gap-1">
 				<div className="px-1 pb-2">
 					<LangSwitcher />
 				</div>
+				<ThemeToggle />
 				<a
 					href={base || '/'}
-					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors">
 					<Home className="w-4 h-4" />
 					<span>{t('goHome')}</span>
 				</a>
 				<button
 					onClick={onLogout}
-					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-left">
+					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors text-left">
 					<LogOut className="w-4 h-4" />
 					<span>{t('logout')}</span>
 				</button>
@@ -129,22 +131,22 @@ export function AdminSidebar() {
 	return (
 		<>
 			{/* Desktop sidebar */}
-			<aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 flex-col z-30">
+			<aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 flex-col z-30">
 				<SidebarBody onLogout={requestLogout} />
 			</aside>
 
 			{/* Mobile topbar */}
-			<header className="lg:hidden sticky top-0 z-40 bg-white border-b border-slate-200">
+			<header className="lg:hidden sticky top-0 z-40 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
 				<div className="flex items-center justify-between px-3 py-2.5">
 					<button
 						onClick={() => setDrawerOpen(true)}
-						className="p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+						className="p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
 						aria-label="Открыть меню">
 						<Menu className="w-5 h-5" />
 					</button>
 					<Link href={`${base}/admin`} className="flex items-center gap-2">
 						<img src="/logo.png" alt="Leader Trans Team" className="w-7 h-7 object-contain" />
-						<span className="text-sm font-semibold text-slate-900">Leader Trans Team</span>
+						<span className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Leader Trans Team</span>
 					</Link>
 					<div className="w-9" />
 				</div>
@@ -157,10 +159,10 @@ export function AdminSidebar() {
 						className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
 						onClick={() => setDrawerOpen(false)}
 					/>
-					<aside className="relative bg-white w-72 max-w-[85%] flex flex-col border-r border-slate-200 shadow-xl">
+					<aside className="relative bg-white dark:bg-zinc-900 w-72 max-w-[85%] flex flex-col border-r border-slate-200 dark:border-zinc-800 shadow-xl">
 						<button
 							onClick={() => setDrawerOpen(false)}
-							className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+							className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
 							aria-label="Закрыть меню">
 							<X className="w-5 h-5" />
 						</button>

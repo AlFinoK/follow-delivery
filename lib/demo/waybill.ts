@@ -3,6 +3,8 @@
 // Реализует рекомендации из согласованного плана (нумерация, авторасчёт объёма,
 // формат сводки логистам по образцу заказчика п.3.3).
 
+import { isValidPhoneNumber } from 'react-phone-number-input'
+
 export type SenderType = 'individual' | 'company'
 export type Payer = 'sender' | 'receiver'
 export type PayMethod = 'cash' | 'cashless'
@@ -33,7 +35,7 @@ export interface Sender {
 
 export interface Receiver {
 	fullName: string
-	phone: string
+	phone: string // E.164, напр. +77021234567 (см. PhoneInput)
 	tin: string // ИНН/ИИН (необяз.)
 	passport: string // серия и номер (необяз.)
 	address: string
@@ -115,9 +117,9 @@ export function initialWaybill(): Waybill {
 		},
 		nature: '',
 		positions: [emptyPosition()],
-		packagingOk: true,
+		packagingOk: false, // по умолчанию «Нет» (правка 5)
 		specialInstructions: '',
-		payer: 'sender',
+		payer: 'receiver', // по умолчанию платит получатель (правка 6)
 		payMethod: 'cash',
 		amount: 0,
 		manualVolume: false,
@@ -164,6 +166,34 @@ export function trimNum(n: number): string {
 	return Number.isInteger(n) ? String(n) : String(n).replace('.', ',')
 }
 
+// ── Телефон: валидация через libphonenumber (react-phone-number-input) ───────
+// Значение хранится в E.164 (+77021234567). Пустое/частичное — невалидно.
+export function isPhoneValid(phone: string): boolean {
+	return !!phone && isValidPhoneNumber(phone)
+}
+
+// ── Валидация накладной для гейта «Сохранить» (правка: нормальная валидация) ──
+export interface WaybillError {
+	step: number // на каком шаге визарда лежит поле
+	message: string
+}
+export function validateWaybill(w: Waybill): WaybillError[] {
+	const errs: WaybillError[] = []
+	// Шаг 0 — отправитель и получатель
+	if (!w.sender.fullName.trim()) errs.push({ step: 0, message: 'Укажите ФИО отправителя' })
+	if (w.sender.type === 'company' && !w.sender.companyName.trim())
+		errs.push({ step: 0, message: 'Укажите название компании-отправителя' })
+	if (!w.sender.address.trim()) errs.push({ step: 0, message: 'Укажите адрес отправителя' })
+	if (!w.sender.city.trim()) errs.push({ step: 0, message: 'Укажите город отправителя' })
+	if (!w.receiver.fullName.trim()) errs.push({ step: 0, message: 'Укажите ФИО получателя' })
+	if (!isPhoneValid(w.receiver.phone)) errs.push({ step: 0, message: 'Проверьте телефон получателя' })
+	if (!w.receiver.address.trim()) errs.push({ step: 0, message: 'Укажите адрес доставки' })
+	if (!w.receiver.city.trim()) errs.push({ step: 0, message: 'Укажите город доставки' })
+	// Шаг 1 — груз
+	if (!w.nature.trim()) errs.push({ step: 1, message: 'Укажите характер груза' })
+	return errs
+}
+
 // ── Сборщик сводки для логистов (Блок №2) по образцу п.3.3 ──────────────────
 // Пустые необязательные поля (ИНН/Паспорт) — строка скрывается.
 export function buildLogistSummary(w: Waybill): string {
@@ -192,7 +222,7 @@ export function buildLogistSummary(w: Waybill): string {
 		w.positions.forEach((p) => {
 			if (p.name.trim()) lines.push(`${p.name} - ${trimNum(p.quantity)}шт`)
 			if (p.length || p.width || p.height) lines.push(`${fmtDims(p)} - ${trimNum(p.weight)}кг`)
-			if (p.price) lines.push(`Стоимость - ${fmtMoney(p.price)} тенге`)
+			if (p.price) lines.push(`Себестоимость - ${fmtMoney(p.price)} тенге`)
 		})
 	}
 
@@ -205,13 +235,15 @@ export function buildLogistSummary(w: Waybill): string {
 	return lines.join('\n')
 }
 
-// ── Mock-нумерация (рекомендация №4): последовательный атомарный счётчик 4–6 цифр ──
-// В проде — Postgres SEQUENCE / счётчик в транзакции + unique. Здесь имитируем в
-// sessionStorage, старт с 2085 (как в образце заказчика).
+// ── Mock-нумерация (рекомендация №4 + правка 3): последовательный атомарный счётчик ──
+// Номера накладных начинаются с 3000 (1–2999 уже заняты в текущей системе) и не
+// повторяются. В проде — Postgres SEQUENCE / счётчик в транзакции + unique-констрейнт.
+// Здесь имитируем в sessionStorage; floor 2999 гарантирует, что первый номер = 3000
+// даже если в сессии остался старый счётчик.
 const COUNTER_KEY = 'demo:waybillCounter'
 export function nextWaybillNumber(): number {
-	if (typeof window === 'undefined') return 2085
-	const cur = Number(sessionStorage.getItem(COUNTER_KEY) || '2084')
+	if (typeof window === 'undefined') return 3000
+	const cur = Math.max(2999, Number(sessionStorage.getItem(COUNTER_KEY) || '2999'))
 	const next = cur + 1
 	sessionStorage.setItem(COUNTER_KEY, String(next))
 	return next

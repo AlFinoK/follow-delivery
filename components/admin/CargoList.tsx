@@ -88,10 +88,10 @@ export function CargoList({ onError }: CargoListProps) {
 	}
 
 	const filterColors: Record<StatusKey, { tab: string; count: string }> = {
-		all: { tab: 'bg-slate-100 text-slate-900 border-slate-300', count: 'bg-slate-200 text-slate-700' },
-		waiting: { tab: 'bg-amber-50 text-amber-700 border-amber-200', count: 'bg-amber-100 text-amber-700' },
-		transit: { tab: 'bg-blue-50 text-blue-700 border-blue-200', count: 'bg-blue-100 text-blue-700' },
-		arrived: { tab: 'bg-emerald-50 text-emerald-700 border-emerald-200', count: 'bg-emerald-100 text-emerald-700' },
+		all: { tab: 'bg-slate-100 dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 border-slate-300 dark:border-zinc-600', count: 'bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200' },
+		waiting: { tab: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/25', count: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300' },
+		transit: { tab: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/25', count: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300' },
+		arrived: { tab: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/25', count: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
 	}
 
 	const counts = data?.counts ?? { all: 0, waiting: 0, transit: 0, arrived: 0 }
@@ -102,15 +102,15 @@ export function CargoList({ onError }: CargoListProps) {
 	const hasFilter = statusFilter !== 'all' || urlSearchQuery.trim().length > 0
 
 	return (
-		<div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200">
+		<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-5 sm:p-6 border border-slate-200 dark:border-zinc-700">
 			{/* Header */}
 			<div className="flex items-center justify-between gap-3 mb-4">
 				<div className="min-w-0">
 					<div className="flex items-center gap-2">
-						<h2 className="text-lg font-semibold text-slate-900">{t('cargosTitle')}</h2>
-						{refreshing && <Spinner className="w-3.5 h-3.5 text-slate-400" />}
+						<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('cargosTitle')}</h2>
+						{refreshing && <Spinner className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />}
 					</div>
-					<p className="text-slate-500 text-xs mt-0.5">
+					<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">
 						{hasFilter
 							? tf('foundCount', { found: total, total: counts.all })
 							: tf('totalCount', { total: counts.all })}
@@ -126,18 +126,18 @@ export function CargoList({ onError }: CargoListProps) {
 
 			{/* Search */}
 			<div className="relative mb-3">
-				<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+				<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500 pointer-events-none" />
 				<input
 					type="text"
 					value={searchInput}
 					onChange={(e) => setSearchInput(e.target.value)}
 					placeholder={t('searchPlaceholder')}
-					className="w-full pl-9 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
+					className="w-full pl-9 pr-9 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 				/>
 				{searchInput && (
 					<button
 						onClick={() => setSearchInput('')}
-						className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors">
+						className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 dark:text-zinc-500 hover:text-slate-600 transition-colors">
 						<X className="w-3.5 h-3.5" />
 					</button>
 				)}
@@ -156,12 +156,12 @@ export function CargoList({ onError }: CargoListProps) {
 							className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
 								isActive
 									? colors.tab
-									: 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900'
+									: 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white'
 							}`}>
 							{filterLabels[key]}
 							<span
 								className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-									isActive ? colors.count : 'bg-slate-100 text-slate-500'
+									isActive ? colors.count : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
 								}`}>
 								{count}
 							</span>
@@ -179,15 +179,15 @@ export function CargoList({ onError }: CargoListProps) {
 				</div>
 			) : counts.all === 0 ? (
 				<div className="text-center py-12">
-					<Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-					<p className="text-slate-600 font-medium text-sm">{t('noCargos')}</p>
-					<p className="text-slate-400 text-xs mt-1">{t('createFirstCargo')}</p>
+					<Inbox className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+					<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('noCargos')}</p>
+					<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('createFirstCargo')}</p>
 				</div>
 			) : items.length === 0 ? (
 				<div className="text-center py-12">
-					<SearchX className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-					<p className="text-slate-600 font-medium text-sm">{t('nothingFound')}</p>
-					<p className="text-slate-400 text-xs mt-1">{t('tryAnotherQuery')}</p>
+					<SearchX className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
+					<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('nothingFound')}</p>
+					<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('tryAnotherQuery')}</p>
 				</div>
 			) : (
 				<>
@@ -198,11 +198,11 @@ export function CargoList({ onError }: CargoListProps) {
 					</div>
 
 					{totalPages > 1 && (
-						<div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-200">
+						<div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-200 dark:border-zinc-700">
 							<button
 								onClick={() => setPage(Math.max(1, currentPage - 1))}
 								disabled={currentPage === 1}
-								className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+								className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
 								<ChevronLeft className="w-4 h-4" />
 							</button>
 
@@ -212,7 +212,7 @@ export function CargoList({ onError }: CargoListProps) {
 									if (!isNear) {
 										if (p === currentPage - 2 || p === currentPage + 2) {
 											return (
-												<span key={p} className="text-slate-300 text-xs px-1">…</span>
+												<span key={p} className="text-slate-300 dark:text-zinc-600 text-xs px-1">…</span>
 											)
 										}
 										return null
@@ -224,7 +224,7 @@ export function CargoList({ onError }: CargoListProps) {
 											className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
 												p === currentPage
 													? 'bg-slate-900 text-white'
-													: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+													: 'text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
 											}`}>
 											{p}
 										</button>
@@ -235,7 +235,7 @@ export function CargoList({ onError }: CargoListProps) {
 							<button
 								onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
 								disabled={currentPage === totalPages}
-								className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+								className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
 								<ChevronRight className="w-4 h-4" />
 							</button>
 						</div>

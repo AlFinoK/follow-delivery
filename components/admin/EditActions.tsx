@@ -15,7 +15,7 @@ export function EditActions({ onSave, onCancel }: { onSave: () => void; onCancel
 			</button>
 			<button
 				onClick={onCancel}
-				className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-colors">
+				className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold transition-colors">
 				<X className="w-3.5 h-3.5" />
 			</button>
 		</div>

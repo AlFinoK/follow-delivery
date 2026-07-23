@@ -17,11 +17,11 @@ interface NewCargoFormProps {
 }
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-	<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-3">{children}</p>
+	<p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">{children}</p>
 )
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-	<label className="text-xs font-medium text-slate-700 mb-1.5 block">{children}</label>
+	<label className="text-xs font-medium text-slate-700 dark:text-zinc-200 mb-1.5 block">{children}</label>
 )
 
 export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wide }: NewCargoFormProps) {
@@ -196,7 +196,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 									placeholder={t('enterAmount')}
 									className={`${INPUT_CLS} flex-1`}
 								/>
-								<span className="text-slate-500 text-sm font-medium shrink-0">{getCurrencySymbol(currency)}</span>
+								<span className="text-slate-500 dark:text-zinc-400 text-sm font-medium shrink-0">{getCurrencySymbol(currency)}</span>
 							</div>
 						</div>
 					)}
@@ -218,7 +218,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 					)}
 				</button>
 				{!canSubmit && !loading && (
-					<p className="text-xs text-slate-500 text-center mt-2">
+					<p className="text-xs text-slate-500 dark:text-zinc-400 text-center mt-2">
 						{!fromCity.trim() && !toCity.trim()
 							? t('createHintBoth')
 							: !fromCity.trim()
@@ -231,10 +231,10 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 	)
 
 	return (
-		<div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6">
+		<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-700 p-5 sm:p-6">
 			{!wide && (
 				<div className="flex items-center gap-2 mb-5">
-					<h2 className="text-lg font-semibold text-slate-900">{t('newCargoTitle')}</h2>
+					<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('newCargoTitle')}</h2>
 				</div>
 			)}
 			{formBody}
