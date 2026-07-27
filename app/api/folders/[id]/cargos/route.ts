@@ -72,7 +72,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 // PATCH /api/folders/[id]/cargos — массовое обновление currentCity/status для всех активных грузов в папке
 // body: { currentCity?, status? }
-// При status === 'прибыл' грузы автоматически открепляются от папки.
+// Прибывшие грузы (status === 'прибыл') под массовое обновление НЕ попадают, но и от
+// папки не открепляются: они уходят из вкладки «Активные» и из счётчика папки, а видны
+// во вкладке «Доставлена» (см. GET /api/folders/[id]?tab=delivered).
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	const { id: folderId } = await params
 	const body = await req.json()

@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { useBasePath } from '@/contexts/DemoContext'
 import { ToastItem } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { NewCargoForm } from '@/components/admin/NewCargoForm'
@@ -12,7 +11,6 @@ import type { Toast } from '@/components/Toast'
 
 export function NewCargoPage() {
 	const router = useRouter()
-	const base = useBasePath()
 	const { t } = useLang()
 	const [toasts, setToasts] = useState<Toast[]>([])
 
@@ -26,7 +24,7 @@ export function NewCargoPage() {
 	}, [])
 
 	const handleCreated = async () => {
-		router.push(`${base}/admin`)
+		router.push(`/admin`)
 	}
 
 	return (

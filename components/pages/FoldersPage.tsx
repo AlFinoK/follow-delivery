@@ -9,8 +9,7 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import type { Toast } from '@/components/Toast'
-import { useRepos } from '@/lib/data/useRepos'
-import { useBasePath } from '@/contexts/DemoContext'
+import { repos } from '@/lib/data/repos'
 
 interface FolderItem {
 	id: string
@@ -23,8 +22,7 @@ interface FolderItem {
 export function FoldersPage() {
 	const { t, tf } = useLang()
 	const router = useRouter()
-	const repo = useRepos()
-	const base = useBasePath()
+	const repo = repos
 	const [mounted, setMounted] = useState(false)
 	const [minLoadDone, setMinLoadDone] = useState(false)
 	const [folders, setFolders] = useState<FolderItem[]>([])
@@ -164,7 +162,7 @@ export function FoldersPage() {
 								{folders.map((f) => (
 									<button
 										key={f.id}
-										onClick={() => router.push(`${base}/admin/folders/${f.id}`)}
+										onClick={() => router.push(`/admin/folders/${f.id}`)}
 										className="w-full text-left bg-white dark:bg-zinc-900 rounded-lg p-3.5 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all group cursor-pointer">
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex items-center gap-3 min-w-0 flex-1">

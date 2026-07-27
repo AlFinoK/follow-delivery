@@ -25,6 +25,7 @@ model Cargo {
   currency             String    @default("KZT")
   folderId             String?
   folder               Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  waybill              Waybill?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
@@ -51,7 +52,11 @@ model CargoPreset {
   width     Float // см
   height    Float // см
   weight    Float // кг
-  basePrice Float    @default(0) // ₸, базовая стоимость
+  basePrice Float    @default(0) // ₸, legacy: базовая стоимость доставки, в расчёте НЕ участвует
+  // ПРАВКИ 2, п.1: себестоимость самого товара за единицу (₸). В цену доставки не
+  // входит — подставляется в позицию накладной и в строку «Стоимость» сводки логистам.
+  // Видна только в админке (в публичный /api/presets не отдаётся).
+  goodsPrice Float   @default(0)
   imageUrl  String?
   sortOrder Int      @default(0)
   active    Boolean  @default(true)
@@ -59,4 +64,87 @@ model CargoPreset {
   updatedAt DateTime @updatedAt
 
   @@index([active, sortOrder])
+}
+
+// Транспортная накладная (ПРАВКИ 2, п.6). До этого форма «Создать накладную» жила
+// только в демо-песочнице (sessionStorage) и в БД уходил лишь урезанный Cargo, из-за
+// чего реквизиты терялись и накладную нельзя было открыть на редактирование.
+//
+// Одна накладная = один груз в трекере: при сохранении создаётся/обновляется Cargo
+// (связь cargoId), номер накладной кладётся в Cargo.cargoNumber.
+model Waybill {
+  id     String @id @default(cuid())
+  number Int    @unique // выдаётся атомарно (WaybillCounter), с 3000
+  status String @default("draft") // draft | active | delivered | cancelled
+
+  // Отправитель
+  senderFullName      String
+  senderType          String  @default("individual") // individual | company
+  senderCompanyName   String?
+  senderCompanyTin    String?
+  senderContactPerson String?
+  senderAddress       String
+  senderCity          String
+  senderCountry       String  @default("Казахстан")
+
+  // Получатель
+  receiverFullName String
+  receiverPhone    String
+  receiverTin      String?
+  receiverPassport String?
+  receiverAddress  String
+  receiverCity     String
+  receiverCountry  String  @default("Россия")
+
+  // Груз
+  nature              String        @default("")
+  packagingOk         Boolean       @default(false) // соответствие упаковки (в PDF — строкой)
+  specialInstructions String?
+  manualVolume        Boolean       @default(false)
+  volume              Float         @default(0) // м³, если объём задан вручную
+  items               WaybillItem[]
+
+  // Оплата
+  payer     String @default("receiver") // sender | receiver
+  payMethod String @default("cash") // cash | cashless
+  amount    Float  @default(0) // стоимость доставки, ₸
+
+  // Реквизиты и сроки (п.5 — ручной ввод в блоке «Итог и отправка»)
+  acceptanceDate    DateTime?
+  shipmentDate      DateTime?
+  deliveryTimeframe String? // формат «N|days|weeks|months», как у Cargo
+
+  cargoId String? @unique
+  cargo   Cargo?  @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+// Позиция накладной (место/наименование). price — себестоимость за единицу, ₸.
+model WaybillItem {
+  id        String  @id @default(cuid())
+  waybillId String
+  waybill   Waybill @relation(fields: [waybillId], references: [id], onDelete: Cascade)
+  name      String  @default("")
+  quantity  Float   @default(1)
+  length    Float   @default(0) // см
+  width     Float   @default(0) // см
+  height    Float   @default(0) // см
+  weight    Float   @default(0) // кг за место
+  price     Float   @default(0) // ₸ себестоимость за единицу
+  sortOrder Int     @default(0)
+
+  @@index([waybillId, sortOrder])
+}
+
+// Счётчик номеров накладных. Одна строка (id = 'main'); номер выдаётся одним
+// атомарным UPSERT ... RETURNING, поэтому два оператора не могут получить один
+// номер (ПРАВКИ 2, п.7). Раньше счётчик жил в sessionStorage у каждого клиента.
+model WaybillCounter {
+  id    String @id
+  value Int
 }

@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Package, MapPin, ArrowRight, Folder } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { useBasePath } from '@/contexts/DemoContext'
 import type { Cargo } from './types'
 
 function getStatusBadge(status: string, t: (k: any) => string) {
@@ -16,12 +15,11 @@ export function CargoListCard({ cargo }: { cargo: Cargo }) {
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const { t } = useLang()
-	const base = useBasePath()
 	const badge = getStatusBadge(cargo.status, t)
 
 	const handleOpen = () => {
 		const qs = searchParams.toString()
-		router.push(qs ? `${base}/admin/cargo/${cargo.docId}?${qs}` : `${base}/admin/cargo/${cargo.docId}`)
+		router.push(qs ? `/admin/cargo/${cargo.docId}?${qs}` : `/admin/cargo/${cargo.docId}`)
 	}
 
 	return (

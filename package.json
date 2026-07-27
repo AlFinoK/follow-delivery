@@ -8,8 +8,6 @@
 		"start": "next start",
 		"lint": "next lint",
 		"test": "vitest run",
-		"test:isolation": "node scripts/check-demo-isolation.mjs",
-		"test:all": "node scripts/check-demo-isolation.mjs && vitest run",
 		"postinstall": "prisma generate"
 	},
 	"dependencies": {

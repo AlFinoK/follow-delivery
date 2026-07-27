@@ -14,8 +14,7 @@ import { DeleteModal } from '@/components/admin/DeleteModal'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import { CitySelect, StatusSelect } from '@/components/admin/Selects'
-import { useRepos } from '@/lib/data/useRepos'
-import { useBasePath } from '@/contexts/DemoContext'
+import { repos } from '@/lib/data/repos'
 import type { Toast } from '@/components/Toast'
 import type { Cargo } from '@/components/admin/types'
 
@@ -43,8 +42,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 export function FolderDetailPage({ id: folderId }: { id: string }) {
 	const { t, tf } = useLang()
 	const router = useRouter()
-	const repo = useRepos()
-	const base = useBasePath()
+	const repo = repos
 
 	const [mounted, setMounted] = useState(false)
 	const [minLoadDone, setMinLoadDone] = useState(false)
@@ -81,14 +79,14 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 		if (!silent) setLoading(true)
 		try {
 			const result = await repo.folders.get(folderId, { tab, page })
-			if (result === null) { router.push(`${base}/admin/folders`); return }
+			if (result === null) { router.push(`/admin/folders`); return }
 			setData(result)
 		} catch {
 			addToast(t('loadError'), 'error')
 		} finally {
 			if (!silent) setLoading(false)
 		}
-	}, [folderId, router, addToast, t, tab, page, repo, base])
+	}, [folderId, router, addToast, t, tab, page, repo])
 
 	useEffect(() => {
 		setMounted(true)
@@ -133,7 +131,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 		try {
 			await repo.folders.remove(folder.id)
 			sessionStorage.setItem('pendingToast', JSON.stringify({ message: t('folderDeleted'), type: 'success' }))
-			router.push(`${base}/admin/folders`)
+			router.push(`/admin/folders`)
 		} catch {
 			addToast(t('folderDeleteError'), 'error')
 		}
@@ -223,7 +221,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 				<div className="max-w-4xl mx-auto">
 					<div className="flex items-center justify-between gap-3 mb-5">
 						<button
-							onClick={() => router.push(`${base}/admin/folders`)}
+							onClick={() => router.push(`/admin/folders`)}
 							className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
 							<ArrowLeft className="w-4 h-4" />
 							{t('backToList')}
@@ -372,7 +370,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 											key={c.docId}
 											className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg p-3 hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
 											<Link
-												href={`${base}/admin/cargo/${c.docId}?returnTo=${encodeURIComponent(`${base}/admin/folders/${folder.id}`)}`}
+												href={`/admin/cargo/${c.docId}?returnTo=${encodeURIComponent(`/admin/folders/${folder.id}`)}`}
 												className="flex-1 min-w-0 group">
 												<div className="flex items-center gap-2">
 													<div className="flex-1 min-w-0">

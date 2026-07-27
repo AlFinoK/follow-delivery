@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X, FilePlus } from 'lucide-react'
+import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X, FileText } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { useBasePath } from '@/contexts/DemoContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
@@ -14,12 +13,11 @@ import { ConfirmModal } from '@/components/admin/ConfirmModal'
 function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLogout: () => void }) {
 	const { t } = useLang()
 	const pathname = usePathname()
-	const base = useBasePath()
-	const isFolders = pathname.startsWith(`${base}/admin/folders`)
-	const isCalc = pathname.startsWith(`${base}/admin/calculator`)
-	const isPresets = pathname.startsWith(`${base}/admin/presets`)
-	const isCreate = pathname.startsWith(`${base}/admin/cargo/create`)
-	const isCargos = !isFolders && !isCalc && !isPresets && !isCreate
+	const isFolders = pathname.startsWith(`/admin/folders`)
+	const isCalc = pathname.startsWith(`/admin/calculator`)
+	const isPresets = pathname.startsWith(`/admin/presets`)
+	const isWaybills = pathname.startsWith(`/admin/waybills`)
+	const isCargos = !isFolders && !isCalc && !isPresets && !isWaybills
 
 	const linkCls = (active: boolean) =>
 		`inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -32,7 +30,7 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 		<div className="flex flex-col h-full">
 			{/* Brand */}
 			<Link
-				href={`${base}/admin`}
+				href={`/admin`}
 				onClick={onLinkClick}
 				className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-200 dark:border-zinc-800">
 				<img src="/logo.png" alt="Leader Trans Team" className="w-9 h-9 object-contain" />
@@ -44,26 +42,25 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 
 			{/* Primary nav */}
 			<nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-				<Link href={`${base}/admin`} onClick={onLinkClick} className={linkCls(isCargos)}>
+				<Link href={`/admin`} onClick={onLinkClick} className={linkCls(isCargos)}>
 					<Package className="w-4 h-4" />
 					<span>{t('cargosTitle')}</span>
 				</Link>
-				{/* «Создать накладную» (мультиблок по ТЗ, правка 7) — пока только в демо-песочнице */}
-				{base && (
-					<Link href={`${base}/admin/cargo/create`} onClick={onLinkClick} className={linkCls(isCreate)}>
-						<FilePlus className="w-4 h-4" />
-						<span>{t('createWaybillButton')}</span>
-					</Link>
-				)}
-				<Link href={`${base}/admin/folders`} onClick={onLinkClick} className={linkCls(isFolders)}>
+				{/* Накладные (ПРАВКИ 2, п.6). Создание — кнопкой на самой странице списка,
+				    как «Создать груз» у грузов, а не отдельным пунктом меню. */}
+				<Link href={`/admin/waybills`} onClick={onLinkClick} className={linkCls(isWaybills)}>
+					<FileText className="w-4 h-4" />
+					<span>{t('waybillsNavLink')}</span>
+				</Link>
+				<Link href={`/admin/folders`} onClick={onLinkClick} className={linkCls(isFolders)}>
 					<Folder className="w-4 h-4" />
 					<span>{t('foldersNavLink')}</span>
 				</Link>
-				<Link href={`${base}/admin/calculator`} onClick={onLinkClick} className={linkCls(isCalc)}>
+				<Link href={`/admin/calculator`} onClick={onLinkClick} className={linkCls(isCalc)}>
 					<Calculator className="w-4 h-4" />
 					<span>{t('calcNavLink')}</span>
 				</Link>
-				<Link href={`${base}/admin/presets`} onClick={onLinkClick} className={linkCls(isPresets)}>
+				<Link href={`/admin/presets`} onClick={onLinkClick} className={linkCls(isPresets)}>
 					<Boxes className="w-4 h-4" />
 					<span>{t('presetsNavLink')}</span>
 				</Link>
@@ -76,7 +73,7 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 				</div>
 				<ThemeToggle />
 				<a
-					href={base || '/'}
+					href="/"
 					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors">
 					<Home className="w-4 h-4" />
 					<span>{t('goHome')}</span>
@@ -95,7 +92,6 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 export function AdminSidebar() {
 	const { t } = useLang()
 	const router = useRouter()
-	const base = useBasePath()
 	const [drawerOpen, setDrawerOpen] = useState(false)
 	const [confirmLogout, setConfirmLogout] = useState(false)
 	const pathname = usePathname()
@@ -107,11 +103,6 @@ export function AdminSidebar() {
 	}
 	const doLogout = () => {
 		setConfirmLogout(false)
-		// В демо реальной сессии нет — просто возвращаемся на демо-логин.
-		if (base) {
-			router.push('/demo/login')
-			return
-		}
 		sessionStorage.setItem('pendingToast', JSON.stringify({ message: t('loggedOut'), type: 'success' }))
 		signOut({ callbackUrl: '/login' })
 	}
@@ -144,7 +135,7 @@ export function AdminSidebar() {
 						aria-label="Открыть меню">
 						<Menu className="w-5 h-5" />
 					</button>
-					<Link href={`${base}/admin`} className="flex items-center gap-2">
+					<Link href={`/admin`} className="flex items-center gap-2">
 						<img src="/logo.png" alt="Leader Trans Team" className="w-7 h-7 object-contain" />
 						<span className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Leader Trans Team</span>
 					</Link>

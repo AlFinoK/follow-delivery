@@ -11,6 +11,7 @@ function mapPreset(p: {
 	height: number
 	weight: number
 	basePrice: number
+	goodsPrice: number
 	imageUrl: string | null
 	sortOrder: number
 	active: boolean
@@ -24,6 +25,7 @@ function mapPreset(p: {
 		height: p.height,
 		weight: p.weight,
 		basePrice: p.basePrice,
+		goodsPrice: p.goodsPrice,
 		imageUrl: p.imageUrl,
 		sortOrder: p.sortOrder,
 		active: p.active,
@@ -57,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	}
 	if (body.category !== undefined) data.category = body.category ? String(body.category).trim() : null
 	// неотрицательные числовые поля: переданное, но некорректное значение → 400 (а не молча → 0)
-	for (const f of ['length', 'width', 'height', 'weight', 'basePrice'] as const) {
+	for (const f of ['length', 'width', 'height', 'weight', 'basePrice', 'goodsPrice'] as const) {
 		if (body[f] === undefined) continue
 		const n = numOrUndef(body[f])
 		if (n === undefined) return NextResponse.json({ error: `Некорректное значение поля «${f}»` }, { status: 400 })

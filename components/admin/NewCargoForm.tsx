@@ -2,7 +2,7 @@
 
 import { memo, useState } from 'react'
 import { useLang } from '@/contexts/LangContext'
-import { useRepos } from '@/lib/data/useRepos'
+import { repos } from '@/lib/data/repos'
 import { getCurrencySymbol } from '@/lib/format'
 import { INPUT_CLS } from './constants'
 import { CitySelect, StatusSelect, PaymentSelect, CurrencySelect } from './Selects'
@@ -26,7 +26,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 
 export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wide }: NewCargoFormProps) {
 	const { t, tf } = useLang()
-	const repo = useRepos()
+	const repo = repos
 	const [fromCity, setFromCity] = useState('')
 	const [toCity, setToCity] = useState('')
 	const [cargoNumber, setCargoNumber] = useState('')

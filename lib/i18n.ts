@@ -35,6 +35,7 @@ export type Translations = {
 	// Main page toasts
 	enterCargoId: string
 	cargoNotFound: string
+	trackLinkNotFound: string
 	searchError: string
 	cargoFound: string
 	// Login
@@ -58,6 +59,7 @@ export type Translations = {
 	creating: string
 	createCargoButton: string
 	createWaybillButton: string
+	waybillsNavLink: string
 	// Admin cargo list
 	cargosTitle: string
 	foundCount: string
@@ -305,6 +307,8 @@ export type Translations = {
 	presetHeightLabel: string
 	presetWeightLabel: string
 	presetBasePriceLabel: string
+	presetGoodsPriceLabel: string
+	presetGoodsPriceHint: string
 	presetImageUrlLabel: string
 	presetActiveLabel: string
 	presetSaveButton: string
@@ -349,6 +353,8 @@ export const translations: Record<Lang, Translations> = {
 		statusArrived: 'Прибыл',
 		enterCargoId: 'Введите ID груза',
 		cargoNotFound: 'Груз не найден',
+		trackLinkNotFound:
+			'Груз №{id} не найден. Проверьте номер в накладной или свяжитесь с нами — возможно, груз ещё не принят на склад.',
 		searchError: 'Ошибка при поиске груза',
 		cargoFound: 'Груз найден!',
 		adminPanelTitle: 'Админ панель',
@@ -369,6 +375,7 @@ export const translations: Record<Lang, Translations> = {
 		creating: 'Создание...',
 		createCargoButton: 'Создать груз',
 		createWaybillButton: 'Создать накладную',
+		waybillsNavLink: 'Накладные',
 		cargosTitle: 'Грузы',
 		foundCount: 'Найдено: {found} из {total}',
 		totalCount: 'Всего: {total}',
@@ -603,6 +610,8 @@ export const translations: Record<Lang, Translations> = {
 		presetHeightLabel: 'Высота, см',
 		presetWeightLabel: 'Вес, кг',
 		presetBasePriceLabel: 'Базовая цена, ₸',
+		presetGoodsPriceLabel: 'Стоимость товара, ₸',
+		presetGoodsPriceHint: 'За единицу. Не влияет на цену доставки, клиентам не видна.',
 		presetImageUrlLabel: 'Ссылка на фото',
 		presetActiveLabel: 'Показывать в калькуляторе',
 		presetSaveButton: 'Сохранить',
@@ -644,6 +653,8 @@ export const translations: Record<Lang, Translations> = {
 		statusArrived: 'Жетті',
 		enterCargoId: 'Жүк идентификаторын енгізіңіз',
 		cargoNotFound: 'Жүк табылмады',
+		trackLinkNotFound:
+			'№{id} жүк табылмады. Жүкқұжаттағы нөмірді тексеріңіз немесе бізге хабарласыңыз — жүк әлі қабылданбаған болуы мүмкін.',
 		searchError: 'Жүкті іздеу кезінде қате',
 		cargoFound: 'Жүк табылды!',
 		adminPanelTitle: 'Әкімші панелі',
@@ -664,6 +675,7 @@ export const translations: Record<Lang, Translations> = {
 		creating: 'Жасалуда...',
 		createCargoButton: 'Жүк жасау',
 		createWaybillButton: 'Жүкқұжат жасау',
+		waybillsNavLink: 'Жүкқұжаттар',
 		cargosTitle: 'Жүктер',
 		foundCount: 'Табылды: {found} / {total}',
 		totalCount: 'Барлығы: {total}',
@@ -898,6 +910,8 @@ export const translations: Record<Lang, Translations> = {
 		presetHeightLabel: 'Биіктігі, см',
 		presetWeightLabel: 'Салмағы, кг',
 		presetBasePriceLabel: 'Базалық баға, ₸',
+		presetGoodsPriceLabel: 'Тауар құны, ₸',
+		presetGoodsPriceHint: 'Бір бірлікке. Жеткізу бағасына әсер етпейді, клиенттерге көрінбейді.',
 		presetImageUrlLabel: 'Фото сілтемесі',
 		presetActiveLabel: 'Калькуляторда көрсету',
 		presetSaveButton: 'Сақтау',

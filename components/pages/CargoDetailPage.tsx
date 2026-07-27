@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Pencil, Copy, Check, Trash2, Package, MapPin, ArrowRight } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { useBasePath } from '@/contexts/DemoContext'
-import { useRepos } from '@/lib/data/useRepos'
+import { repos } from '@/lib/data/repos'
 import { ToastItem } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { DeleteModal } from '@/components/admin/DeleteModal'
+import { CargoWaybillBlock } from '@/components/admin/CargoWaybillBlock'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
 import { PageLoader } from '@/components/PageLoader'
 import { CitySelect, StatusSelect, PaymentSelect, CurrencySelect } from '@/components/admin/Selects'
@@ -86,14 +86,13 @@ const FieldValue = ({ children, empty }: { children: React.ReactNode; empty?: bo
 export function CargoDetailPage({ id }: { id: string }) {
 	const { t } = useLang()
 	const router = useRouter()
-	const base = useBasePath()
-	const repo = useRepos()
+	const repo = repos
 	const searchParams = useSearchParams()
 	const backToList = () => {
 		const returnTo = searchParams.get('returnTo')
 		if (returnTo) { router.push(returnTo); return }
 		const qs = searchParams.toString()
-		router.push(qs ? `${base}/admin?${qs}` : `${base}/admin`)
+		router.push(qs ? `/admin?${qs}` : `/admin`)
 	}
 	const [mounted, setMounted] = useState(false)
 	const [cargo, setCargo] = useState<Cargo | null>(null)
@@ -425,6 +424,13 @@ export function CargoDetailPage({ id }: { id: string }) {
 											</Field>
 										)}
 									</div>
+								</div>
+
+								{/* Накладная (ПРАВКИ 2: накладная видна прямо в грузе — и в просмотре,
+								    и при редактировании). Отделена от полей груза разделителем. */}
+								<div className="border-t border-slate-200 dark:border-zinc-700 pt-5">
+									<SectionTitle>Накладная</SectionTitle>
+									<CargoWaybillBlock cargoDocId={cargo.docId} />
 								</div>
 
 								{/* Edit actions */}

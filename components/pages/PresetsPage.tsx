@@ -9,7 +9,7 @@ import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
 import { PresetForm, type PresetFormValues } from '@/components/admin/PresetForm'
-import { useRepos } from '@/lib/data/useRepos'
+import { repos } from '@/lib/data/repos'
 import type { Preset } from '@/lib/calculator/presets'
 import type { Toast } from '@/components/Toast'
 
@@ -26,7 +26,7 @@ function CatIcon({ category }: { category: string | null }) {
 
 export function PresetsPage() {
 	const { t, tf } = useLang()
-	const repo = useRepos()
+	const repo = repos
 	const [mounted, setMounted] = useState(false)
 	const [minLoadDone, setMinLoadDone] = useState(false)
 	const [presets, setPresets] = useState<Preset[]>([])
@@ -226,6 +226,7 @@ export function PresetsPage() {
 													width: p.width,
 													height: p.height,
 													weight: p.weight,
+													goodsPrice: p.goodsPrice,
 													imageUrl: p.imageUrl ?? '',
 													sortOrder: p.sortOrder,
 													active: p.active,
@@ -261,6 +262,7 @@ export function PresetsPage() {
 															</div>
 															<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
 																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг
+																{p.goodsPrice > 0 && ` · товар ${ru(p.goodsPrice)} ₸`}
 															</p>
 														</div>
 													</div>

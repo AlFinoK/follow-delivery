@@ -14,6 +14,10 @@ import type {
 	Preset,
 	PresetRepo,
 	Repos,
+	WaybillDTO,
+	WaybillListParams,
+	WaybillRepo,
+	WaybillsResponse,
 } from './types'
 import { RepoError } from './types'
 import type { Cargo } from '@/components/admin/types'
@@ -156,4 +160,63 @@ const presets: PresetRepo = {
 	},
 }
 
-export const httpRepos: Repos = { cargos, folders, presets }
+const waybills: WaybillRepo = {
+	async reserveNumber() {
+		const res = await fetch('/api/waybills/number', { method: 'POST' })
+		if (!res.ok) throw new RepoError(res.status)
+		return ((await res.json()) as { number: number }).number
+	},
+	async list(params: WaybillListParams) {
+		const qs = new URLSearchParams()
+		if (params.status && params.status !== 'all') qs.set('status', params.status)
+		if (params.q && params.q.trim()) qs.set('q', params.q.trim())
+		if (params.page && params.page > 1) qs.set('page', String(params.page))
+		if (params.cargoId) qs.set('cargoId', params.cargoId)
+		const res = await fetch(`/api/waybills?${qs.toString()}`)
+		if (!res.ok) throw new RepoError(res.status)
+		return (await res.json()) as WaybillsResponse
+	},
+	async get(id) {
+		const res = await fetch(`/api/waybills/${id}`)
+		if (res.status === 404) return null
+		if (!res.ok) throw new RepoError(res.status)
+		return (await res.json()) as WaybillDTO
+	},
+	async getByCargo(cargoId) {
+		const { items } = await this.list({ cargoId })
+		return items[0] ?? null
+	},
+	async create(body) {
+		const res = await fetch('/api/waybills', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		})
+		if (!res.ok) throw new RepoError(res.status, await errorText(res))
+		return (await res.json()) as WaybillDTO
+	},
+	async update(id, body) {
+		const res = await fetch(`/api/waybills/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		})
+		if (!res.ok) throw new RepoError(res.status, await errorText(res))
+		return (await res.json()) as WaybillDTO
+	},
+	async remove(id) {
+		const res = await fetch(`/api/waybills/${id}`, { method: 'DELETE' })
+		if (!res.ok) throw new RepoError(res.status)
+	},
+}
+
+// Текст ошибки из тела ответа — чтобы показать в тосте причину отказа сервера.
+async function errorText(res: Response): Promise<string | undefined> {
+	try {
+		return ((await res.json()) as { error?: string }).error
+	} catch {
+		return undefined
+	}
+}
+
+export const httpRepos: Repos = { cargos, folders, presets, waybills }

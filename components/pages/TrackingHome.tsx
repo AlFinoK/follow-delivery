@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Search, Calculator, Zap, Radio, LayoutDashboard } from 'lucide-react'
+import { Search, Calculator, Zap, Radio, AlertCircle } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
 import { ToastItem } from '@/components/Toast'
@@ -11,8 +10,7 @@ import { CalculatorForm } from '@/components/calculator/CalculatorForm'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import type { Toast } from '@/components/Toast'
-import { useRepos } from '@/lib/data/useRepos'
-import { useBasePath } from '@/contexts/DemoContext'
+import { repos } from '@/lib/data/repos'
 
 interface CargoData {
 	id: string
@@ -38,9 +36,8 @@ type Tab = 'track' | 'calc'
 const SHOW_CALCULATOR = true
 
 export function TrackingHome() {
-	const { t } = useLang()
-	const repo = useRepos()
-	const base = useBasePath()
+	const { t, tf } = useLang()
+	const repo = repos
 	const [tab, setTab] = useState<Tab>('track')
 	const [trackingId, setTrackingId] = useState<string>('')
 	const [cargo, setCargo] = useState<CargoData | null>(null)
@@ -48,6 +45,8 @@ export function TrackingHome() {
 	const [mounted, setMounted] = useState<boolean>(false)
 	const [minLoadDone, setMinLoadDone] = useState<boolean>(false)
 	const [toasts, setToasts] = useState<Toast[]>([])
+	// Номер из ссылки, который не нашёлся (для постоянного сообщения вместо тоста)
+	const [missedId, setMissedId] = useState<string | null>(null)
 
 	useEffect(() => {
 		setMounted(true)
@@ -63,12 +62,12 @@ export function TrackingHome() {
 		}, 5000)
 	}
 
-	const handleSubmit = async (e: React.SyntheticEvent) => {
-		e.preventDefault()
+	const runSearch = async (raw: string, fromLink = false) => {
 		setCargo(null)
+		setMissedId(null)
 		setLoading(true)
 
-		const searchId = trackingId.trim().toUpperCase()
+		const searchId = raw.trim().toUpperCase()
 		if (!searchId) {
 			addToast(t('enterCargoId'), 'error')
 			setLoading(false)
@@ -79,6 +78,9 @@ export function TrackingHome() {
 			const found = await repo.cargos.search(searchId)
 			if (found === null) {
 				addToast(t('cargoNotFound'), 'error')
+				// По ссылке из накладной тоста мало: он исчезает, и клиент остаётся на
+				// пустой странице, будто ссылка не сработала. Показываем это постоянно.
+				if (fromLink) setMissedId(searchId)
 			} else {
 				setCargo(found)
 				setTrackingId('')
@@ -86,9 +88,26 @@ export function TrackingHome() {
 			}
 		} catch {
 			addToast(t('searchError'), 'error')
+			if (fromLink) setMissedId(searchId)
 		} finally {
 			setLoading(false)
 		}
+	}
+
+	// Диплинк «?id=НОМЕР» — по нему ведёт ссылка в PDF-накладной
+	// (см. lib/waybill/company.ts). Ищем сразу, чтобы клиент попал на карточку груза.
+	useEffect(() => {
+		if (!mounted) return
+		const id = new URLSearchParams(window.location.search).get('id')
+		if (!id) return
+		setTrackingId(id)
+		void runSearch(id, true)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [mounted])
+
+	const handleSubmit = async (e: React.SyntheticEvent) => {
+		e.preventDefault()
+		await runSearch(trackingId)
 	}
 
 	if (!mounted || !minLoadDone) return <PageLoader />
@@ -138,15 +157,6 @@ export function TrackingHome() {
 						</div>
 					</div>
 					<div className="flex items-center gap-2 shrink-0">
-						{/* Вход в демо-кабинет — только в песочнице (на реальном сайте скрыт) */}
-						{base && (
-							<Link
-								href={`${base}/admin`}
-								className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
-								<LayoutDashboard className="w-3.5 h-3.5" />
-								Демо-кабинет
-							</Link>
-						)}
 						<LangSwitcher />
 					</div>
 				</div>
@@ -219,6 +229,16 @@ export function TrackingHome() {
 											<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">
 												{t('tabTrack')}
 											</p>
+											{/* Клиент пришёл по ссылке из накладной, а груза с таким номером нет —
+											    сообщаем явно, а не исчезающим тостом. */}
+											{missedId && !loading && (
+												<div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
+													<AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+													<span>
+														{tf('trackLinkNotFound', { id: missedId })}
+													</span>
+												</div>
+											)}
 											<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 												<div className="relative">
 													<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />

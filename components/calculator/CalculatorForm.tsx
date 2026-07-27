@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Lock, Ruler, ClipboardList, LayoutGrid, ClipboardCheck } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
+import { repos } from '@/lib/data/repos'
 import { ORIGIN_CITY, ORIGIN_COUNTRY, RUB_TO_KZT } from '@/lib/calculator/config'
 import {
 	calcShipment,
@@ -61,6 +62,7 @@ export function CalculatorForm({
 	onCopyCargo?: (snapshot: CalcCargoSnapshot) => void
 } = {}) {
 	const { t } = useLang()
+	const repo = repos
 
 	const [selection, setSelection] = useState<CitySelection | null>(null)
 	const [mode, setMode] = useState<Mode>('presets')
@@ -88,13 +90,13 @@ export function CalculatorForm({
 		}
 	}, [])
 
-	// Пресеты грузов из админки
+	// Шаблоны грузов из админки — через слой репозиториев ([lib/data/repos.ts]).
 	useEffect(() => {
 		let active = true
-		fetch('/api/presets')
-			.then((r) => (r.ok ? r.json() : []))
+		repo.presets
+			.list()
 			.then((d) => {
-				if (active && Array.isArray(d)) setPresets(d)
+				if (active) setPresets(d)
 			})
 			.catch(() => {})
 			.finally(() => {
@@ -103,7 +105,7 @@ export function CalculatorForm({
 		return () => {
 			active = false
 		}
-	}, [])
+	}, [repo])
 
 	const direction = useMemo(() => (selection ? findDirection(selection.code) ?? null : null), [selection])
 
@@ -211,7 +213,9 @@ export function CalculatorForm({
 								height: p.height,
 								weight: p.weight,
 								quantity: quantities[p.id],
-								price: 0,
+								// Себестоимость техники из шаблона (ПРАВКИ 2, п.1). Клиентам
+								// /api/presets её не отдаёт → в публичном калькуляторе 0.
+								price: p.goodsPrice ?? 0,
 							}))
 					: []
 		return {

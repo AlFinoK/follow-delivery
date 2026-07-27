@@ -41,6 +41,12 @@ npm run start    # next start
 | [/admin/cargo/[id]](app/admin/cargo/[id]/page.tsx) | protected | Детали + edit-mode + удаление |
 | `/api/cargos` | API | `GET` (list или `?trackingId=` search, в т.ч. по `cargoNumber`), `POST` (create) |
 | `/api/cargos/[id]` | API | `GET` / `PATCH` / `DELETE` по docId |
+| [/admin/waybills](app/admin/waybills/page.tsx) | protected | Список накладных + поиск + фильтр по статусу + пагинация (12 на стр.) |
+| [/admin/waybills/new](app/admin/waybills/new/page.tsx) | protected | Мастер создания накладной (3 шага) |
+| [/admin/waybills/[id]](app/admin/waybills/[id]/page.tsx) | protected | Редактирование сохранённой накладной |
+| `/api/waybills` | API | `GET` (list; `?q=`, `?status=`, `?page=`, `?cargoId=`), `POST` (create) |
+| `/api/waybills/[id]` | API | `GET` / `PATCH` / `DELETE` |
+| `/api/waybills/number` | API | `POST` — атомарно зарезервировать номер накладной |
 | [/admin/presets](app/admin/presets/page.tsx) | protected | CRUD пресетов техники для калькулятора + кнопка сида |
 | `/api/presets` | API | `GET` (active; `?all=1`+auth — все), `POST` (create, auth) |
 | `/api/presets/[id]` | API | `PATCH` / `DELETE` (auth) |
@@ -56,23 +62,32 @@ npm run start    # next start
 app/                      Next App Router (страницы + API)
   api/auth/[...nextauth]  NextAuth credentials
   api/cargos              REST для Cargo
+  api/waybills            REST для Waybill (+ /number — выдача номера)
 contexts/LangContext.tsx  i18n провайдер (t, tf, lang)
 lib/
   prisma.ts               Singleton PrismaClient
   i18n.ts                 Словари ru + kk + типы Translations
   format.ts               formatDate, displayTimeframe, getCurrencySymbol
+  data/                   Слой доступа к данным: types (контракт), httpRepo, repos
+  waybill/                model, company (реквизиты), print (PDF), number, cargoSync
+  calculator/             движок расчёта, тарифы, справочник НП
 components/
   home/                   SearchSection, CargoResultCard
   admin/                  CargoList, NewCargoForm, Selects, DatePickerField,
-                          TimeframeInput, DeleteModal, AdminNav, EditActions
+                          TimeframeInput, DeleteModal, AdminSidebar, CargoWaybillBlock
+  waybill/                WaybillForm, Stepper, LogistSummary, NotifyModal,
+                          PhoneInput, Select
+  pages/                  Крупные страницы (грузы, накладные, папки, калькулятор)
   Toast, Spinner, PageLoader, LangSwitcher
-prisma/schema.prisma      Единственная модель Cargo
+prisma/schema.prisma      Cargo, Folder, CargoPreset, Waybill(+Item,+Counter)
 middleware.ts             Защита /admin/*
 ```
 
 ## Модель данных
 
-Единственная модель — `Cargo`:
+Модели: `Cargo`, `Folder`, `CargoPreset`, `Waybill` + `WaybillItem` + `WaybillCounter` (см. ловушку №11).
+
+Базовая — `Cargo`:
 
 ```prisma
 Cargo {
@@ -164,13 +179,28 @@ Cargo {
 
 - **Региональная надбавка** — [lib/calculator/districts.ts](lib/calculator/districts.ts). `resolveSurcharge(name, region)` → ДОЛЯ (0.2 = +20%): базовая ставка по округу (`DISTRICT_DEFAULT_SURCHARGE`: central/south/volga/ural 20%, caucasus 25%, northwest/siberia/fareast 0) + переопределения по областям (`REGION_SURCHARGE`). Ключевые правила improves2.0: Крым/Севастополь +30%; СЗФО по областям (Архангельская +35%, Мурманская +25%, Вологодская +20%, Псковская +15%, Ленинградская/Новгородская +10%); в Уральском и Центральном ряд областей — исключения с базовой ставкой 0% (Свердловская/Челябинская/Курганская/Тюменская; Московская/Орловская/Рязанская/Тверская/Тульская/Калужская/Липецкая/Ярославская/Костромская/Ивановская + Москва). `resolveDistrict` остался для подписи округа. Надбавка зашивается в `Direction.surcharge` в `config.ts` при сборке `DIRECTIONS`; для НП — в `/api/places` (по области НП).
 - **`finalizePrice(base, surcharge)`** в [engine.ts](lib/calculator/engine.ts) — общий хвост во ВСЕХ режимах: ×(1+доля) от округлённой базы → пол `MIN_PRICE_KZT` (90 000 ₸, [config.ts](lib/calculator/config.ts)). Флаги `surchargeApplied`/`surchargePct`/`minApplied`/`basePrice` для `ResultPanel`.
-- **Пресеты** (в UI называются «Шаблоны» / KK «Үлгілер» — final-improves; в коде/API/БД остаются `preset`/`CargoPreset`/`/api/presets`) (improves2.0) — считаются ТЕМ ЖЕ движком, что и «Свой груз»: пресет даёт только габариты+вес, цена = `calcShipment` по кривым ПЭК + надбавка области → поэтому пресет и «Свой груз» с одинаковыми размерами дают ОДИНАКОВУЮ цену. Поле `CargoPreset.basePrice` в БД больше НЕ используется для расчёта (оставлено в схеме, в UI скрыто). Цена за единицу на карточках убрана. БД-модель `CargoPreset`, сид `DEFAULT_PRESETS` ([lib/calculator/presets.ts](lib/calculator/presets.ts)). Сид: `/admin/presets` → «Загрузить стандартные» или `node scripts/seed-presets.mjs`.
-- **Миграции и деплой** — в проекте Prisma-миграции (`prisma/migrations/`): `0_init` идемпотентна (baseline существующей db-push базы), `add_cargo_preset` создаёт таблицу + сидит 16 пресетов. Build-команда — `node scripts/deploy-migrate.mjs && next build`: скрипт авто-**baseline**'ит существующую базу (если есть `Cargo`, но нет истории миграций → P3005) и гоняет `migrate deploy`. На Vercel это применяется автоматически на каждом деплое; локально скрипт берёт URL из `.env.local`. **Новое изменение схемы: `prisma migrate dev --name ...` локально (создаёт миграцию) → коммит → деплой применит сам.** НЕ использовать `db push` для прода (история миграций разойдётся).
-  - ⚠️ **`.env` vs `.env.local`**: приложение и `scripts/deploy-migrate.mjs` берут `DATABASE_URL` из `.env.local` (приоритет, как у Next); голый `prisma` CLI — из `.env`. Симптом «не та БД»: `GET /api/presets` → **500** (`P2021: table CargoPreset does not exist`).
+- **Пресеты** (в UI называются «Шаблоны» / KK «Үлгілер» — final-improves; в коде/API/БД остаются `preset`/`CargoPreset`/`/api/presets`) (improves2.0) — считаются ТЕМ ЖЕ движком, что и «Свой груз»: пресет даёт только габариты+вес, цена = `calcShipment` по кривым ПЭК + надбавка области → поэтому пресет и «Свой груз» с одинаковыми размерами дают ОДИНАКОВУЮ цену. Поле `CargoPreset.basePrice` в БД больше НЕ используется для расчёта (оставлено в схеме, в UI скрыто). Цена доставки за единицу на карточках убрана. **Не путать с `goodsPrice`** — это себестоимость самой техники (ПРАВКИ 2 п.1), на расчёт доставки не влияет, см. §11.
+- **Шаблоны берутся через `repos.presets`** ([lib/data/repos.ts](lib/data/repos.ts)), не прямым `fetch('/api/presets')`. БД-модель `CargoPreset`, сид `DEFAULT_PRESETS` ([lib/calculator/presets.ts](lib/calculator/presets.ts)). Сид: `/admin/presets` → «Загрузить стандартные» или `node scripts/seed-presets.mjs`.
+- **Миграции и деплой** — в проекте Prisma-миграции (`prisma/migrations/`), все написаны идемпотентно (`IF NOT EXISTS`). Build-команда — `node scripts/deploy-migrate.mjs && next build`. Скрипт ([deploy-migrate.mjs](scripts/deploy-migrate.mjs)) гарантирует, что схема БД соответствует коду, **или валит сборку** — чтобы на прод не уехала версия, где раздел падает с 500 из-за отсутствующей таблицы. Порядок: расчистка истории от незавершённых миграций (иначе P3009 блокирует все следующие) → baseline существующей db-push базы (иначе P3005) → `migrate deploy` → **проверка наличия нужных таблиц/колонок** (`REQUIRED_TABLES` / `REQUIRED_COLUMNS` — дополнять при новых миграциях!) → если что-то не так, прямой прогон SQL через `prisma db execute` (не берёт advisory-lock, поэтому проходит через пулер) → повторная проверка → `exit 1`, если не сошлось. **Новое изменение схемы: `prisma migrate dev --name ...` локально → дописать объекты в `REQUIRED_*` → коммит → деплой применит сам.** НЕ использовать `db push` для прода.
+  - ⚠️ **BOM в `20260524120000_init/migration.sql`**: из-за него `migrate deploy` падает с `P3018` / `42601 syntax error at or near "﻿"` на любой базе, где init ещё НЕ применена (т.е. на новой БД). Файл править нельзя — Prisma сверяет контрольную сумму применённых миграций, и правка сломает деплой на прод-базе. Скрипт обходит это временной копией без BOM.
+  - ⚠️ **`.env` vs `.env.local`**: приложение и `deploy-migrate.mjs` берут `DATABASE_URL` из `.env.local` (приоритет, как у Next); голый `prisma` CLI — из `.env`. Явный override для тестов/CI — `DEPLOY_MIGRATE_DB_URL`. Симптом «не та БД»: `GET /api/presets` → **500** (`P2021: table ... does not exist`).
+  - Если прод-БД за пулером (pgbouncer, порт 6543) — можно задать `DIRECT_URL` (прямое подключение, 5432) для `migrate deploy`; без неё сработает фолбэк на `db execute`.
 - **Дробный ввод** — [DecimalInput.tsx](components/calculator/DecimalInput.tsx): принимает запятую И точку, `max` опционален (валюту не зажимает). Использовать вместо `type=number` для размеров/веса/цены.
 - **Справочник НП РФ** — `lib/calculator/settlements.json` (~135k населённых пунктов из GeoNames, включая Крым/Севастополь; собран `scripts/build-settlements.mjs`: кириллическое имя (`pickRuName`: официальное поле name → экзоним → ближайший по транслитерации alt, без дореформенных вариантов) + регион→округ + ближайший город-терминал по координатам). Поиск — серверный `/api/places?q=` (in-memory, в клиентский бандл не кладётся). `CitySelect` ищет одновременно по терминалам (локально) и по НП (через `/api/places`); выбор НП даёт `{code: ближайший терминал, surcharge: надбавка по области НП, approx:true}` — тариф по ближайшему терминалу, надбавка по области самого НП (override `direction.surcharge` в `CalculatorForm`). Крым/Севастополь в GeoNames лежат в дампе Украины (admin1 UA.11/UA.20) → отдельный источник в сборщике. Пересборка: GeoNames `RU.zip` + `UA.zip` → `node scripts/build-settlements.mjs <RU.txt>` (UA.txt подхватывается из той же папки). Проверка целостности: `scripts/check-settlements-integrity.mjs`.
 - Калькулятор **открыт всем** (`SHOW_CALCULATOR=true` в [app/page.tsx](app/page.tsx), final-improves): на главной — вкладки «Отслеживание»/«Калькулятор», пресеты доступны клиентам. Та же `CalculatorForm` на главной и `/admin/calculator`.
 - **Количество в пресетах** — редактируемое поле (`DecimalInput`, можно вписать «45», select-on-focus), плюс кнопки −/+.
+
+### 11. Накладные (ПРАВКИ 2)
+
+- **Хранение в БД.** До ПРАВОК 2 мастер «Создать накладную» жил только в демо-песочнице (sessionStorage) и в БД уходил урезанный `Cargo` — реквизиты терялись, накладную нельзя было открыть заново. Теперь есть модели `Waybill` + `WaybillItem`, раздел `/admin/waybills` (список → открытие → правка → удаление) и `WaybillRepo` в слое данных ([lib/data/types.ts](lib/data/types.ts)). Компоненты формы — [components/waybill/](components/waybill/).
+- **Модель формы** — [lib/waybill/model.ts](lib/waybill/model.ts) (вложенные `sender`/`receiver`/`positions`); плоские колонки БД ↔ модель конвертирует [lib/mapWaybill.ts](lib/mapWaybill.ts). `waybill.docId` — cuid записи, `waybill.number` — человеческий номер.
+- **Одна накладная = один груз.** При сохранении [lib/waybill/cargoSync.ts](lib/waybill/cargoSync.ts) создаёт/обновляет `Cargo` (`trackingId = CARGO-<номер>`, `cargoNumber = номер`). Статусы — РАЗНЫЕ оси: документ (`draft|active|delivered|cancelled`) и перемещение (`ожидает отправления|в пути|прибыл`). Переносится только `delivered → прибыл`; `currentCity` и «в пути» ведёт логист в `/admin`, накладная их НЕ перезатирает. Груз виден на своей карточке блоком «Накладная» ([CargoWaybillBlock.tsx](components/admin/CargoWaybillBlock.tsx)).
+- **Номера — только с сервера.** `POST /api/waybills/number` делает атомарный `INSERT … ON CONFLICT DO UPDATE … RETURNING` по таблице `WaybillCounter` ([lib/waybill/number.ts](lib/waybill/number.ts)). Раньше счётчик жил в `sessionStorage` у клиента → два оператора получали один номер. Номер резервируется при ОТКРЫТИИ формы (решение заказчика), поэтому в нумерации возможны пропуски, если форму закрыли без сохранения. Первый номер — 3000 (1–2999 заняты), счётчик инициализируется не ниже `MAX(Cargo.cargoNumber)`.
+- **Печатная форма** — [lib/waybill/print.ts](lib/waybill/print.ts): логотип `/logo-ltt-ntk.svg`, реквизиты и контакты из [lib/waybill/company.ts](lib/waybill/company.ts) (единственное место для правок; пустые поля не печатаются — `bin`/`bankDetails` ждут значений), таблица позиций, строка о соответствии упаковки, дата отправки и сроки. Открывается в новом окне: логотип подставляется АБСОЛЮТНЫМ URL (окно — `about:blank`, относительный путь не разрешится), печать вызывает сам документ по `load`.
+- **Логотип LTT–НТК** — `public/logo-ltt-ntk.svg`, только для PDF (на сайте остаётся `logo.png`). Собран из `logo.png`: контур отрисован по маске альфа-канала, «–НТК» построено геометрией в пропорциях образца заказчика. При `fill-rule="evenodd"` подпути НЕ должны пересекаться (наложение вырезает дырку) — фигуры букв только стыкуются.
+- **Диплинк отслеживания** — `/?id=НОМЕР` на главной автоматически ищет груз ([TrackingHome.tsx](components/pages/TrackingHome.tsx)); по этой ссылке ведут PDF и SMS-уведомление.
+- **Себестоимость товара в шаблонах** (п.1) — `CargoPreset.goodsPrice`, ₸ за единицу. Задаётся в `/admin/presets` («Стоимость товара»), НЕ влияет на цену доставки. Попадает в позицию накладной при «Скопировать в накладную» и в строку `Стоимость - N тенге` сводки логистам (формат — по заявке заказчика №2782). Клиентам не отдаётся: публичный `GET /api/presets` без сессии подставляет `goodsPrice: 0`, поэтому в открытом калькуляторе её нет. У существующих шаблонов значение 0 — заполняется вручную в админке.
+- **БИН и банковские реквизиты в накладной не печатаются** — решение заказчика.
 
 ## Стиль
 

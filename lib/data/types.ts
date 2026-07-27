@@ -1,12 +1,11 @@
-// Единый контракт доступа к данным. Реальная реализация ([httpRepo.ts]) ходит в
-// /api/*; демо-реализация ([demoRepo.ts]) работает поверх sessionStorage и НИКОГДА
-// не обращается к реальным грузам/папкам. Компоненты берут репозиторий через
-// useRepos() ([useRepos.ts]) — он выбирает реализацию по контексту демо.
+// Единый контракт доступа к данным. Реализация — [httpRepo.ts] (fetch к /api/*).
+// Компоненты берут репозиторий через `repos` ([repos.ts]).
 
 import type { Cargo } from '@/components/admin/types'
 import type { Preset } from '@/lib/calculator/presets'
+import type { Waybill as WaybillModel, WaybillStatus } from '@/lib/waybill/model'
 
-export type { Cargo, Preset }
+export type { Cargo, Preset, WaybillModel }
 
 // ── Грузы ───────────────────────────────────────────────────────────────────
 
@@ -104,10 +103,49 @@ export interface PresetRepo {
 	seed(force?: boolean): Promise<{ seeded: number; existing?: number; message?: string }>
 }
 
+// ── Накладные (ПРАВКИ 2, п.6) ────────────────────────────────────────────────
+
+/** Накладная в том виде, как её отдаёт API: модель формы + служебные поля. */
+export interface WaybillDTO extends WaybillModel {
+	cargoId: string | null
+	createdAt: string
+	updatedAt: string
+}
+
+export interface WaybillsResponse {
+	items: WaybillDTO[]
+	total: number
+	page: number
+	pageSize: number
+	counts: { all: number; draft: number; active: number; delivered: number; cancelled: number }
+}
+
+export interface WaybillListParams {
+	status?: WaybillStatus | 'all'
+	q?: string
+	page?: number
+	/** Накладная конкретного груза (блок «Накладная» на карточке груза). */
+	cargoId?: string
+}
+
+export interface WaybillRepo {
+	/** Зарезервировать номер накладной (сервер, атомарно — см. ПРАВКИ 2 п.7). */
+	reserveNumber(): Promise<number>
+	list(params: WaybillListParams): Promise<WaybillsResponse>
+	/** Накладная по id. null — не найдена (404). */
+	get(id: string): Promise<WaybillDTO | null>
+	/** Накладная, привязанная к грузу. null — у груза её нет. */
+	getByCargo(cargoId: string): Promise<WaybillDTO | null>
+	create(body: WaybillModel): Promise<WaybillDTO>
+	update(id: string, body: WaybillModel): Promise<WaybillDTO>
+	remove(id: string): Promise<void>
+}
+
 export interface Repos {
 	cargos: CargoRepo
 	folders: FolderRepo
 	presets: PresetRepo
+	waybills: WaybillRepo
 }
 
 /** Ошибка репозитория с HTTP-подобным статусом (для веток 404 / прочее). */

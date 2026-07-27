@@ -2,20 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 
-// Форма пресета в JSON (совпадает с lib/calculator/presets.ts → Preset)
-function mapPreset(p: {
-	id: string
-	name: string
-	category: string | null
-	length: number
-	width: number
-	height: number
-	weight: number
-	basePrice: number
-	imageUrl: string | null
-	sortOrder: number
-	active: boolean
-}) {
+// Форма пресета в JSON (совпадает с lib/calculator/presets.ts → Preset).
+// goodsPrice (себестоимость товара) — только для авторизованных: калькулятор открыт
+// клиентам, и внутренние цены техники им отдавать нельзя (ПРАВКИ 2, п.1).
+function mapPreset(
+	p: {
+		id: string
+		name: string
+		category: string | null
+		length: number
+		width: number
+		height: number
+		weight: number
+		basePrice: number
+		goodsPrice: number
+		imageUrl: string | null
+		sortOrder: number
+		active: boolean
+	},
+	withGoodsPrice = true
+) {
 	return {
 		id: p.id,
 		name: p.name,
@@ -25,6 +31,7 @@ function mapPreset(p: {
 		height: p.height,
 		weight: p.weight,
 		basePrice: p.basePrice,
+		goodsPrice: withGoodsPrice ? p.goodsPrice : 0,
 		imageUrl: p.imageUrl,
 		sortOrder: p.sortOrder,
 		active: p.active,
@@ -38,7 +45,7 @@ async function requireAuth() {
 }
 
 // GET /api/presets — список пресетов для калькулятора.
-//   по умолчанию — только активные (публично);
+//   по умолчанию — только активные (публично, без себестоимости товара);
 //   ?all=1 — включая скрытые (для админки, требует auth).
 export async function GET(req: NextRequest) {
 	const all = req.nextUrl.searchParams.get('all') === '1'
@@ -47,11 +54,15 @@ export async function GET(req: NextRequest) {
 		if (denied) return denied
 	}
 
+	// Для админского калькулятора (создание накладной) себестоимость нужна, поэтому
+	// отдаём её любому авторизованному, а не только при ?all=1.
+	const authed = all || !!(await getServerSession())
+
 	const presets = await prisma.cargoPreset.findMany({
 		where: all ? {} : { active: true },
 		orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
 	})
-	return NextResponse.json(presets.map(mapPreset))
+	return NextResponse.json(presets.map((p) => mapPreset(p, authed)))
 }
 
 // POST /api/presets — создать пресет (auth)
@@ -64,7 +75,7 @@ export async function POST(req: NextRequest) {
 	if (!name) return NextResponse.json({ error: 'Название обязательно' }, { status: 400 })
 
 	// если поле передано, но это не корректное неотрицательное число — отклоняем (а не молча → 0)
-	for (const f of ['length', 'width', 'height', 'weight', 'basePrice'] as const) {
+	for (const f of ['length', 'width', 'height', 'weight', 'basePrice', 'goodsPrice'] as const) {
 		const v = body[f]
 		if (v !== undefined && v !== null && v !== '') {
 			const n = Number(v)
@@ -91,6 +102,7 @@ export async function POST(req: NextRequest) {
 			height: num(body.height),
 			weight: num(body.weight),
 			basePrice: num(body.basePrice),
+			goodsPrice: num(body.goodsPrice),
 			imageUrl: body.imageUrl ? String(body.imageUrl).trim() : null,
 			sortOrder: Number.isFinite(Number(body.sortOrder)) ? Number(body.sortOrder) : 0,
 			active: body.active === undefined ? true : !!body.active,

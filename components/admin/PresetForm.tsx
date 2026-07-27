@@ -13,6 +13,8 @@ export interface PresetFormValues {
 	width: number
 	height: number
 	weight: number
+	/** Себестоимость товара за единицу, ₸ (ПРАВКИ 2, п.1) — не влияет на цену доставки. */
+	goodsPrice: number
 	imageUrl: string
 	sortOrder: number
 	active: boolean
@@ -35,6 +37,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	const [width, setWidth] = useState(initial?.width ?? 0)
 	const [height, setHeight] = useState(initial?.height ?? 0)
 	const [weight, setWeight] = useState(initial?.weight ?? 0)
+	const [goodsPrice, setGoodsPrice] = useState(initial?.goodsPrice ?? 0)
 	const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '')
 	const [sortOrder, setSortOrder] = useState(initial?.sortOrder ?? 0)
 	const [active, setActive] = useState(initial?.active ?? true)
@@ -46,7 +49,7 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 	const submit = (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!name.trim()) return
-		onSubmit({ name: name.trim(), category: category.trim(), length, width, height, weight, imageUrl: imageUrl.trim(), sortOrder, active })
+		onSubmit({ name: name.trim(), category: category.trim(), length, width, height, weight, goodsPrice, imageUrl: imageUrl.trim(), sortOrder, active })
 	}
 
 	return (
@@ -87,9 +90,17 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 				</div>
 			</div>
 
-			<div>
-				<label className={labelCls}>{t('presetWeightLabel')}</label>
-				<DecimalInput value={weight} onChange={setWeight} className={inputCls} />
+			<div className="grid grid-cols-2 gap-3">
+				<div>
+					<label className={labelCls}>{t('presetWeightLabel')}</label>
+					<DecimalInput value={weight} onChange={setWeight} className={inputCls} />
+				</div>
+				{/* ПРАВКИ 2, п.1 — себестоимость самой техники. Клиентам не показывается. */}
+				<div>
+					<label className={labelCls}>{t('presetGoodsPriceLabel')}</label>
+					<DecimalInput value={goodsPrice} onChange={setGoodsPrice} className={inputCls} />
+					<p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{t('presetGoodsPriceHint')}</p>
+				</div>
 			</div>
 
 			<div>
