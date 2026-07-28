@@ -95,7 +95,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 		<form onSubmit={handleSubmit} className="flex flex-col gap-6">
 			{/* Route */}
 			<div>
-				<SectionTitle>Маршрут</SectionTitle>
+				<SectionTitle>{t('secRoute')}</SectionTitle>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
 						<Label>{t('fromFormLabel')}</Label>
@@ -110,7 +110,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 
 			{/* Info */}
 			<div>
-				<SectionTitle>Информация</SectionTitle>
+				<SectionTitle>{t('secInfo')}</SectionTitle>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
 						<Label>{t('cargoNumberLabel')}</Label>
@@ -143,7 +143,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 
 			{/* Dates */}
 			<div>
-				<SectionTitle>Даты</SectionTitle>
+				<SectionTitle>{t('secDates')}</SectionTitle>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
 						<Label>{t('acceptanceDateLabel')}</Label>
@@ -158,7 +158,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 
 			{/* Payment */}
 			<div>
-				<SectionTitle>Оплата и доставка</SectionTitle>
+				<SectionTitle>{t('secPayment')}</SectionTitle>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
 						<Label>{t('deliveryTimeframeLabel')}</Label>

@@ -322,6 +322,153 @@ export type Translations = {
 	tabCalc: string
 	tabTrackShort: string
 	tabCalcShort: string
+	// Общие заголовки секций (карточка груза, создание груза)
+	openMenu: string
+	closeMenu: string
+	calcNamePh: string
+	// Сообщения валидации накладной (показываются тостом при сохранении)
+	wvSenderName: string
+	wvCompanyName: string
+	wvSenderAddress: string
+	wvSenderCity: string
+	wvReceiverName: string
+	wvPhone: string
+	wvDeliveryAddress: string
+	wvDeliveryCity: string
+	wvNature: string
+	// Статусы накладной (документ; не путать со статусами перемещения груза)
+	wsDraft: string
+	wsActive: string
+	wsDelivered: string
+	wsCancelled: string
+	secRoute: string
+	secDates: string
+	secPayment: string
+	secInfo: string
+	folderLabel: string
+	folderInBadge: string
+	presetGoodsShort: string
+	// Форма накладной
+	wfSenderTitle: string
+	wfSenderHint: string
+	wfSenderName: string
+	wfSenderNamePh: string
+	wfSenderType: string
+	wfIndividual: string
+	wfCompany: string
+	wfCompanyName: string
+	wfCompanyNamePh: string
+	wfCompanyTin: string
+	wfDigitsOnly: string
+	wfContactPerson: string
+	wfSenderAddress: string
+	wfCity: string
+	wfCountry: string
+	wfReceiverTitle: string
+	wfReceiverHint: string
+	wfReceiverFullName: string
+	wfReceiverNamePh: string
+	wfPhone: string
+	wfReceiverTin: string
+	wfOptional: string
+	wfPassport: string
+	wfDeliveryAddress: string
+	wfAddressPh: string
+	wfDeliveryCountry: string
+	wfPrivacyNote: string
+	wfCargoTitle: string
+	wfCargoHint: string
+	wfNature: string
+	wfNaturePh: string
+	wfPositions: string
+	wfPositionsUnit: string
+	wfPositionNamePh: string
+	wfRemovePosition: string
+	wfQty: string
+	wfDims: string
+	wfPlaceWeight: string
+	wfCost: string
+	wfPositionVolume: string
+	wfPositionWeight: string
+	wfAddPosition: string
+	wfTotalWeight: string
+	wfVolume: string
+	wfManualVolume: string
+	wfPackaging: string
+	wfYes: string
+	wfNo: string
+	wfInstructions: string
+	wfInstructionsPh: string
+	wfPaymentTitle: string
+	wfPayer: string
+	wfPayMethod: string
+	wfCash: string
+	wfCashless: string
+	wfAmount: string
+	wfAmountHint: string
+	wfExtrasTitle: string
+	wfAcceptanceDate: string
+	wfShipmentDate: string
+	wfExtrasNote: string
+	wfNumberLabel: string
+	wfNumberPending: string
+	// Страница накладной (мастер)
+	wpStep1: string
+	wpStep2: string
+	wpStep3: string
+	wpStepOf: string
+	wpWaybill: string
+	wpNotFound: string
+	wpToList: string
+	wpNumberError: string
+	wpCalcFilled: string
+	wpCalcCopied: string
+	wpSaved: string
+	wpSaveError: string
+	wpCleared: string
+	wpDeleted: string
+	wpDeleteError: string
+	wpSaving: string
+	wpSave: string
+	wpDownloadPdf: string
+	wpNotifyClient: string
+	wpNotifyDisabled: string
+	wpClear: string
+	wpBack: string
+	wpNext: string
+	wpCalcTitle: string
+	wpCalcHint: string
+	wpFillFromWaybill: string
+	wpLogistTitle: string
+	wpLogistHint: string
+	// Список накладных
+	wlLoadError: string
+	wlSearchPh: string
+	wlPayerSender: string
+	wlPayerReceiver: string
+	wlPdfAria: string
+	wlEmpty: string
+	wlEmptyHint: string
+	wlAccepted: string
+	// Блок накладной в грузе
+	wbChecking: string
+	wbNone: string
+	wbReceiverPhone: string
+	wbPlacesWeight: string
+	wbPackaging: string
+	wbPackagingOk: string
+	wbPackagingBad: string
+	// Сводка логистам
+	lsHint: string
+	lsCopy: string
+	lsSend: string
+	lsSendDisabled: string
+	lsSendNote: string
+	// Ввод телефона
+	phCountry: string
+	phCountrySearch: string
+	phNumber: string
+	phInvalid: string
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -622,6 +769,144 @@ export const translations: Record<Lang, Translations> = {
 		homeHeroSubtitle: 'Отслеживайте отправления в реальном времени и рассчитывайте ориентировочную стоимость доставки',
 		tabTrack: 'Отслеживание груза',
 		tabCalc: 'Калькулятор доставки',
+		openMenu: 'Открыть меню',
+		closeMenu: 'Закрыть меню',
+		calcNamePh: 'напр. Электровелосипеды SK8',
+		wvSenderName: 'Укажите ФИО отправителя',
+		wvCompanyName: 'Укажите название компании-отправителя',
+		wvSenderAddress: 'Укажите адрес отправителя',
+		wvSenderCity: 'Укажите город отправителя',
+		wvReceiverName: 'Укажите ФИО получателя',
+		wvPhone: 'Проверьте телефон получателя',
+		wvDeliveryAddress: 'Укажите адрес доставки',
+		wvDeliveryCity: 'Укажите город доставки',
+		wvNature: 'Укажите характер груза',
+		wsDraft: 'Черновик',
+		wsActive: 'Активна / В работе',
+		wsDelivered: 'Доставлена',
+		wsCancelled: 'Отменена',
+		secRoute: 'Маршрут',
+		secDates: 'Даты',
+		secPayment: 'Оплата и доставка',
+		secInfo: 'Информация',
+		folderLabel: 'Папка',
+		folderInBadge: 'В папке',
+		presetGoodsShort: 'товар',
+		wfSenderTitle: 'Отправитель',
+		wfSenderHint: 'По умолчанию — реквизиты склада ЛТТ в Алматы',
+		wfSenderName: 'ФИО отправителя',
+		wfSenderNamePh: 'Иванов Иван Иванович',
+		wfSenderType: 'Тип отправителя',
+		wfIndividual: 'Физлицо',
+		wfCompany: 'Компания',
+		wfCompanyName: 'Название компании',
+		wfCompanyNamePh: 'ТОО «…»',
+		wfCompanyTin: 'ИНН / БИН',
+		wfDigitsOnly: 'Только цифры',
+		wfContactPerson: 'Контактное лицо',
+		wfSenderAddress: 'Адрес отправителя',
+		wfCity: 'Город',
+		wfCountry: 'Страна',
+		wfReceiverTitle: 'Получатель',
+		wfReceiverHint: 'Телефон используется для уведомления клиента',
+		wfReceiverFullName: 'Фамилия, Имя, Отчество',
+		wfReceiverNamePh: 'Троценко Никита Алексеевич',
+		wfPhone: 'Телефон',
+		wfReceiverTin: 'ИНН / ИИН',
+		wfOptional: 'Необязательно',
+		wfPassport: 'Паспорт',
+		wfDeliveryAddress: 'Полный адрес доставки',
+		wfAddressPh: 'г. Казань, ул. Южно-промышленная 30А',
+		wfDeliveryCountry: 'Страна доставки',
+		wfPrivacyNote: 'ИНН и паспорт необязательны; хранятся в защищённом виде, доступ по ролям.',
+		wfCargoTitle: 'Описание отправления',
+		wfCargoHint: 'Характер груза, позиции, вес и объём',
+		wfNature: 'Характер груза',
+		wfNaturePh: 'или введите свой характер груза',
+		wfPositions: 'Позиции груза',
+		wfPositionsUnit: '{count} поз.',
+		wfPositionNamePh: 'Наименование (напр. Электровелосипеды SK8)',
+		wfRemovePosition: 'Удалить позицию',
+		wfQty: 'Кол-во, шт',
+		wfDims: 'Габариты, см (Д × Ш × В)',
+		wfPlaceWeight: 'Вес места, кг',
+		wfCost: 'Стоимость, ₸',
+		wfPositionVolume: 'Объём позиции:',
+		wfPositionWeight: 'Вес позиции:',
+		wfAddPosition: 'Добавить позицию',
+		wfTotalWeight: 'Общий вес (авто)',
+		wfVolume: 'Объём',
+		wfManualVolume: 'ввести вручную',
+		wfPackaging: 'Соответствие упаковки',
+		wfYes: 'Да',
+		wfNo: 'Нет',
+		wfInstructions: 'Спец-инструкция',
+		wfInstructionsPh: 'Особые условия перевозки…',
+		wfPaymentTitle: 'Оплата',
+		wfPayer: 'Кто оплачивает',
+		wfPayMethod: 'Способ оплаты',
+		wfCash: 'Наличный',
+		wfCashless: 'Безналичный',
+		wfAmount: 'Сумма к оплате',
+		wfAmountHint: 'Подставляется автоматически из калькулятора (Блок №3).',
+		wfExtrasTitle: 'Дополнительные реквизиты',
+		wfAcceptanceDate: 'Дата приёма груза',
+		wfShipmentDate: 'Дата отправки груза',
+		wfExtrasNote: 'Дата отправки и сроки доставки попадают в PDF-накладную (кнопка «Скачать PDF») и в карточку груза.',
+		wfNumberLabel: 'Номер накладной',
+		wfNumberPending: 'присвоится при сохранении',
+		wpStep1: 'Отправитель и получатель',
+		wpStep2: 'Груз, оплата и расчёт',
+		wpStep3: 'Итог и отправка',
+		wpStepOf: 'Шаг {step} из {total} · {title}',
+		wpWaybill: 'Накладная',
+		wpNotFound: 'Накладная не найдена.',
+		wpToList: 'К списку накладных',
+		wpNumberError: 'Не удалось получить номер накладной',
+		wpCalcFilled: 'Вес и объём переданы в калькулятор',
+		wpCalcCopied: 'Данные калькулятора скопированы в накладную',
+		wpSaved: 'Накладная №{number} сохранена',
+		wpSaveError: 'Не удалось сохранить накладную',
+		wpCleared: 'Форма очищена',
+		wpDeleted: 'Накладная №{number} удалена',
+		wpDeleteError: 'Не удалось удалить накладную',
+		wpSaving: 'Сохранение…',
+		wpSave: 'Сохранить накладную',
+		wpDownloadPdf: 'Скачать PDF',
+		wpNotifyClient: 'Уведомить клиента',
+		wpNotifyDisabled: 'Канал уведомлений пока не подключён',
+		wpClear: 'Очистить',
+		wpBack: 'Назад',
+		wpNext: 'Далее',
+		wpCalcTitle: 'Калькулятор стоимости',
+		wpCalcHint: 'Итог → «Сумма к оплате». Кнопка «{copy}» переносит габариты, название и себестоимость в накладную.',
+		wpFillFromWaybill: 'Заполнить из накладной →',
+		wpLogistTitle: 'Данные для логистов',
+		wpLogistHint: 'Автосводка по накладной — скопировать или отправить',
+		wlLoadError: 'Не удалось загрузить накладные',
+		wlSearchPh: 'Номер, ФИО, телефон, город или характер груза',
+		wlPayerSender: 'платит отправитель',
+		wlPayerReceiver: 'платит получатель',
+		wlPdfAria: 'Скачать PDF накладной №{number}',
+		wlEmpty: 'Накладных пока нет',
+		wlEmptyHint: 'Создайте первую — она сохранится в базе и появится здесь',
+		wlAccepted: 'приём {date}',
+		wbChecking: 'Проверяем накладную…',
+		wbNone: 'К этому грузу накладная не привязана. Накладная создаётся в разделе «Накладные» — груз в трекере появляется автоматически.',
+		wbReceiverPhone: 'Телефон получателя',
+		wbPlacesWeight: 'Мест / вес',
+		wbPackaging: 'Упаковка',
+		wbPackagingOk: 'соответствует',
+		wbPackagingBad: 'не соответствует',
+		lsHint: 'Сводка собирается автоматически из накладной (Блок №1). Формат — по образцу заказчика.',
+		lsCopy: 'Скопировать',
+		lsSend: 'Отправить логисту',
+		lsSendDisabled: 'Канал отправки пока не подключён',
+		lsSendNote: 'Отправка появится после согласования канала (WhatsApp Business API / Telegram / e-mail). Пока — «Скопировать».',
+		phCountry: 'Выбрать страну',
+		phCountrySearch: 'Поиск страны…',
+		phNumber: 'Номер телефона',
+		phInvalid: 'Введите корректный номер телефона',
 		tabTrackShort: 'Отслеживание',
 		tabCalcShort: 'Калькулятор',
 	},
@@ -922,6 +1207,144 @@ export const translations: Record<Lang, Translations> = {
 		homeHeroSubtitle: 'Жөнелтілімдерді нақты уақытта бақылаңыз және жеткізудің болжамды құнын есептеңіз',
 		tabTrack: 'Жүкті бақылау',
 		tabCalc: 'Жеткізу калькуляторы',
+		openMenu: 'Мәзірді ашу',
+		closeMenu: 'Мәзірді жабу',
+		calcNamePh: 'мыс. Электровелосипедтер SK8',
+		wvSenderName: 'Жіберушінің аты-жөнін көрсетіңіз',
+		wvCompanyName: 'Жіберуші компанияның атауын көрсетіңіз',
+		wvSenderAddress: 'Жіберушінің мекенжайын көрсетіңіз',
+		wvSenderCity: 'Жіберушінің қаласын көрсетіңіз',
+		wvReceiverName: 'Алушының аты-жөнін көрсетіңіз',
+		wvPhone: 'Алушының телефонын тексеріңіз',
+		wvDeliveryAddress: 'Жеткізу мекенжайын көрсетіңіз',
+		wvDeliveryCity: 'Жеткізу қаласын көрсетіңіз',
+		wvNature: 'Жүк сипатын көрсетіңіз',
+		wsDraft: 'Жоба',
+		wsActive: 'Белсенді / Жұмыста',
+		wsDelivered: 'Жеткізілді',
+		wsCancelled: 'Болдырылмады',
+		secRoute: 'Бағыт',
+		secDates: 'Күндер',
+		secPayment: 'Төлем және жеткізу',
+		secInfo: 'Ақпарат',
+		folderLabel: 'Қалта',
+		folderInBadge: 'Қалтада',
+		presetGoodsShort: 'тауар',
+		wfSenderTitle: 'Жіберуші',
+		wfSenderHint: 'Әдепкі бойынша — Алматыдағы ЛТТ қоймасының деректемелері',
+		wfSenderName: 'Жіберушінің аты-жөні',
+		wfSenderNamePh: 'Иванов Иван Иванович',
+		wfSenderType: 'Жіберуші түрі',
+		wfIndividual: 'Жеке тұлға',
+		wfCompany: 'Компания',
+		wfCompanyName: 'Компания атауы',
+		wfCompanyNamePh: 'ЖШС «…»',
+		wfCompanyTin: 'ЖСН / БСН',
+		wfDigitsOnly: 'Тек сандар',
+		wfContactPerson: 'Байланыс тұлғасы',
+		wfSenderAddress: 'Жіберушінің мекенжайы',
+		wfCity: 'Қала',
+		wfCountry: 'Ел',
+		wfReceiverTitle: 'Алушы',
+		wfReceiverHint: 'Телефон клиентке хабарлама жіберу үшін қолданылады',
+		wfReceiverFullName: 'Тегі, Аты, Әкесінің аты',
+		wfReceiverNamePh: 'Троценко Никита Алексеевич',
+		wfPhone: 'Телефон',
+		wfReceiverTin: 'ИНН / ЖСН',
+		wfOptional: 'Міндетті емес',
+		wfPassport: 'Төлқұжат',
+		wfDeliveryAddress: 'Жеткізудің толық мекенжайы',
+		wfAddressPh: 'Қазан қ., Южно-промышленная көш. 30А',
+		wfDeliveryCountry: 'Жеткізу елі',
+		wfPrivacyNote: 'ЖСН мен төлқұжат міндетті емес; қорғалған түрде сақталады, рөлдер бойынша қолжетімді.',
+		wfCargoTitle: 'Жүктеме сипаттамасы',
+		wfCargoHint: 'Жүк сипаты, позициялар, салмағы және көлемі',
+		wfNature: 'Жүк сипаты',
+		wfNaturePh: 'немесе өз жүк сипатыңызды енгізіңіз',
+		wfPositions: 'Жүк позициялары',
+		wfPositionsUnit: '{count} поз.',
+		wfPositionNamePh: 'Атауы (мыс. Электровелосипедтер SK8)',
+		wfRemovePosition: 'Позицияны жою',
+		wfQty: 'Саны, дана',
+		wfDims: 'Габариттер, см (Ұ × Е × Б)',
+		wfPlaceWeight: 'Орын салмағы, кг',
+		wfCost: 'Құны, ₸',
+		wfPositionVolume: 'Позиция көлемі:',
+		wfPositionWeight: 'Позиция салмағы:',
+		wfAddPosition: 'Позиция қосу',
+		wfTotalWeight: 'Жалпы салмағы (авто)',
+		wfVolume: 'Көлемі',
+		wfManualVolume: 'қолмен енгізу',
+		wfPackaging: 'Қаптаманың сәйкестігі',
+		wfYes: 'Иә',
+		wfNo: 'Жоқ',
+		wfInstructions: 'Арнайы нұсқау',
+		wfInstructionsPh: 'Тасымалдаудың ерекше шарттары…',
+		wfPaymentTitle: 'Төлем',
+		wfPayer: 'Кім төлейді',
+		wfPayMethod: 'Төлем әдісі',
+		wfCash: 'Қолма-қол',
+		wfCashless: 'Қолма-қол емес',
+		wfAmount: 'Төлеуге жататын сома',
+		wfAmountHint: 'Калькулятордан автоматты қойылады (№3 блок).',
+		wfExtrasTitle: 'Қосымша деректемелер',
+		wfAcceptanceDate: 'Жүкті қабылдау күні',
+		wfShipmentDate: 'Жүкті жіберу күні',
+		wfExtrasNote: 'Жіберу күні мен жеткізу мерзімі PDF-жүкқұжатқа («PDF жүктеу» түймесі) және жүк карточкасына түседі.',
+		wfNumberLabel: 'Жүкқұжат нөмірі',
+		wfNumberPending: 'сақтау кезінде беріледі',
+		wpStep1: 'Жіберуші және алушы',
+		wpStep2: 'Жүк, төлем және есептеу',
+		wpStep3: 'Қорытынды және жіберу',
+		wpStepOf: '{total} қадамнан {step}-і · {title}',
+		wpWaybill: 'Жүкқұжат',
+		wpNotFound: 'Жүкқұжат табылмады.',
+		wpToList: 'Жүкқұжаттар тізіміне',
+		wpNumberError: 'Жүкқұжат нөмірін алу мүмкін болмады',
+		wpCalcFilled: 'Салмақ пен көлем калькуляторға берілді',
+		wpCalcCopied: 'Калькулятор деректері жүкқұжатқа көшірілді',
+		wpSaved: '№{number} жүкқұжат сақталды',
+		wpSaveError: 'Жүкқұжатты сақтау мүмкін болмады',
+		wpCleared: 'Форма тазартылды',
+		wpDeleted: '№{number} жүкқұжат жойылды',
+		wpDeleteError: 'Жүкқұжатты жою мүмкін болмады',
+		wpSaving: 'Сақталуда…',
+		wpSave: 'Жүкқұжатты сақтау',
+		wpDownloadPdf: 'PDF жүктеу',
+		wpNotifyClient: 'Клиентке хабарлау',
+		wpNotifyDisabled: 'Хабарлама арнасы әзірге қосылмаған',
+		wpClear: 'Тазарту',
+		wpBack: 'Артқа',
+		wpNext: 'Әрі қарай',
+		wpCalcTitle: 'Құн калькуляторы',
+		wpCalcHint: 'Қорытынды → «Төлеуге жататын сома». «{copy}» түймесі габариттерді, атауын және өзіндік құнын жүкқұжатқа көшіреді.',
+		wpFillFromWaybill: 'Жүкқұжаттан толтыру →',
+		wpLogistTitle: 'Логистерге арналған деректер',
+		wpLogistHint: 'Жүкқұжат бойынша авто-жиынтық — көшіріңіз немесе жіберіңіз',
+		wlLoadError: 'Жүкқұжаттарды жүктеу мүмкін болмады',
+		wlSearchPh: 'Нөмір, аты-жөні, телефон, қала немесе жүк сипаты',
+		wlPayerSender: 'жіберуші төлейді',
+		wlPayerReceiver: 'алушы төлейді',
+		wlPdfAria: '№{number} жүкқұжаттың PDF-ін жүктеу',
+		wlEmpty: 'Жүкқұжаттар әзірге жоқ',
+		wlEmptyHint: 'Біріншісін жасаңыз — ол дерекқорда сақталып, осында көрінеді',
+		wlAccepted: 'қабылдау {date}',
+		wbChecking: 'Жүкқұжат тексерілуде…',
+		wbNone: 'Бұл жүкке жүкқұжат тіркелмеген. Жүкқұжат «Жүкқұжаттар» бөлімінде жасалады — жүк трекерде автоматты пайда болады.',
+		wbReceiverPhone: 'Алушының телефоны',
+		wbPlacesWeight: 'Орын / салмақ',
+		wbPackaging: 'Қаптама',
+		wbPackagingOk: 'сәйкес келеді',
+		wbPackagingBad: 'сәйкес келмейді',
+		lsHint: 'Жиынтық жүкқұжаттан автоматты жиналады (№1 блок). Пішімі — тапсырыс беруші үлгісі бойынша.',
+		lsCopy: 'Көшіру',
+		lsSend: 'Логистке жіберу',
+		lsSendDisabled: 'Жіберу арнасы әзірге қосылмаған',
+		lsSendNote: 'Жіберу арна келісілгеннен кейін қосылады (WhatsApp Business API / Telegram / e-mail). Әзірге — «Көшіру».',
+		phCountry: 'Елді таңдау',
+		phCountrySearch: 'Ел іздеу…',
+		phNumber: 'Телефон нөмірі',
+		phInvalid: 'Дұрыс телефон нөмірін енгізіңіз',
 		tabTrackShort: 'Бақылау',
 		tabCalcShort: 'Калькулятор',
 	},

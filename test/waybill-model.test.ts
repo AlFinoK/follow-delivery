@@ -98,7 +98,7 @@ describe('валидация перед сохранением', () => {
 
 	it('битый телефон не проходит', () => {
 		const errs = validateWaybill(filled({ receiver: { ...filled().receiver, phone: '+7961' } }))
-		expect(errs.some((e) => /телефон/i.test(e.message))).toBe(true)
+		expect(errs.some((e) => e.key === 'wvPhone')).toBe(true)
 	})
 
 	it('характер груза обязателен и относится ко второму шагу', () => {
@@ -110,7 +110,7 @@ describe('валидация перед сохранением', () => {
 	it('компании нужно название', () => {
 		const w = filled()
 		const errs = validateWaybill({ ...w, sender: { ...w.sender, type: 'company', companyName: '' } })
-		expect(errs.some((e) => /компани/i.test(e.message))).toBe(true)
+		expect(errs.some((e) => e.key === 'wvCompanyName')).toBe(true)
 	})
 })
 

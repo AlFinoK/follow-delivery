@@ -15,6 +15,8 @@ export interface Cargo {
 	partialPaymentDetail?: string | null
 	currency?: string
 	folderId?: string | null
+	/** Название папки, в которой лежит груз (для списка и поиска). null — не в папке. */
+	folderName?: string | null
 	createdAt: any
 }
 

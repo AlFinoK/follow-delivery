@@ -26,10 +26,10 @@ import { effectiveVolume, initialWaybill, totalWeight, validateWaybill, type Way
 //         по id; вместе с ней создаётся/обновляется груз в трекере;
 //   п.7 — номер выдаёт сервер при открытии формы (клиентский счётчик давал дубли).
 
-const STEPS = ['Отправитель и получатель', 'Груз, оплата и расчёт', 'Итог и отправка']
+const STEP_KEYS = ['wpStep1', 'wpStep2', 'wpStep3'] as const
 
 export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
-	const { t } = useLang()
+	const { t, tf } = useLang()
 	const repo = repos
 	const isEdit = !!waybillId
 	const [mounted, setMounted] = useState(false)
@@ -89,7 +89,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 		repo.waybills
 			.reserveNumber()
 			.then((number) => alive && setWaybill((w) => ({ ...w, number: w.number ?? number })))
-			.catch(() => alive && addToast('Не удалось получить номер накладной', 'error'))
+			.catch(() => alive && addToast(t('wpNumberError'), 'error'))
 
 		return () => {
 			alive = false
@@ -102,7 +102,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	// со страницы в список. Адрес при этом не меняется — номер шага лежит в history.state
 	// (иначе перезагрузка открывала бы пустую форму на середине визарда).
 	const goTo = (i: number) => {
-		const target = Math.min(Math.max(i, 0), STEPS.length - 1)
+		const target = Math.min(Math.max(i, 0), STEP_KEYS.length - 1)
 		if (target === step) return
 		if (target > step) {
 			// по одной записи на шаг, чтобы «Назад» шёл ровно по шагам
@@ -121,7 +121,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	useEffect(() => {
 		const onPop = (e: PopStateEvent) => {
 			const s = (e.state as { wizardStep?: number } | null)?.wizardStep ?? 0
-			setStep(Math.min(Math.max(s, 0), STEPS.length - 1))
+			setStep(Math.min(Math.max(s, 0), STEP_KEYS.length - 1))
 		}
 		window.addEventListener('popstate', onPop)
 		return () => window.removeEventListener('popstate', onPop)
@@ -137,7 +137,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	const fillCalcFromWaybill = () => {
 		setPrefill({ mode: 'totals', volume: effectiveVolume(waybill), weight: totalWeight(waybill.positions) })
 		setCalcKey((k) => k + 1)
-		addToast('Вес и объём переданы в калькулятор')
+		addToast(t('wpCalcFilled'))
 	}
 	// Копирование данных калькулятора → накладная (правка 2): позиции с названием техники
 	// и себестоимостью + стоимость доставки. Сводка логистам строится из накладной, поэтому
@@ -161,7 +161,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			manualVolume: false, // объём считается из габаритов позиций
 			amount: snap.price > 0 ? snap.price : w.amount,
 		}))
-		addToast('Данные калькулятора скопированы в накладную')
+		addToast(t('wpCalcCopied'))
 	}
 
 	const save = async () => {
@@ -170,11 +170,12 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 		if (errors.length) {
 			setShowErrors(true)
 			goTo(errors[0].step)
-			addToast(errors[0].message, 'error')
+			addToast(t(errors[0].key), 'error')
 			return
 		}
-		// Черновик при сохранении становится активной накладной.
-		const payload: Waybill = { ...waybill, status: waybill.status === 'draft' ? 'active' : waybill.status }
+		// Статус сохраняем ровно тот, что выбрал оператор: раньше черновик при сохранении
+		// принудительно становился активным, и выставить «Черновик» было невозможно.
+		const payload: Waybill = { ...waybill }
 
 		setSaving(true)
 		try {
@@ -183,13 +184,13 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 				? await repo.waybills.update(payload.docId, payload)
 				: await repo.waybills.create(payload)
 			setWaybill(saved)
-			addToast(`Накладная №${saved.number} сохранена`)
+			addToast(tf('wpSaved', { number: saved.number ?? '' }))
 			// Созданную накладную «прописываем» в адресной строке, чтобы обновление
 			// страницы вело на неё, а не на пустую форму создания. Номер шага в
 			// history.state сохраняем — иначе «Назад» после сохранения сбросит визард.
 			if (isNew) window.history.replaceState({ wizardStep: step }, '', `/admin/waybills/${saved.docId}`)
 		} catch (e) {
-			addToast(e instanceof Error && e.message ? e.message : 'Не удалось сохранить накладную', 'error')
+			addToast(e instanceof Error && e.message ? e.message : t('wpSaveError'), 'error')
 		} finally {
 			setSaving(false)
 		}
@@ -205,19 +206,19 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			const number = await repo.waybills.reserveNumber()
 			setWaybill((w) => ({ ...w, number }))
 		} catch {
-			addToast('Не удалось получить номер накладной', 'error')
+			addToast(t('wpNumberError'), 'error')
 		}
-		addToast('Форма очищена')
+		addToast(t('wpCleared'))
 	}
 
 	const remove = async () => {
 		if (!waybill.docId) return
 		try {
 			await repo.waybills.remove(waybill.docId)
-			sessionStorage.setItem('pendingToast', JSON.stringify({ message: `Накладная №${waybill.number} удалена`, type: 'success' }))
+			sessionStorage.setItem('pendingToast', JSON.stringify({ message: tf('wpDeleted', { number: waybill.number ?? '' }), type: 'success' }))
 			window.location.href = `/admin/waybills`
 		} catch {
-			addToast('Не удалось удалить накладную', 'error')
+			addToast(t('wpDeleteError'), 'error')
 		}
 	}
 
@@ -242,7 +243,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 
 			<DeleteModal
 				isOpen={confirmDelete}
-				itemName={waybill.number ? `Накладная №${waybill.number}` : 'Накладная'}
+				itemName={waybill.number ? `${t('wpWaybill')} №${waybill.number}` : t('wpWaybill')}
 				itemId={waybill.receiver.fullName || null}
 				onConfirm={remove}
 				onCancel={() => setConfirmDelete(false)}
@@ -253,11 +254,11 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 					<div className="max-w-4xl mx-auto">
 						{notFound ? (
 							<div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-700 p-8 text-center">
-								<p className="text-slate-600 dark:text-zinc-300">Накладная не найдена.</p>
+								<p className="text-slate-600 dark:text-zinc-300">{t('wpNotFound')}</p>
 								<Link
 									href={`/admin/waybills`}
 									className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700">
-									<ArrowLeft className="w-4 h-4" /> К списку накладных
+									<ArrowLeft className="w-4 h-4" /> {t('wpToList')}
 								</Link>
 							</div>
 						) : (
@@ -268,11 +269,11 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 										<Link
 											href={`/admin/waybills`}
 											className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 mb-1.5">
-											<ArrowLeft className="w-3.5 h-3.5" /> Накладные
+											<ArrowLeft className="w-3.5 h-3.5" /> {t('waybillsNavLink')}
 										</Link>
 										<div className="flex items-center gap-2.5 flex-wrap">
 											<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">
-												{isEdit ? 'Накладная' : 'Создать накладную'}
+												{isEdit ? t('wpWaybill') : t('createWaybillButton')}
 											</h2>
 											{waybill.number && (
 												<span className="text-sm font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 rounded-md px-2 py-0.5">
@@ -280,16 +281,16 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 												</span>
 											)}
 										</div>
-										<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">Шаг {step + 1} из {STEPS.length} · {STEPS[step]}</p>
+										<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">{tf('wpStepOf', { step: step + 1, total: STEP_KEYS.length, title: t(STEP_KEYS[step]) })}</p>
 									</div>
 								</div>
 
 								{/* Индикатор шагов */}
 								<div className="mb-4">
 									<Stepper
-										steps={STEPS}
+										steps={STEP_KEYS.map((k) => t(k))}
 										current={step}
-										maxReached={isEdit ? STEPS.length - 1 : maxStep}
+										maxReached={isEdit ? STEP_KEYS.length - 1 : maxStep}
 										onStep={goTo}
 									/>
 								</div>
@@ -320,9 +321,9 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 															<Calculator className="w-[18px] h-[18px]" />
 														</span>
 														<div className="min-w-0">
-															<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 leading-tight">Калькулятор стоимости</h3>
+															<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 leading-tight">{t('wpCalcTitle')}</h3>
 															<p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-																Итог → «Сумма к оплате». Кнопка «{t('calcCopyToWaybill')}» переносит габариты, название и себестоимость в накладную.
+																{tf('wpCalcHint', { copy: t('calcCopyToWaybill') })}
 															</p>
 														</div>
 													</div>
@@ -330,7 +331,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 														type="button"
 														onClick={fillCalcFromWaybill}
 														className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 whitespace-nowrap shrink-0">
-														Заполнить из накладной →
+														{t('wpFillFromWaybill')}
 													</button>
 												</div>
 												<CalculatorForm
@@ -354,8 +355,8 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 												showErrors={showErrors}
 											/>
 											<div className="pt-6 border-t border-slate-100 dark:border-zinc-800">
-												<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 mb-1">Данные для логистов</h3>
-												<p className="text-xs text-slate-400 dark:text-zinc-500 mb-4">Автосводка по накладной — скопировать или отправить</p>
+												<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 mb-1">{t('wpLogistTitle')}</h3>
+												<p className="text-xs text-slate-400 dark:text-zinc-500 mb-4">{t('wpLogistHint')}</p>
 												<LogistSummary waybill={waybill} />
 											</div>
 											<div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-zinc-800">
@@ -364,35 +365,35 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 														onClick={save}
 														disabled={saving}
 														className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-														<Save className="w-4 h-4" /> {saving ? 'Сохранение…' : 'Сохранить накладную'}
+														<Save className="w-4 h-4" /> {saving ? t('wpSaving') : t('wpSave')}
 													</button>
 													<button
 														type="button"
 														onClick={() => openWaybillPrint(waybill)}
 														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-														<FileDown className="w-4 h-4" /> Скачать PDF
+														<FileDown className="w-4 h-4" /> {t('wpDownloadPdf')}
 													</button>
-													{/* Отключено до согласования канала уведомлений (см. NotifyModal). */}
+													{/* Отключено до согласования канала уведомлений */}
 													<button
 														type="button"
 														disabled
-														title="Канал уведомлений пока не подключён"
+														title={t('wpNotifyDisabled')}
 														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-														<Bell className="w-4 h-4" /> Уведомить клиента
+														<Bell className="w-4 h-4" /> {t('wpNotifyClient')}
 													</button>
 													{waybill.docId ? (
 														<button
 															type="button"
 															onClick={() => setConfirmDelete(true)}
 															className="inline-flex items-center gap-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium px-3 py-2.5 rounded-lg text-sm transition-colors ml-auto">
-															<Trash2 className="w-4 h-4" /> Удалить
+															<Trash2 className="w-4 h-4" /> {t('deleteButton')}
 														</button>
 													) : (
 														<button
 															type="button"
 															onClick={reset}
 															className="inline-flex items-center gap-2 text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 font-medium px-3 py-2.5 rounded-lg text-sm transition-colors ml-auto">
-															<RotateCcw className="w-4 h-4" /> Очистить
+															<RotateCcw className="w-4 h-4" /> {t('wpClear')}
 														</button>
 													)}
 											</div>
@@ -407,14 +408,14 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 										onClick={back}
 										disabled={step === 0}
 										className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-										<ChevronLeft className="w-4 h-4" /> Назад
+										<ChevronLeft className="w-4 h-4" /> {t('wpBack')}
 									</button>
-									{step < STEPS.length - 1 && (
+									{step < STEP_KEYS.length - 1 && (
 										<button
 											type="button"
 											onClick={next}
 											className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition-colors">
-											Далее <ChevronRight className="w-4 h-4" />
+											{t('wpNext')} <ChevronRight className="w-4 h-4" />
 										</button>
 									)}
 								</div>

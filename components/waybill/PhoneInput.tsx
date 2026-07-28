@@ -7,6 +7,7 @@ import ru from 'react-phone-number-input/locale/ru.json'
 import 'react-phone-number-input/style.css'
 import { ChevronDown, Globe, Search } from 'lucide-react'
 import { isPhoneValid } from '@/lib/waybill/model'
+import { useLang } from '@/contexts/LangContext'
 
 type CountryOption = { value?: string; label?: string; divider?: boolean }
 const flagMap = flags as Record<string, ComponentType<{ title?: string }>>
@@ -44,6 +45,7 @@ function CountrySelect({
 	options: CountryOption[]
 	disabled?: boolean
 }) {
+	const { t } = useLang()
 	const [open, setOpen] = useState(false)
 	const [query, setQuery] = useState('')
 	const rootRef = useRef<HTMLDivElement>(null)
@@ -74,7 +76,7 @@ function CountrySelect({
 				disabled={disabled}
 				onClick={() => setOpen((v) => !v)}
 				className="flex items-center gap-1 pr-1 outline-none disabled:cursor-not-allowed"
-				aria-label="Выбрать страну">
+				aria-label={t('phCountry')}>
 				<Flag country={value} label={value ? ru[value as keyof typeof ru] : 'International'} />
 				<ChevronDown className={`w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
@@ -87,12 +89,12 @@ function CountrySelect({
 							ref={searchRef}
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
-							placeholder="Поиск страны…"
+							placeholder={t('phCountrySearch')}
 							className="w-full pl-9 pr-3 py-2.5 text-sm outline-none placeholder-slate-300 dark:placeholder-zinc-600"
 						/>
 					</div>
 					<div className="max-h-64 overflow-y-auto py-1">
-						{list.length === 0 && <p className="px-3 py-4 text-sm text-slate-400 dark:text-zinc-500 text-center">Ничего не найдено</p>}
+						{list.length === 0 && <p className="px-3 py-4 text-sm text-slate-400 dark:text-zinc-500 text-center">{t('nothingFound')}</p>}
 						{list.map((o, i) => {
 							const divider = o.divider || (!o.label && !o.value)
 							if (divider) return <div key={`d${i}`} className="my-1 border-t border-slate-100 dark:border-zinc-800" />
@@ -135,6 +137,7 @@ export function PhoneInput({
 	showError?: boolean
 	onChange: (phone: string) => void
 }) {
+	const { t } = useLang()
 	const [touched, setTouched] = useState(false)
 	const invalid = (touched || showError) && !isPhoneValid(value)
 
@@ -160,10 +163,10 @@ export function PhoneInput({
 					value={value || undefined}
 					disabled={disabled}
 					onChange={(v) => onChange(v ?? '')}
-					placeholder="Номер телефона"
+					placeholder={t('phNumber')}
 				/>
 			</div>
-			{invalid && <p className="text-[11px] text-red-500 mt-1">Введите корректный номер телефона</p>}
+			{invalid && <p className="text-[11px] text-red-500 mt-1">{t('phInvalid')}</p>}
 		</div>
 	)
 }

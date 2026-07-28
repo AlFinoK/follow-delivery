@@ -65,6 +65,8 @@ export async function GET(req: NextRequest) {
 	const [items, total, groups] = await Promise.all([
 		prisma.cargo.findMany({
 			where,
+			// название папки показываем в списке и в поиске (по просьбе заказчика)
+			include: { folder: { select: { name: true } } },
 			orderBy: { createdAt: 'desc' },
 			skip: (page - 1) * PAGE_SIZE,
 			take: PAGE_SIZE,

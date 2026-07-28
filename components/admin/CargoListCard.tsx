@@ -41,9 +41,13 @@ export function CargoListCard({ cargo }: { cargo: Cargo }) {
 					<p className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono mt-0.5 truncate">{cargo.id}</p>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
+					{/* Папка груза видна прямо в списке и в результатах поиска (правка заказчика) */}
 					{cargo.folderId && (
-						<span className="inline-flex items-center text-slate-400 dark:text-zinc-500" title="В папке">
-							<Folder className="w-3.5 h-3.5" />
+						<span
+							className="inline-flex items-center gap-1 max-w-[160px] text-[11px] font-medium text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-1.5 py-0.5"
+							title={cargo.folderName ? `${t('folderLabel')}: ${cargo.folderName}` : t('folderInBadge')}>
+							<Folder className="w-3 h-3 shrink-0" />
+							<span className="truncate">{cargo.folderName ?? t('folderInBadge')}</span>
 						</span>
 					)}
 					<span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${badge.cls}`}>{badge.label}</span>

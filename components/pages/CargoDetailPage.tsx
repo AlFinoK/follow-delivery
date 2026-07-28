@@ -317,7 +317,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 
 								{/* Маршрут */}
 								<div>
-									<SectionTitle>Маршрут</SectionTitle>
+									<SectionTitle>{t('secRoute')}</SectionTitle>
 									<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
 										<Field editMode={editMode}>
 											<FieldLabel>{t('fromCardLabel')}</FieldLabel>
@@ -337,6 +337,13 @@ export function CargoDetailPage({ id }: { id: string }) {
 												? <CitySelect value={d.currentCity} onChange={(v) => setField('currentCity', v)} />
 												: <FieldValue>{cargo.currentCity}</FieldValue>}
 										</Field>
+										{/* Папка груза — только для чтения: назначается в разделе «Папки» */}
+										{cargo.folderId && (
+											<Field editMode={editMode}>
+												<FieldLabel>{t('folderLabel')}</FieldLabel>
+												<FieldValue>{cargo.folderName ?? '—'}</FieldValue>
+											</Field>
+										)}
 										<Field editMode={editMode}>
 											<FieldLabel>{t('statusCardLabel')}</FieldLabel>
 											{editMode ? (
@@ -358,7 +365,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 
 								{/* Даты */}
 								<div>
-									<SectionTitle>Даты</SectionTitle>
+									<SectionTitle>{t('secDates')}</SectionTitle>
 									<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
 										<Field editMode={editMode}>
 											<FieldLabel>{t('acceptanceDateLabel')}</FieldLabel>
@@ -377,7 +384,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 
 								{/* Оплата и доставка */}
 								<div>
-									<SectionTitle>Оплата и доставка</SectionTitle>
+									<SectionTitle>{t('secPayment')}</SectionTitle>
 									<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
 										<Field editMode={editMode}>
 											<FieldLabel>{t('deliveryTimeframeLabel')}</FieldLabel>
@@ -429,7 +436,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 								{/* Накладная (ПРАВКИ 2: накладная видна прямо в грузе — и в просмотре,
 								    и при редактировании). Отделена от полей груза разделителем. */}
 								<div className="border-t border-slate-200 dark:border-zinc-700 pt-5">
-									<SectionTitle>Накладная</SectionTitle>
+									<SectionTitle>{t('wpWaybill')}</SectionTitle>
 									<CargoWaybillBlock cargoDocId={cargo.docId} />
 								</div>
 

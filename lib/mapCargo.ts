@@ -19,6 +19,9 @@ export interface CargoRow {
 	partialPaymentDetail: string | null
 	currency: string
 	folderId: string | null
+	// Подтягивается через include: { folder: { select: { name: true } } } там, где
+	// название папки нужно показать (список грузов и карточка груза).
+	folder?: { name: string } | null
 	createdAt: Date
 }
 
@@ -40,6 +43,7 @@ export function mapCargo(cargo: CargoRow) {
 		partialPaymentDetail: cargo.partialPaymentDetail,
 		currency: cargo.currency,
 		folderId: cargo.folderId,
+		folderName: cargo.folder?.name ?? null,
 		createdAt: cargo.createdAt,
 	}
 }

@@ -1,16 +1,17 @@
 'use client'
 
 import { Plus, Trash2, User, UserRound, PackageOpen, Wallet, CalendarDays, Info } from 'lucide-react'
+import { useLang } from '@/contexts/LangContext'
 import { DecimalInput } from '@/components/calculator/DecimalInput'
 import { DatePickerField } from '@/components/admin/DatePickerField'
 import { TimeframeInput } from '@/components/admin/TimeframeInput'
 import { Select } from '@/components/waybill/Select'
 import { PhoneInput } from '@/components/waybill/PhoneInput'
 import { CitySelect, CountrySelect } from '@/components/admin/Selects'
+import { STATUS_KEYS, STATUS_ORDER } from '@/lib/waybill/statusI18n'
 import {
 	INSTRUCTION_HINTS,
 	NATURE_PRESETS,
-	STATUS_LABELS,
 	autoVolume,
 	emptyPosition,
 	fmtDecimal,
@@ -112,6 +113,7 @@ export function WaybillForm({
 	// Подсветка незаполненных обязательных полей (после попытки сохранить)
 	showErrors?: boolean
 }) {
+	const { t, tf } = useLang()
 	const w = value
 	const show = (k: WaybillSection) => !only || only.includes(k)
 	const set = (patch: Partial<Waybill>) => onChange({ ...w, ...patch })
@@ -140,29 +142,23 @@ export function WaybillForm({
 
 	return (
 		<div className="flex flex-col gap-0">
-			{readOnly && !only && (
-				<div className="mb-6 flex items-center gap-2 text-[13px] bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-300 rounded-lg px-3.5 py-2.5">
-					<Info className="w-4 h-4 shrink-0" />
-					Роль «Логист»: форма доступна только для просмотра. Редактирование — у Оператора / Администратора.
-				</div>
-			)}
 
 			{/* Шапка: номер + статус */}
 			{show('header') && (
 			<div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-100 dark:border-amber-500/20 px-4 sm:px-5 py-4">
 				<div>
-					<p className="text-[11px] font-semibold text-amber-700/70 dark:text-amber-300 uppercase tracking-wide">Номер накладной</p>
+					<p className="text-[11px] font-semibold text-amber-700/70 dark:text-amber-300 uppercase tracking-wide">{t('wfNumberLabel')}</p>
 					<p className="text-xl font-bold text-slate-900 dark:text-zinc-100 mt-0.5">
-						{w.number ? `№${w.number}` : <span className="text-slate-400 dark:text-zinc-500 text-base font-medium">присвоится при сохранении</span>}
+						{w.number ? `№${w.number}` : <span className="text-slate-400 dark:text-zinc-500 text-base font-medium">{t('wfNumberPending')}</span>}
 					</p>
 				</div>
 				<div className="min-w-[220px]">
-					<Label>Статус</Label>
+					<Label>{t('statusCardLabel')}</Label>
 					<Select<WaybillStatus>
 						value={w.status}
 						disabled={dis}
 						onChange={(status) => set({ status })}
-						options={(Object.keys(STATUS_LABELS) as WaybillStatus[]).map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+						options={STATUS_ORDER.map((s) => ({ value: s, label: t(STATUS_KEYS[s]) }))}
 					/>
 				</div>
 			</div>
@@ -172,56 +168,56 @@ export function WaybillForm({
 			{show('sender') && (
 			<Section
 				icon={User}
-				title="Отправитель"
-				hint="По умолчанию — реквизиты склада ЛТТ в Алматы">
+				title={t('wfSenderTitle')}
+				hint={t('wfSenderHint')}>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
-						<Label req>ФИО отправителя</Label>
+						<Label req>{t('wfSenderName')}</Label>
 						<input
 							value={w.sender.fullName}
 							disabled={dis}
 							onChange={(e) => setSender({ fullName: e.target.value })}
 							maxLength={150}
-							placeholder="Иванов Иван Иванович"
+							placeholder={t('wfSenderNamePh')}
 							className={reqField(!w.sender.fullName.trim())}
 						/>
 					</div>
 					<div>
-						<Label req>Тип отправителя</Label>
+						<Label req>{t('wfSenderType')}</Label>
 						<Radio
 							value={w.sender.type}
 							disabled={dis}
 							onChange={(type) => setSender({ type })}
 							options={[
-								{ value: 'individual', label: 'Физлицо' },
-								{ value: 'company', label: 'Компания' },
+								{ value: 'individual', label: t('wfIndividual') },
+								{ value: 'company', label: t('wfCompany') },
 							]}
 						/>
 					</div>
 					{w.sender.type === 'company' && (
 						<>
 							<div>
-								<Label req>Название компании</Label>
+								<Label req>{t('wfCompanyName')}</Label>
 								<input
 									value={w.sender.companyName}
 									disabled={dis}
 									onChange={(e) => setSender({ companyName: e.target.value })}
-									placeholder="ТОО «…»"
+									placeholder={t('wfCompanyNamePh')}
 									className={reqField(!w.sender.companyName.trim())}
 								/>
 							</div>
 							<div>
-								<Label>ИНН / БИН</Label>
+								<Label>{t('wfCompanyTin')}</Label>
 								<input
 									value={w.sender.companyTin}
 									disabled={dis}
 									onChange={(e) => setSender({ companyTin: e.target.value.replace(/\D/g, '') })}
-									placeholder="Только цифры"
+									placeholder={t('wfDigitsOnly')}
 									className={fld}
 								/>
 							</div>
 							<div className="sm:col-span-2">
-								<Label>Контактное лицо</Label>
+								<Label>{t('wfContactPerson')}</Label>
 								<input
 									value={w.sender.contactPerson}
 									disabled={dis}
@@ -232,7 +228,7 @@ export function WaybillForm({
 						</>
 					)}
 					<div className="sm:col-span-2">
-						<Label req>Адрес отправителя</Label>
+						<Label req>{t('wfSenderAddress')}</Label>
 						<input
 							value={w.sender.address}
 							disabled={dis}
@@ -241,7 +237,7 @@ export function WaybillForm({
 						/>
 					</div>
 					<div>
-						<Label req>Город</Label>
+						<Label req>{t('wfCity')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<CitySelect
 								value={w.sender.city}
@@ -252,7 +248,7 @@ export function WaybillForm({
 						</div>
 					</div>
 					<div>
-						<Label req>Страна</Label>
+						<Label req>{t('wfCountry')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<CountrySelect
 								value={w.sender.country}
@@ -270,22 +266,22 @@ export function WaybillForm({
 			{show('receiver') && (
 			<Section
 				icon={UserRound}
-				title="Получатель"
-				hint="Телефон используется для уведомления клиента">
+				title={t('wfReceiverTitle')}
+				hint={t('wfReceiverHint')}>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div className="sm:col-span-2">
-						<Label req>Фамилия, Имя, Отчество</Label>
+						<Label req>{t('wfReceiverFullName')}</Label>
 						<input
 							value={w.receiver.fullName}
 							disabled={dis}
 							onChange={(e) => setReceiver({ fullName: e.target.value })}
 							maxLength={150}
-							placeholder="Троценко Никита Алексеевич"
+							placeholder={t('wfReceiverNamePh')}
 							className={reqField(!w.receiver.fullName.trim())}
 						/>
 					</div>
 					<div>
-						<Label req>Телефон</Label>
+						<Label req>{t('wfPhone')}</Label>
 						<PhoneInput
 							value={w.receiver.phone}
 							disabled={dis}
@@ -294,17 +290,17 @@ export function WaybillForm({
 						/>
 					</div>
 					<div>
-						<Label>ИНН / ИИН</Label>
+						<Label>{t('wfReceiverTin')}</Label>
 						<input
 							value={w.receiver.tin}
 							disabled={dis}
 							onChange={(e) => setReceiver({ tin: e.target.value.replace(/\D/g, '') })}
-							placeholder="Необязательно"
+							placeholder={t('wfOptional')}
 							className={fld}
 						/>
 					</div>
 					<div>
-						<Label>Паспорт</Label>
+						<Label>{t('wfPassport')}</Label>
 						<input
 							value={w.receiver.passport}
 							disabled={dis}
@@ -314,18 +310,18 @@ export function WaybillForm({
 						/>
 					</div>
 					<div className="sm:col-span-2 sm:row-start-2">
-						<Label req>Полный адрес доставки</Label>
+						<Label req>{t('wfDeliveryAddress')}</Label>
 						<input
 							value={w.receiver.address}
 							disabled={dis}
 							onChange={(e) => setReceiver({ address: e.target.value })}
 							maxLength={250}
-							placeholder="г. Казань, ул. Южно-промышленная 30А"
+							placeholder={t('wfAddressPh')}
 							className={reqField(!w.receiver.address.trim())}
 						/>
 					</div>
 					<div>
-						<Label req>Город доставки</Label>
+						<Label req>{t('cityDelivery')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<CitySelect
 								value={w.receiver.city}
@@ -336,7 +332,7 @@ export function WaybillForm({
 						</div>
 					</div>
 					<div>
-						<Label req>Страна доставки</Label>
+						<Label req>{t('wfDeliveryCountry')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<CountrySelect
 								value={w.receiver.country}
@@ -349,7 +345,7 @@ export function WaybillForm({
 				</div>
 				<p className="text-xs text-slate-400 dark:text-zinc-500 mt-3 flex items-start gap-1.5">
 					<Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-					ИНН и паспорт необязательны; хранятся в защищённом виде, доступ по ролям.
+					{t('wfPrivacyNote')}
 				</p>
 			</Section>
 			)}
@@ -358,9 +354,9 @@ export function WaybillForm({
 			{show('cargo') && (
 			<Section
 				icon={PackageOpen}
-				title="Описание отправления"
-				hint="Характер груза, позиции, вес и объём">
-				<Label req>Характер груза</Label>
+				title={t('wfCargoTitle')}
+				hint={t('wfCargoHint')}>
+				<Label req>{t('wfNature')}</Label>
 				<div className="flex flex-wrap gap-2 mb-2.5">
 					{NATURE_PRESETS.map((n) => (
 						<button
@@ -381,13 +377,13 @@ export function WaybillForm({
 					value={w.nature}
 					disabled={dis}
 					onChange={(e) => set({ nature: e.target.value })}
-					placeholder="или введите свой характер груза"
+					placeholder={t('wfNaturePh')}
 					className={`${fld} mb-5`}
 				/>
 
 				<div className="flex items-center justify-between mb-2">
-					<Label>Позиции груза</Label>
-					<span className="text-xs text-slate-400 dark:text-zinc-500">{w.positions.length} поз.</span>
+					<Label>{t('wfPositions')}</Label>
+					<span className="text-xs text-slate-400 dark:text-zinc-500">{tf('wfPositionsUnit', { count: w.positions.length })}</span>
 				</div>
 				<div className="flex flex-col gap-3">
 					{w.positions.map((p, i) => (
@@ -402,7 +398,7 @@ export function WaybillForm({
 									value={p.name}
 									disabled={dis}
 									onChange={(e) => updatePos(p.id, { name: e.target.value })}
-									placeholder="Наименование (напр. Электровелосипеды SK8)"
+									placeholder={t('wfPositionNamePh')}
 									className={`${fld} flex-1`}
 								/>
 								{!dis && w.positions.length > 1 && (
@@ -410,14 +406,14 @@ export function WaybillForm({
 										type="button"
 										onClick={() => removePos(p.id)}
 										className="shrink-0 p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50 transition-colors"
-										aria-label="Удалить позицию">
+										aria-label={t('wfRemovePosition')}>
 										<Trash2 className="w-4 h-4" />
 									</button>
 								)}
 							</div>
 							<div className="grid grid-cols-2 lg:grid-cols-12 gap-3">
 								<div className="lg:col-span-2">
-									<FieldLabel>Кол-во, шт</FieldLabel>
+									<FieldLabel>{t('wfQty')}</FieldLabel>
 									<DecimalInput
 										value={p.quantity}
 										onChange={(v) => updatePos(p.id, { quantity: v })}
@@ -425,7 +421,7 @@ export function WaybillForm({
 									/>
 								</div>
 								<div className="col-span-2 lg:col-span-5">
-									<FieldLabel>Габариты, см (Д × Ш × В)</FieldLabel>
+									<FieldLabel>{t('wfDims')}</FieldLabel>
 									<div className="flex items-center gap-1.5">
 										<DecimalInput
 											value={p.length}
@@ -447,7 +443,7 @@ export function WaybillForm({
 									</div>
 								</div>
 								<div className="lg:col-span-2">
-									<FieldLabel>Вес места, кг</FieldLabel>
+									<FieldLabel>{t('wfPlaceWeight')}</FieldLabel>
 									<DecimalInput
 										value={p.weight}
 										onChange={(v) => updatePos(p.id, { weight: v })}
@@ -455,7 +451,7 @@ export function WaybillForm({
 									/>
 								</div>
 								<div className="col-span-2 lg:col-span-3">
-									<FieldLabel>Стоимость, ₸</FieldLabel>
+									<FieldLabel>{t('wfCost')}</FieldLabel>
 									<DecimalInput
 										value={p.price}
 										onChange={(v) => updatePos(p.id, { price: v })}
@@ -465,8 +461,8 @@ export function WaybillForm({
 							</div>
 							{(posWeight(p) > 0 || posVolume(p) > 0) && (
 								<div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-zinc-700 text-xs text-slate-500 dark:text-zinc-400 flex flex-wrap gap-x-4 gap-y-1">
-									<span>Объём позиции: <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posVolume(p))} м³</b></span>
-									<span>Вес позиции: <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posWeight(p), 1)} кг</b></span>
+									<span>{t('wfPositionVolume')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posVolume(p))} м³</b></span>
+									<span>{t('wfPositionWeight')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posWeight(p), 1)} кг</b></span>
 								</div>
 							)}
 						</div>
@@ -477,19 +473,19 @@ export function WaybillForm({
 						type="button"
 						onClick={addPos}
 						className="mt-3 inline-flex items-center gap-1.5 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 font-medium">
-						<Plus className="w-4 h-4" /> Добавить позицию
+						<Plus className="w-4 h-4" /> {t('wfAddPosition')}
 					</button>
 				)}
 
 				{/* Итоги */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
 					<div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3">
-						<p className="text-xs text-slate-500 dark:text-zinc-400">Общий вес (авто)</p>
+						<p className="text-xs text-slate-500 dark:text-zinc-400">{t('wfTotalWeight')}</p>
 						<p className="text-lg font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{fmtDecimal(totalWeight(w.positions), 1)} кг</p>
 					</div>
 					<div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3">
 						<div className="flex items-center justify-between">
-							<p className="text-xs text-slate-500 dark:text-zinc-400">Объём</p>
+							<p className="text-xs text-slate-500 dark:text-zinc-400">{t('wfVolume')}</p>
 							<label className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1.5 cursor-pointer">
 								<input
 									type="checkbox"
@@ -498,7 +494,7 @@ export function WaybillForm({
 									onChange={(e) => set({ manualVolume: e.target.checked })}
 									className="accent-orange-500"
 								/>
-								ввести вручную
+								{t('wfManualVolume')}
 							</label>
 						</div>
 						{w.manualVolume ? (
@@ -515,20 +511,20 @@ export function WaybillForm({
 				</div>
 
 				<div className="mt-5">
-					<Label req>Соответствие упаковки</Label>
+					<Label req>{t('wfPackaging')}</Label>
 					<Radio
 						value={w.packagingOk ? 'yes' : 'no'}
 						disabled={dis}
 						onChange={(v) => set({ packagingOk: v === 'yes' })}
 						options={[
-							{ value: 'yes', label: 'Да' },
-							{ value: 'no', label: 'Нет' },
+							{ value: 'yes', label: t('wfYes') },
+							{ value: 'no', label: t('wfNo') },
 						]}
 					/>
 				</div>
 
 				<div className="mt-5">
-					<Label>Спец-инструкция</Label>
+					<Label>{t('wfInstructions')}</Label>
 					<div className="flex flex-wrap gap-1.5 mb-2">
 						{INSTRUCTION_HINTS.map((h) => (
 							<button
@@ -548,7 +544,7 @@ export function WaybillForm({
 						disabled={dis}
 						onChange={(e) => set({ specialInstructions: e.target.value })}
 						rows={2}
-						placeholder="Особые условия перевозки…"
+						placeholder={t('wfInstructionsPh')}
 						className={`${fld} resize-none`}
 					/>
 				</div>
@@ -559,34 +555,34 @@ export function WaybillForm({
 			{show('payment') && (
 			<Section
 				icon={Wallet}
-				title="Оплата">
+				title={t('wfPaymentTitle')}>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
-						<Label req>Кто оплачивает</Label>
+						<Label req>{t('wfPayer')}</Label>
 						<Radio
 							value={w.payer}
 							disabled={dis}
 							onChange={(payer) => set({ payer })}
 							options={[
-								{ value: 'sender', label: 'Отправитель' },
-								{ value: 'receiver', label: 'Получатель' },
+								{ value: 'sender', label: t('wfSenderTitle') },
+								{ value: 'receiver', label: t('wfReceiverTitle') },
 							]}
 						/>
 					</div>
 					<div>
-						<Label req>Способ оплаты</Label>
+						<Label req>{t('wfPayMethod')}</Label>
 						<Radio
 							value={w.payMethod}
 							disabled={dis}
 							onChange={(payMethod) => set({ payMethod })}
 							options={[
-								{ value: 'cash', label: 'Наличный' },
-								{ value: 'cashless', label: 'Безналичный' },
+								{ value: 'cash', label: t('wfCash') },
+								{ value: 'cashless', label: t('wfCashless') },
 							]}
 						/>
 					</div>
 					<div className="sm:col-span-2">
-						<Label req>Сумма к оплате</Label>
+						<Label req>{t('wfAmount')}</Label>
 						<div className="relative">
 							<DecimalInput
 								value={w.amount}
@@ -596,7 +592,7 @@ export function WaybillForm({
 							/>
 							<span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-sm pointer-events-none">₸</span>
 						</div>
-						<p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">Подставляется автоматически из калькулятора (Блок №3).</p>
+						<p className="text-xs text-slate-400 dark:text-zinc-500 mt-1.5">{t('wfAmountHint')}</p>
 					</div>
 				</div>
 			</Section>
@@ -606,10 +602,10 @@ export function WaybillForm({
 			{show('extras') && (
 			<Section
 				icon={CalendarDays}
-				title="Дополнительные реквизиты">
+				title={t('wfExtrasTitle')}>
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div>
-						<Label req>Дата приёма груза</Label>
+						<Label req>{t('wfAcceptanceDate')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<DatePickerField
 								value={w.acceptanceDate}
@@ -619,7 +615,7 @@ export function WaybillForm({
 					</div>
 					{/* ПРАВКИ 2, п.5 — оба поля заполняет оператор вручную и они идут в PDF */}
 					<div>
-						<Label>Дата отправки груза</Label>
+						<Label>{t('wfShipmentDate')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<DatePickerField
 								value={w.shipmentDate}
@@ -628,7 +624,7 @@ export function WaybillForm({
 						</div>
 					</div>
 					<div>
-						<Label>Сроки доставки</Label>
+						<Label>{t('deliveryTimeframeLabel')}</Label>
 						<div className={dis ? 'opacity-60 pointer-events-none' : ''}>
 							<TimeframeInput
 								value={w.deliveryTimeframe}
@@ -639,7 +635,7 @@ export function WaybillForm({
 				</div>
 				<p className="text-xs text-slate-400 dark:text-zinc-500 mt-3 flex items-start gap-1.5">
 					<Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-					Дата отправки и сроки доставки попадают в PDF-накладную (кнопка «Скачать PDF») и в карточку груза.
+					{t('wfExtrasNote')}
 				</p>
 			</Section>
 			)}

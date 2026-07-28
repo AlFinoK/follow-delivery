@@ -5,6 +5,7 @@
 // один и тот же номер.
 
 import { isValidPhoneNumber } from 'react-phone-number-input'
+import type { TranslationKey } from '@/lib/i18n'
 
 export type SenderType = 'individual' | 'company'
 export type Payer = 'sender' | 'receiver'
@@ -179,24 +180,25 @@ export function isPhoneValid(phone: string): boolean {
 }
 
 // ── Валидация накладной для гейта «Сохранить» (правка: нормальная валидация) ──
+// Ошибка — ключ словаря, а не готовый текст: тост показывается на языке интерфейса.
 export interface WaybillError {
 	step: number // на каком шаге визарда лежит поле
-	message: string
+	key: TranslationKey
 }
 export function validateWaybill(w: Waybill): WaybillError[] {
 	const errs: WaybillError[] = []
 	// Шаг 0 — отправитель и получатель
-	if (!w.sender.fullName.trim()) errs.push({ step: 0, message: 'Укажите ФИО отправителя' })
+	if (!w.sender.fullName.trim()) errs.push({ step: 0, key: 'wvSenderName' })
 	if (w.sender.type === 'company' && !w.sender.companyName.trim())
-		errs.push({ step: 0, message: 'Укажите название компании-отправителя' })
-	if (!w.sender.address.trim()) errs.push({ step: 0, message: 'Укажите адрес отправителя' })
-	if (!w.sender.city.trim()) errs.push({ step: 0, message: 'Укажите город отправителя' })
-	if (!w.receiver.fullName.trim()) errs.push({ step: 0, message: 'Укажите ФИО получателя' })
-	if (!isPhoneValid(w.receiver.phone)) errs.push({ step: 0, message: 'Проверьте телефон получателя' })
-	if (!w.receiver.address.trim()) errs.push({ step: 0, message: 'Укажите адрес доставки' })
-	if (!w.receiver.city.trim()) errs.push({ step: 0, message: 'Укажите город доставки' })
+		errs.push({ step: 0, key: 'wvCompanyName' })
+	if (!w.sender.address.trim()) errs.push({ step: 0, key: 'wvSenderAddress' })
+	if (!w.sender.city.trim()) errs.push({ step: 0, key: 'wvSenderCity' })
+	if (!w.receiver.fullName.trim()) errs.push({ step: 0, key: 'wvReceiverName' })
+	if (!isPhoneValid(w.receiver.phone)) errs.push({ step: 0, key: 'wvPhone' })
+	if (!w.receiver.address.trim()) errs.push({ step: 0, key: 'wvDeliveryAddress' })
+	if (!w.receiver.city.trim()) errs.push({ step: 0, key: 'wvDeliveryCity' })
 	// Шаг 1 — груз
-	if (!w.nature.trim()) errs.push({ step: 1, message: 'Укажите характер груза' })
+	if (!w.nature.trim()) errs.push({ step: 1, key: 'wvNature' })
 	return errs
 }
 

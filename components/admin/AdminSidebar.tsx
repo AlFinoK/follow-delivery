@@ -132,7 +132,7 @@ export function AdminSidebar() {
 					<button
 						onClick={() => setDrawerOpen(true)}
 						className="p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
-						aria-label="Открыть меню">
+						aria-label={t('openMenu')}>
 						<Menu className="w-5 h-5" />
 					</button>
 					<Link href={`/admin`} className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export function AdminSidebar() {
 						<button
 							onClick={() => setDrawerOpen(false)}
 							className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
-							aria-label="Закрыть меню">
+							aria-label={t('closeMenu')}>
 							<X className="w-5 h-5" />
 						</button>
 						<SidebarBody onLinkClick={() => setDrawerOpen(false)} onLogout={requestLogout} />

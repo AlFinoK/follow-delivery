@@ -122,7 +122,7 @@ export function PlacesEditor({
 									type="text"
 									value={p.name ?? ''}
 									onChange={(e) => onUpdate(i, { name: e.target.value })}
-									placeholder="напр. Электровелосипеды SK8"
+									placeholder={t('calcNamePh')}
 									className="w-full px-2.5 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-300 dark:placeholder-zinc-600 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 								/>
 							</div>

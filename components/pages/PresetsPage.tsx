@@ -262,7 +262,7 @@ export function PresetsPage() {
 															</div>
 															<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
 																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг
-																{p.goodsPrice > 0 && ` · товар ${ru(p.goodsPrice)} ₸`}
+																{p.goodsPrice > 0 && ` · ${t('presetGoodsShort')} ${ru(p.goodsPrice)} ₸`}
 															</p>
 														</div>
 													</div>

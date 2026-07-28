@@ -11,16 +11,15 @@ import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import { ToastItem, type Toast } from '@/components/Toast'
 import { openWaybillPrint } from '@/lib/waybill/print'
-import { STATUS_LABELS, fmtMoney, totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { fmtMoney, totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { STATUS_KEYS, STATUS_ORDER } from '@/lib/waybill/statusI18n'
 
 // Список сохранённых накладных (ПРАВКИ 2, п.6 — «непонятно, где хранятся накладные»).
 // Отсюда накладная открывается на редактирование: /admin/waybills/[id].
 
 type Tab = 'all' | WaybillStatus
 
-const TABS: Tab[] = ['all', 'draft', 'active', 'delivered', 'cancelled']
-
-const TAB_LABELS: Record<Tab, string> = { all: 'Все', ...STATUS_LABELS }
+const TABS: Tab[] = ['all', ...STATUS_ORDER]
 
 const BADGE: Record<WaybillStatus, string> = {
 	draft: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700',
@@ -36,7 +35,7 @@ const ru = (date: string) => {
 }
 
 export function WaybillsListPage() {
-	const { t } = useLang()
+	const { t, tf } = useLang()
 	const repo = repos
 	const [mounted, setMounted] = useState(false)
 	const [minLoadDone, setMinLoadDone] = useState(false)
@@ -89,7 +88,7 @@ export function WaybillsListPage() {
 			try {
 				setData(await repo.waybills.list({ status: tab, q: query, page }))
 			} catch {
-				addToast('Не удалось загрузить накладные', 'error')
+				addToast(t('wlLoadError'), 'error')
 			} finally {
 				setLoading(false)
 				setRefreshing(false)
@@ -140,7 +139,7 @@ export function WaybillsListPage() {
 										{refreshing && <Spinner className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />}
 									</div>
 									<p className="text-slate-500 dark:text-zinc-400 text-xs mt-0.5">
-										{hasFilter ? `Найдено: ${data?.total ?? 0} из ${counts.all}` : `Всего: ${counts.all}`}
+										{hasFilter ? tf('foundCount', { found: data?.total ?? 0, total: counts.all }) : tf('totalCount', { total: counts.all })}
 									</p>
 								</div>
 								<Link
@@ -158,7 +157,7 @@ export function WaybillsListPage() {
 									type="text"
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
-									placeholder="Номер, ФИО, телефон, город или характер груза"
+									placeholder={t('wlSearchPh')}
 									className="w-full pl-9 pr-9 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 								/>
 								{search && (
@@ -186,7 +185,7 @@ export function WaybillsListPage() {
 													? 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-500/25'
 													: 'bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white'
 											}`}>
-											{TAB_LABELS[key]}
+											{key === 'all' ? t('filterAll') : t(STATUS_KEYS[key])}
 											<span
 												className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
 													active
@@ -208,14 +207,14 @@ export function WaybillsListPage() {
 							) : counts.all === 0 ? (
 								<div className="text-center py-12">
 									<Inbox className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
-									<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">Накладных пока нет</p>
-									<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">Создайте первую — она сохранится в базе и появится здесь</p>
+									<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('wlEmpty')}</p>
+									<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('wlEmptyHint')}</p>
 								</div>
 							) : items.length === 0 ? (
 								<div className="text-center py-12">
 									<SearchX className="w-10 h-10 text-slate-300 dark:text-zinc-600 mx-auto mb-3" />
-									<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">Ничего не найдено</p>
-									<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">Попробуйте другой запрос</p>
+									<p className="text-slate-600 dark:text-zinc-300 font-medium text-sm">{t('nothingFound')}</p>
+									<p className="text-slate-400 dark:text-zinc-500 text-xs mt-1">{t('tryAnotherQuery')}</p>
 								</div>
 							) : (
 								<>
@@ -238,7 +237,7 @@ export function WaybillsListPage() {
 												<ChevronLeft className="w-4 h-4" />
 											</button>
 											<span className="text-xs text-slate-500 dark:text-zinc-400">
-												Стр. {currentPage} из {totalPages}
+												{tf('pageOf', { page: currentPage, pages: totalPages })}
 											</span>
 											<button
 												onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
@@ -260,6 +259,7 @@ export function WaybillsListPage() {
 }
 
 function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string }) {
+	const { t, tf } = useLang()
 	const weight = totalWeight(w.positions)
 	return (
 		<div className="group relative rounded-xl border border-slate-200 dark:border-zinc-700 hover:border-orange-300 dark:hover:border-orange-500/40 bg-white dark:bg-zinc-900 transition-colors">
@@ -273,7 +273,7 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 								<FileText className="w-4 h-4 text-orange-500" />№{w.number}
 							</span>
 							<span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${BADGE[w.status]}`}>
-								{STATUS_LABELS[w.status]}
+								{t(STATUS_KEYS[w.status])}
 							</span>
 							{w.nature && <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">{w.nature}</span>}
 						</div>
@@ -281,14 +281,14 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 							{w.sender.fullName || '—'} <span className="text-slate-400 dark:text-zinc-500">→</span> {w.receiver.fullName || '—'}
 						</p>
 						<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 truncate">
-							{w.sender.city || '—'} → {w.receiver.city || '—'} · приём {ru(w.acceptanceDate)}
-							{weight > 0 && ` · ${weight.toFixed(1).replace('.', ',')} кг`}
+							{w.sender.city || '—'} → {w.receiver.city || '—'} · {tf('wlAccepted', { date: ru(w.acceptanceDate) })}
+							{weight > 0 && ` · ${weight.toFixed(1).replace('.', ',')} ${t('calcKg')}`}
 						</p>
 					</div>
 					<div className="text-right shrink-0">
 						<p className="text-sm font-bold text-slate-900 dark:text-zinc-100">{fmtMoney(w.amount)} ₸</p>
 						<p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
-							{w.payer === 'sender' ? 'платит отправитель' : 'платит получатель'}
+							{w.payer === 'sender' ? t('wlPayerSender') : t('wlPayerReceiver')}
 						</p>
 					</div>
 				</div>
@@ -296,8 +296,8 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 			<button
 				type="button"
 				onClick={() => openWaybillPrint(w)}
-				title="Скачать PDF"
-				aria-label={`Скачать PDF накладной №${w.number}`}
+				title={t('wpDownloadPdf')}
+				aria-label={tf('wlPdfAria', { number: w.number })}
 				className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors">
 				<FileDown className="w-4 h-4" />
 			</button>

@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 	if (denied) return denied
 
 	const { id } = await params
-	const cargo = await prisma.cargo.findUnique({ where: { id } })
+	const cargo = await prisma.cargo.findUnique({ where: { id }, include: { folder: { select: { name: true } } } })
 	if (!cargo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 	return NextResponse.json(mapCargo(cargo))
 }
