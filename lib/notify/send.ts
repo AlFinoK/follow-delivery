@@ -189,6 +189,29 @@ function createLog(w: Waybill, channel: NotifyChannel, text: string, smsText?: s
 }
 
 /**
+ * Отправка «одной кнопкой»: WhatsApp, а если он не сработал — SMS.
+ *
+ * Каскад целиком:
+ *   1. у номера нет WhatsApp        → SMS (это делает сам notifyClient);
+ *   2. WhatsApp-канал не настроен
+ *      или недоступен (WAHA лежит,
+ *      сессия отвалилась)           → SMS (это делает эта функция);
+ *   3. SMS тоже не настроен         → ручной режим со ссылками.
+ *
+ * Повтор, отклонённый защитой от дублей (RECENTLY_SENT), в SMS НЕ уходит: клиенту
+ * только что уже написали, второе сообщение другим каналом ему не нужно.
+ */
+export async function notifyWithFallback(w: Waybill, custom?: NotifyTexts): Promise<NotifyOutcome> {
+	const outcome = await notifyClient(w, undefined, custom)
+	if (outcome.status === 'sent' || outcome.code === RECENTLY_SENT) return outcome
+	if (!outcome.smsAvailable) return outcome
+
+	const viaSms = await notifyClient(w, 'sms', custom)
+	// Причину провала WhatsApp сохраняем: оператору полезно знать, почему ушло SMS.
+	return viaSms.status === 'sent' ? { ...viaSms, code: outcome.code ?? viaSms.code } : viaSms
+}
+
+/**
  * Досылка SMS вместо не доставленного WhatsApp. Вызывается двумя путями: сразу при
  * `numberExists: false` и из вебхука при ack=ERROR.
  *

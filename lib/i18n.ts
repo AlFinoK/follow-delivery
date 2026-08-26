@@ -432,6 +432,9 @@ export type Translations = {
 	wpSave: string
 	wpDownloadPdf: string
 	wpNotifyClient: string
+	wpAutoWa: string
+	wpAutoSms: string
+	wpAutoFailed: string
 	wpClear: string
 	wpBack: string
 	wpNext: string
@@ -451,6 +454,7 @@ export type Translations = {
 	nmPreviewSms: string
 	nmReset: string
 	nmSmsParts: string
+	nmSend: string
 	nmSendWa: string
 	nmOpenWa: string
 	nmSendSms: string
@@ -915,6 +919,9 @@ export const translations: Record<Lang, Translations> = {
 		wpSave: 'Сохранить накладную',
 		wpDownloadPdf: 'Скачать PDF',
 		wpNotifyClient: 'Уведомить клиента',
+		wpAutoWa: 'Клиент уведомлён в WhatsApp.',
+		wpAutoSms: 'Клиент уведомлён по SMS.',
+		wpAutoFailed: 'Уведомить клиента не удалось',
 		wpClear: 'Очистить',
 		wpBack: 'Назад',
 		wpNext: 'Далее',
@@ -925,7 +932,7 @@ export const translations: Record<Lang, Translations> = {
 		wpLogistHint: 'Автосводка по накладной — скопировать или отправить',
 		wpLogistLocked: 'Сводка появится после сохранения накладной',
 		nmTitle: 'Отправить уведомление?',
-		nmConfirmHint: 'Текст можно поправить — клиенту он уйдёт после нажатия «Отправить в WhatsApp».',
+		nmConfirmHint: 'Текст можно поправить — клиенту он уйдёт после нажатия «Отправить».',
 		nmRecipient: 'Получатель',
 		nmNoPhone: 'У получателя не указан телефон',
 		nmNeedSave: 'Накладная не сохранена: автоотправка недоступна. Сохраните её или отправьте вручную по ссылке.',
@@ -933,9 +940,10 @@ export const translations: Record<Lang, Translations> = {
 		nmPreviewSms: 'Текст для SMS',
 		nmReset: 'Вернуть шаблон',
 		nmSmsParts: '{n} SMS',
-		nmSendWa: 'Отправить в WhatsApp',
+		nmSend: 'Отправить',
+		nmSendWa: 'WhatsApp',
 		nmOpenWa: 'Открыть WhatsApp',
-		nmSendSms: 'Отправить SMS',
+		nmSendSms: 'SMS',
 		nmOpenSms: 'Открыть SMS',
 		nmSending: 'Отправка…',
 		nmSentWa: 'Отправлено в WhatsApp',
@@ -945,7 +953,7 @@ export const translations: Record<Lang, Translations> = {
 		nmFailed: 'Не удалось отправить',
 		nmManualMode: 'Автоотправка не настроена — отправьте вручную',
 		nmManualHint: 'Автоотправка не подключена: кнопки откроют WhatsApp или SMS с готовым текстом — отправку подтвердите сами.',
-		nmSmsHint: 'Отдельная кнопка нужна редко: если у номера нет WhatsApp, SMS уходит само.',
+		nmSmsHint: '«Отправить» шлёт в WhatsApp, а если не вышло — SMS. Кнопки ниже отправляют выбранным каналом, без запасного.',
 		nmHistory: 'Прошлые отправки',
 		nmClose: 'Закрыть',
 		nmChWhatsapp: 'WhatsApp',
@@ -1392,6 +1400,9 @@ export const translations: Record<Lang, Translations> = {
 		wpSave: 'Жүкқұжатты сақтау',
 		wpDownloadPdf: 'PDF жүктеу',
 		wpNotifyClient: 'Клиентке хабарлау',
+		wpAutoWa: 'Клиент WhatsApp арқылы хабарландырылды.',
+		wpAutoSms: 'Клиент SMS арқылы хабарландырылды.',
+		wpAutoFailed: 'Клиентке хабарлау сәтсіз аяқталды',
 		wpClear: 'Тазарту',
 		wpBack: 'Артқа',
 		wpNext: 'Әрі қарай',
@@ -1402,7 +1413,7 @@ export const translations: Record<Lang, Translations> = {
 		wpLogistHint: 'Жүкқұжат бойынша авто-жиынтық — көшіріңіз немесе жіберіңіз',
 		wpLogistLocked: 'Жиынтық жүкқұжат сақталғаннан кейін пайда болады',
 		nmTitle: 'Хабарлама жіберу?',
-		nmConfirmHint: 'Мәтінді өңдеуге болады — «WhatsApp-қа жіберу» түймесін басқаннан кейін клиентке жіберіледі.',
+		nmConfirmHint: 'Мәтінді өңдеуге болады — «Жіберу» түймесін басқаннан кейін клиентке жіберіледі.',
 		nmRecipient: 'Алушы',
 		nmNoPhone: 'Алушының телефоны көрсетілмеген',
 		nmNeedSave: 'Жүкқұжат сақталмаған: авто-жіберу қолжетімсіз. Оны сақтаңыз немесе сілтеме арқылы қолмен жіберіңіз.',
@@ -1410,9 +1421,10 @@ export const translations: Record<Lang, Translations> = {
 		nmPreviewSms: 'SMS үшін мәтін',
 		nmReset: 'Үлгіні қайтару',
 		nmSmsParts: '{n} SMS',
-		nmSendWa: 'WhatsApp-қа жіберу',
+		nmSend: 'Жіберу',
+		nmSendWa: 'WhatsApp',
 		nmOpenWa: 'WhatsApp-ты ашу',
-		nmSendSms: 'SMS жіберу',
+		nmSendSms: 'SMS',
 		nmOpenSms: 'SMS ашу',
 		nmSending: 'Жіберілуде…',
 		nmSentWa: 'WhatsApp-қа жіберілді',
@@ -1422,7 +1434,7 @@ export const translations: Record<Lang, Translations> = {
 		nmFailed: 'Жіберу мүмкін болмады',
 		nmManualMode: 'Авто-жіберу бапталмаған — қолмен жіберіңіз',
 		nmManualHint: 'Авто-жіберу қосылмаған: түймелер WhatsApp немесе SMS-ті дайын мәтінмен ашады — жіберуді өзіңіз растайсыз.',
-		nmSmsHint: 'Бөлек түйме сирек керек: нөмірде WhatsApp болмаса, SMS өздігінен жіберіледі.',
+		nmSmsHint: '«Жіберу» WhatsApp-қа жібереді, болмаса — SMS. Төмендегі түймелер таңдалған арнамен, қосалқысыз жібереді.',
 		nmHistory: 'Бұрынғы жіберулер',
 		nmClose: 'Жабу',
 		nmChWhatsapp: 'WhatsApp',

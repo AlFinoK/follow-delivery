@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { mapWaybill, waybillData, waybillErrors, waybillItems } from '@/lib/mapWaybill'
 import { syncCargo } from '@/lib/waybill/cargoSync'
 import { reserveWaybillNumber } from '@/lib/waybill/number'
+import { autoNotify } from '@/lib/notify/auto'
 
 const PAGE_SIZE = 12
 
@@ -97,17 +98,19 @@ export async function POST(req: NextRequest) {
 	// Груз в трекере — производная сущность. Если привязка не удалась (например,
 	// CARGO-<номер> уже занят другой накладной), накладную всё равно отдаём: связь
 	// восстановится при следующем сохранении.
+	let result = mapWaybill(created)
 	try {
 		const cargoId = await syncCargo(number, data, null)
-		const linked = await prisma.waybill.update({
-			where: { id: created.id },
-			data: { cargoId },
-			include: { items: true },
-		})
-		return NextResponse.json(mapWaybill(linked), { status: 201 })
+		result = mapWaybill(
+			await prisma.waybill.update({ where: { id: created.id }, data: { cargoId }, include: { items: true } })
+		)
 	} catch {
-		return NextResponse.json(mapWaybill(created), { status: 201 })
+		/* связь с грузом восстановится при следующем сохранении */
 	}
+
+	// Накладную создали сразу активной — клиента уведомляем автоматически.
+	const notified = await autoNotify(result, null)
+	return NextResponse.json({ ...result, notified }, { status: 201 })
 }
 
 function isUniqueNumberError(e: unknown): boolean {

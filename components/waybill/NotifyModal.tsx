@@ -42,7 +42,8 @@ const STATUS_KEYS = {
 
 export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalProps) {
 	const { t, tf } = useLang()
-	const [sending, setSending] = useState<NotifyChannel | null>(null)
+	// 'cascade' — основная кнопка (канал выбирает сервер), остальное — принудительный канал.
+	const [sending, setSending] = useState<'cascade' | NotifyChannel | null>(null)
 	const [outcome, setOutcome] = useState<NotifyOutcome | null>(null)
 	const [history, setHistory] = useState<NotificationDTO[]>([])
 	// null — ещё не спросили у сервера; до ответа кнопки в ручном режиме, чтобы
@@ -82,7 +83,7 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 	// фолбэком по вебхуку. 'sms' передаём, только когда оператор выбрал его явно.
 	const send = async (channel?: NotifyChannel) => {
 		if (!docId) return
-		setSending(channel ?? 'whatsapp')
+		setSending(channel ?? 'cascade')
 		try {
 			// Правки передаём только если они есть: иначе шаблон соберёт сервер сам.
 			const res = await repos.notify.send(docId, channel, edited ? texts : undefined)
@@ -110,6 +111,7 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 	// (журнал уведомлений пишется по её docId).
 	const waAuto = !!auto?.whatsapp && !!docId
 	const smsAuto = !!auto?.sms && !!docId
+	const anyAuto = waAuto || smsAuto
 	const busy = sending !== null
 
 	return (
@@ -226,24 +228,39 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						</div>
 					)}
 
-					{/* Кнопки. В авто-режиме отправляет сервер, в ручном — открывается ссылка. */}
-					<div className="flex flex-wrap gap-2">
-						<button
-							type="button"
-							disabled={!phone || busy}
-							onClick={() => (waAuto ? send() : openManual('whatsapp'))}
-							className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-							<Send className="w-4 h-4" />
-							{sending === 'whatsapp' ? t('nmSending') : waAuto ? t('nmSendWa') : t('nmOpenWa')}
-						</button>
-						<button
-							type="button"
-							disabled={!phone || busy}
-							onClick={() => (smsAuto ? send('sms') : openManual('sms'))}
-							className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-							<MessageSquare className="w-4 h-4" />
-							{sending === 'sms' ? t('nmSending') : smsAuto ? t('nmSendSms') : t('nmOpenSms')}
-						</button>
+					{/* Сверху основная кнопка — «Отправить»: WhatsApp, а если не вышло, SMS.
+					    Снизу два принудительных канала, когда оператор точно знает, чем слать.
+					    Если автоотправка не настроена вовсе, основную не показываем: слать ей
+					    нечем, остаются только ссылки для ручной отправки. */}
+					<div className="flex flex-col gap-2">
+						{anyAuto && (
+							<button
+								type="button"
+								disabled={!phone || busy}
+								onClick={() => send()}
+								className="inline-flex w-full items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors">
+								<Send className="w-4 h-4" />
+								{sending === 'cascade' ? t('nmSending') : t('nmSend')}
+							</button>
+						)}
+						<div className="grid grid-cols-2 gap-2">
+							<button
+								type="button"
+								disabled={!phone || busy}
+								onClick={() => (waAuto ? send('whatsapp') : openManual('whatsapp'))}
+								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
+								<Send className="w-4 h-4 shrink-0" />
+								<span className="truncate">{sending === 'whatsapp' ? t('nmSending') : waAuto ? t('nmSendWa') : t('nmOpenWa')}</span>
+							</button>
+							<button
+								type="button"
+								disabled={!phone || busy}
+								onClick={() => (smsAuto ? send('sms') : openManual('sms'))}
+								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
+								<MessageSquare className="w-4 h-4 shrink-0" />
+								<span className="truncate">{sending === 'sms' ? t('nmSending') : smsAuto ? t('nmSendSms') : t('nmOpenSms')}</span>
+							</button>
+						</div>
 					</div>
 					{/* Подсказка под кнопками зависит от режима. Обещать «SMS уходит само»
 					    в ручном режиме нельзя: там не уходит ничего, пока оператор не

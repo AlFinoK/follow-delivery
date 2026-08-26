@@ -188,18 +188,29 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 				? await repo.waybills.update(payload.docId, payload)
 				: await repo.waybills.create(payload)
 			setWaybill(saved)
+
+			// Автоуведомление уходит на сервере в момент перехода накладной в «активна».
+			// Оператор должен видеть, что именно случилось: молча отправленное клиенту
+			// сообщение — худший вид «магии».
+			const n = saved.notified
+			const notifyNote =
+				n?.status === 'sent'
+					? ` ${n.channel === 'sms' ? t('wpAutoSms') : t('wpAutoWa')}`
+					: n && n.status !== 'manual'
+						? ` ${t('wpAutoFailed')}${n.error ? `: ${n.error}` : ''}`
+						: ''
+			const savedMsg = tf('wpSaved', { number: saved.number ?? '' }) + notifyNote
+			const savedType = n && n.status !== 'sent' && n.status !== 'manual' ? 'error' : 'success'
+
 			// Правка существующей накладной завершается возвратом в карточку — как в
 			// грузах, где «Сохранить» выходит из режима редактирования. Тост переносим
 			// через sessionStorage: страница меняется, локальный стейт его не переживёт.
 			if (isEdit) {
-				sessionStorage.setItem(
-					'pendingToast',
-					JSON.stringify({ message: tf('wpSaved', { number: saved.number ?? '' }), type: 'success' })
-				)
+				sessionStorage.setItem('pendingToast', JSON.stringify({ message: savedMsg, type: savedType }))
 				router.push(`/admin/waybills/${saved.docId}`)
 				return
 			}
-			addToast(tf('wpSaved', { number: saved.number ?? '' }))
+			addToast(savedMsg, savedType)
 			// Созданную накладную «прописываем» в адресной строке, чтобы обновление
 			// страницы вело на неё, а не на пустую форму создания. Номер шага в
 			// history.state сохраняем — иначе «Назад» после сохранения сбросит визард.

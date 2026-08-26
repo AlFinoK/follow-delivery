@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { mapWaybill, type WaybillRow } from '@/lib/mapWaybill'
-import { mapNotification, notifyClient } from '@/lib/notify/send'
+import { mapNotification, notifyClient, notifyWithFallback } from '@/lib/notify/send'
 import { smsConfigured } from '@/lib/notify/sms'
 import { wahaConfigured } from '@/lib/notify/waha'
 import type { NotifyChannel, NotifyTexts } from '@/lib/notify/types'
@@ -69,7 +69,9 @@ export async function POST(req: NextRequest) {
 	if (!waybill.receiver.phone) return NextResponse.json({ error: 'У получателя не указан телефон' }, { status: 400 })
 
 	try {
-		const outcome = await notifyClient(waybill, channel, custom)
+		// Без явного канала — каскад «WhatsApp, не вышло → SMS» (кнопка «Отправить»).
+		// С каналом 'sms' — оператор выбрал SMS принудительно, WhatsApp не трогаем.
+		const outcome = channel ? await notifyClient(waybill, channel, custom) : await notifyWithFallback(waybill, custom)
 		return NextResponse.json(outcome)
 	} catch (e) {
 		console.error('[notify] отправка не удалась:', e)

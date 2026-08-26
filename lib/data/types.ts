@@ -111,6 +111,12 @@ export interface WaybillDTO extends WaybillModel {
 	cargoId: string | null
 	createdAt: string
 	updatedAt: string
+	/**
+	 * Итог автоуведомления — приходит только в ответ на create/update и только если
+	 * накладная в этот момент стала активной. Нужен, чтобы оператор увидел тост
+	 * «клиент уведомлён», а не гадал, ушло что-то или нет.
+	 */
+	notified?: { channel: 'whatsapp' | 'sms' | null; status: 'sent' | 'failed' | 'manual' | 'skipped'; error?: string }
 }
 
 export interface WaybillsResponse {
