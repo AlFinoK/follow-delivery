@@ -6,6 +6,7 @@
 
 import { isValidPhoneNumber } from 'react-phone-number-input'
 import type { TranslationKey } from '@/lib/i18n'
+import { effectiveVolume, fmtDecimal, fmtDims, fmtMoney, totalWeight, trimNum } from './totals'
 
 export type SenderType = 'individual' | 'company'
 export type Payer = 'sender' | 'receiver'
@@ -130,48 +131,20 @@ export function initialWaybill(): Waybill {
 	}
 }
 
-// Итоговый вес: Σ вес_места × кол-во.
-export function totalWeight(positions: Position[]): number {
-	return positions.reduce((s, p) => s + (p.weight || 0) * (p.quantity || 0), 0)
-}
-
-// Авто-объём из габаритов мест: Σ (Д×Ш×В см³ / 1e6) × кол-во → м³. (рекомендация №3)
-export function autoVolume(positions: Position[]): number {
-	return positions.reduce(
-		(s, p) => s + ((p.length || 0) * (p.width || 0) * (p.height || 0)) / 1_000_000 * (p.quantity || 0),
-		0
-	)
-}
-
-export function effectiveVolume(w: Waybill): number {
-	return w.manualVolume ? w.volume : autoVolume(w.positions)
-}
-
-/** Общая себестоимость груза: Σ цена × кол-во, ₸. */
-export function totalGoodsPrice(positions: Position[]): number {
-	return positions.reduce((s, p) => s + (p.price || 0) * (p.quantity || 0), 0)
-}
-
-// ── Форматтеры под образец заказчика (п.3.3) ────────────────────────────────
-// «35.000 тенге» — точка как разделитель тысяч; «1,911 м³», «245,0 кг» — запятая.
-
-export function fmtMoney(n: number): string {
-	// целое, разделитель тысяч — точка
-	const int = Math.round(n)
-	return int.toLocaleString('ru-RU').replace(/ |\s/g, '.')
-}
-
-export function fmtDecimal(n: number, digits = 3): string {
-	return n.toFixed(digits).replace('.', ',')
-}
-
-export function fmtDims(p: Position): string {
-	return `${trimNum(p.length)}x${trimNum(p.width)}x${trimNum(p.height)}`
-}
-
-export function trimNum(n: number): string {
-	return Number.isInteger(n) ? String(n) : String(n).replace('.', ',')
-}
+// Итоги и форматтеры переехали в [totals.ts] — там нет импорта
+// `react-phone-number-input`, из-за которого этот модуль нельзя вычислять на сервере
+// (см. комментарий в totals.ts). Здесь оставлен реэкспорт: импорты из model.ts,
+// которых по проекту много, продолжают работать.
+export {
+	autoVolume,
+	effectiveVolume,
+	fmtDecimal,
+	fmtDims,
+	fmtMoney,
+	totalGoodsPrice,
+	totalWeight,
+	trimNum,
+} from './totals'
 
 // ── Телефон: валидация через libphonenumber (react-phone-number-input) ───────
 // Значение хранится в E.164 (+77021234567). Пустое/частичное — невалидно.

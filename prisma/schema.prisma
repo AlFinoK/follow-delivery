@@ -141,6 +141,36 @@ model WaybillItem {
   @@index([waybillId, sortOrder])
 }
 
+// Журнал уведомлений клиенту (WhatsApp через Wazzup + SMS-фолбэк).
+//
+// Нужен не для отчётности, а для РАБОТЫ автофолбэка: Wazzup на отправку отвечает 201
+// сразу, а «у номера нет WhatsApp» приходит потом вебхуком (status=error,
+// error=BAD_CONTACT). Чтобы вебхук знал, кому досылать SMS, отправка пишется сюда.
+//
+// FK на Waybill нет намеренно: журнал должен переживать удаление накладной.
+model Notification {
+  id            String   @id @default(cuid())
+  waybillId     String? // docId накладной (без FK — см. выше)
+  waybillNumber Int? // человеческий номер, чтобы журнал читался без join
+  phone         String // E.164, напр. +77021234567
+  text          String // отправленный текст (шаблон уже развёрнут)
+  // Короткий SMS-вариант того же уведомления. Хранится у строки whatsapp, чтобы
+  // вебхук при ack=-1 дослал SMS текстом, который видел оператор (в т.ч. правленым),
+  // а не пересобранным шаблоном.
+  smsText       String?
+  channel       String // whatsapp | sms
+  status        String   @default("pending") // pending | sent | delivered | read | failed
+  providerId    String? // messageId Wazzup / id SMS-шлюза
+  error         String? // код + описание от провайдера
+  fallbackOf    String? // id уведомления, вместо которого ушло это (WhatsApp → SMS)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([providerId])
+  @@index([waybillId])
+  @@index([createdAt])
+}
+
 // Счётчик номеров накладных. Одна строка (id = 'main'); номер выдаётся одним
 // атомарным UPSERT ... RETURNING, поэтому два оператора не могут получить один
 // номер (ПРАВКИ 2, п.7). Раньше счётчик жил в sessionStorage у каждого клиента.

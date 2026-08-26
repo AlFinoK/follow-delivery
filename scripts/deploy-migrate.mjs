@@ -42,12 +42,15 @@ const BASELINE = '20260524120000_init'
 const MIGRATIONS_DIR = 'prisma/migrations'
 
 // Объекты схемы, без которых приложение отдаёт 500. Дополнять при новых миграциях.
-const REQUIRED_TABLES = ['Cargo', 'Folder', 'CargoPreset', 'Waybill', 'WaybillItem', 'WaybillCounter']
+const REQUIRED_TABLES = ['Cargo', 'Folder', 'CargoPreset', 'Waybill', 'WaybillItem', 'WaybillCounter', 'Notification']
 const REQUIRED_COLUMNS = [
 	['CargoPreset', 'goodsPrice'],
 	['Waybill', 'number'],
 	['Waybill', 'deliveryTimeframe'],
 	['WaybillItem', 'price'],
+	['Notification', 'providerId'],
+	['Notification', 'fallbackOf'],
+	['Notification', 'smsText'],
 ]
 
 // Для migrate deploy предпочитаем ПРЯМОЕ подключение (через пулер не берётся advisory-lock).

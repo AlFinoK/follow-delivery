@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Save, FileDown, Bell, RotateCcw, ChevronLeft, ChevronRight, Calculator, ArrowLeft, Trash2 } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
@@ -14,6 +15,7 @@ import { DeleteModal } from '@/components/admin/DeleteModal'
 import { Stepper } from '@/components/waybill/Stepper'
 import { WaybillForm } from '@/components/waybill/WaybillForm'
 import { LogistSummary } from '@/components/waybill/LogistSummary'
+import { NotifyModal } from '@/components/waybill/NotifyModal'
 import { openWaybillPrint } from '@/lib/waybill/print'
 import { effectiveVolume, initialWaybill, totalWeight, validateWaybill, type Waybill } from '@/lib/waybill/model'
 
@@ -30,6 +32,7 @@ const STEP_KEYS = ['wpStep1', 'wpStep2', 'wpStep3'] as const
 
 export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	const { t, tf } = useLang()
+	const router = useRouter()
 	const repo = repos
 	const isEdit = !!waybillId
 	const [mounted, setMounted] = useState(false)
@@ -40,6 +43,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	const [toasts, setToasts] = useState<Toast[]>([])
 	const [saving, setSaving] = useState(false)
 	const [confirmDelete, setConfirmDelete] = useState(false)
+	const [notifyOpen, setNotifyOpen] = useState(false)
 	const [calcKey, setCalcKey] = useState(0)
 	const [prefill, setPrefill] = useState<{ volume?: number; weight?: number; mode?: 'totals' }>({})
 	const [step, setStep] = useState(0)
@@ -184,6 +188,17 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 				? await repo.waybills.update(payload.docId, payload)
 				: await repo.waybills.create(payload)
 			setWaybill(saved)
+			// Правка существующей накладной завершается возвратом в карточку — как в
+			// грузах, где «Сохранить» выходит из режима редактирования. Тост переносим
+			// через sessionStorage: страница меняется, локальный стейт его не переживёт.
+			if (isEdit) {
+				sessionStorage.setItem(
+					'pendingToast',
+					JSON.stringify({ message: tf('wpSaved', { number: saved.number ?? '' }), type: 'success' })
+				)
+				router.push(`/admin/waybills/${saved.docId}`)
+				return
+			}
 			addToast(tf('wpSaved', { number: saved.number ?? '' }))
 			// Созданную накладную «прописываем» в адресной строке, чтобы обновление
 			// страницы вело на неё, а не на пустую форму создания. Номер шага в
@@ -241,6 +256,13 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 				))}
 			</div>
 
+			<NotifyModal
+				isOpen={notifyOpen}
+				waybill={waybill}
+				onClose={() => setNotifyOpen(false)}
+				onToast={addToast}
+			/>
+
 			<DeleteModal
 				isOpen={confirmDelete}
 				itemName={waybill.number ? `${t('wpWaybill')} №${waybill.number}` : t('wpWaybill')}
@@ -266,10 +288,12 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 								{/* Header */}
 								<div className="mb-5 flex flex-col sm:flex-row sm:flex-wrap sm:items-start gap-3">
 									<div className="w-full sm:w-auto sm:flex-1 min-w-0">
+										{/* Из редактирования «назад» ведёт в карточку накладной, а не в
+										    список: иначе выход из правки выбрасывал бы на два экрана назад. */}
 										<Link
-											href={`/admin/waybills`}
+											href={isEdit ? `/admin/waybills/${waybillId}` : `/admin/waybills`}
 											className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 mb-1.5">
-											<ArrowLeft className="w-3.5 h-3.5" /> {t('waybillsNavLink')}
+											<ArrowLeft className="w-3.5 h-3.5" /> {isEdit ? t('wdBackToCard') : t('waybillsNavLink')}
 										</Link>
 										<div className="flex items-center gap-2.5 flex-wrap">
 											<h2 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">
@@ -354,10 +378,19 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 												only={['header', 'extras']}
 												showErrors={showErrors}
 											/>
+											{/* Сводка логистам появляется только у сохранённой накладной: до
+											    сохранения она собиралась из пустой формы и показывала «0,000 м³,
+											    0 тенге» и пустые ФИО — выглядело как сломанный блок. */}
 											<div className="pt-6 border-t border-slate-100 dark:border-zinc-800">
 												<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 mb-1">{t('wpLogistTitle')}</h3>
 												<p className="text-xs text-slate-400 dark:text-zinc-500 mb-4">{t('wpLogistHint')}</p>
-												<LogistSummary waybill={waybill} />
+												{waybill.docId ? (
+													<LogistSummary waybill={waybill} />
+												) : (
+													<p className="text-sm text-slate-400 dark:text-zinc-500 bg-slate-50 dark:bg-zinc-800/40 border border-dashed border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-6 text-center">
+														{t('wpLogistLocked')}
+													</p>
+												)}
 											</div>
 											<div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100 dark:border-zinc-800">
 													<button
@@ -373,12 +406,11 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
 														<FileDown className="w-4 h-4" /> {t('wpDownloadPdf')}
 													</button>
-													{/* Отключено до согласования канала уведомлений */}
+													{/* Уведомление клиенту: WhatsApp через Wazzup, SMS — фолбэком */}
 													<button
 														type="button"
-														disabled
-														title={t('wpNotifyDisabled')}
-														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+														onClick={() => setNotifyOpen(true)}
+														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
 														<Bell className="w-4 h-4" /> {t('wpNotifyClient')}
 													</button>
 													{waybill.docId ? (

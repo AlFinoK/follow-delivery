@@ -432,7 +432,6 @@ export type Translations = {
 	wpSave: string
 	wpDownloadPdf: string
 	wpNotifyClient: string
-	wpNotifyDisabled: string
 	wpClear: string
 	wpBack: string
 	wpNext: string
@@ -441,6 +440,47 @@ export type Translations = {
 	wpFillFromWaybill: string
 	wpLogistTitle: string
 	wpLogistHint: string
+	wpLogistLocked: string
+	// Уведомление клиенту (WhatsApp через Wazzup + SMS-фолбэк)
+	nmTitle: string
+	nmConfirmHint: string
+	nmRecipient: string
+	nmNoPhone: string
+	nmNeedSave: string
+	nmPreviewWa: string
+	nmPreviewSms: string
+	nmReset: string
+	nmSmsParts: string
+	nmSendWa: string
+	nmOpenWa: string
+	nmSendSms: string
+	nmOpenSms: string
+	nmSending: string
+	nmSentWa: string
+	nmSentSms: string
+	nmPending: string
+	nmNoWhatsapp: string
+	nmFailed: string
+	nmManualMode: string
+	nmManualHint: string
+	nmSmsHint: string
+	nmHistory: string
+	nmClose: string
+	nmChWhatsapp: string
+	nmChSms: string
+	nmStPending: string
+	nmStSent: string
+	nmStDelivered: string
+	nmStRead: string
+	nmStFailed: string
+	// Детальный просмотр накладной
+	wdPlaces: string
+	wdWeight: string
+	wdPositionName: string
+	wdCargoTitle: string
+	wdCargoLink: string
+	wdDangerHint: string
+	wdBackToCard: string
 	// Список накладных
 	wlLoadError: string
 	wlSearchPh: string
@@ -462,8 +502,9 @@ export type Translations = {
 	lsHint: string
 	lsCopy: string
 	lsSend: string
-	lsSendDisabled: string
 	lsSendNote: string
+	lsSentOpened: string
+	lsOpenGroup: string
 	// Ввод телефона
 	phCountry: string
 	phCountrySearch: string
@@ -874,7 +915,6 @@ export const translations: Record<Lang, Translations> = {
 		wpSave: 'Сохранить накладную',
 		wpDownloadPdf: 'Скачать PDF',
 		wpNotifyClient: 'Уведомить клиента',
-		wpNotifyDisabled: 'Канал уведомлений пока не подключён',
 		wpClear: 'Очистить',
 		wpBack: 'Назад',
 		wpNext: 'Далее',
@@ -883,6 +923,45 @@ export const translations: Record<Lang, Translations> = {
 		wpFillFromWaybill: 'Заполнить из накладной →',
 		wpLogistTitle: 'Данные для логистов',
 		wpLogistHint: 'Автосводка по накладной — скопировать или отправить',
+		wpLogistLocked: 'Сводка появится после сохранения накладной',
+		nmTitle: 'Отправить уведомление?',
+		nmConfirmHint: 'Текст можно поправить — клиенту он уйдёт после нажатия «Отправить в WhatsApp».',
+		nmRecipient: 'Получатель',
+		nmNoPhone: 'У получателя не указан телефон',
+		nmNeedSave: 'Накладная не сохранена: автоотправка недоступна. Сохраните её или отправьте вручную по ссылке.',
+		nmPreviewWa: 'Текст для WhatsApp',
+		nmPreviewSms: 'Текст для SMS',
+		nmReset: 'Вернуть шаблон',
+		nmSmsParts: '{n} SMS',
+		nmSendWa: 'Отправить в WhatsApp',
+		nmOpenWa: 'Открыть WhatsApp',
+		nmSendSms: 'Отправить SMS',
+		nmOpenSms: 'Открыть SMS',
+		nmSending: 'Отправка…',
+		nmSentWa: 'Отправлено в WhatsApp',
+		nmSentSms: 'SMS отправлено',
+		nmPending: 'Доставка подтвердится в течение минуты — статус появится в списке отправок.',
+		nmNoWhatsapp: 'У номера нет WhatsApp — отправили SMS.',
+		nmFailed: 'Не удалось отправить',
+		nmManualMode: 'Автоотправка не настроена — отправьте вручную',
+		nmManualHint: 'Автоотправка не подключена: кнопки откроют WhatsApp или SMS с готовым текстом — отправку подтвердите сами.',
+		nmSmsHint: 'Отдельная кнопка нужна редко: если у номера нет WhatsApp, SMS уходит само.',
+		nmHistory: 'Прошлые отправки',
+		nmClose: 'Закрыть',
+		nmChWhatsapp: 'WhatsApp',
+		nmChSms: 'SMS',
+		nmStPending: 'в очереди',
+		nmStSent: 'отправлено',
+		nmStDelivered: 'доставлено',
+		nmStRead: 'прочитано',
+		nmStFailed: 'ошибка',
+		wdPlaces: 'Мест',
+		wdWeight: 'Вес',
+		wdPositionName: 'Наименование',
+		wdCargoTitle: 'Груз в трекере',
+		wdCargoLink: 'Открыть карточку груза',
+		wdDangerHint: 'Накладная будет удалена без возможности восстановления',
+		wdBackToCard: 'К накладной',
 		wlLoadError: 'Не удалось загрузить накладные',
 		wlSearchPh: 'Номер, ФИО, телефон, город или характер груза',
 		wlPayerSender: 'платит отправитель',
@@ -901,8 +980,9 @@ export const translations: Record<Lang, Translations> = {
 		lsHint: 'Сводка собирается автоматически из накладной (Блок №1). Формат — по образцу заказчика.',
 		lsCopy: 'Скопировать',
 		lsSend: 'Отправить логисту',
-		lsSendDisabled: 'Канал отправки пока не подключён',
-		lsSendNote: 'Отправка появится после согласования канала (WhatsApp Business API / Telegram / e-mail). Пока — «Скопировать».',
+		lsSendNote: 'Откроется WhatsApp с готовым текстом — останется выбрать чат группы. Текст заодно скопирован в буфер.',
+		lsSentOpened: 'Текст готов в WhatsApp',
+		lsOpenGroup: 'Открыть группу',
 		phCountry: 'Выбрать страну',
 		phCountrySearch: 'Поиск страны…',
 		phNumber: 'Номер телефона',
@@ -1312,7 +1392,6 @@ export const translations: Record<Lang, Translations> = {
 		wpSave: 'Жүкқұжатты сақтау',
 		wpDownloadPdf: 'PDF жүктеу',
 		wpNotifyClient: 'Клиентке хабарлау',
-		wpNotifyDisabled: 'Хабарлама арнасы әзірге қосылмаған',
 		wpClear: 'Тазарту',
 		wpBack: 'Артқа',
 		wpNext: 'Әрі қарай',
@@ -1321,6 +1400,45 @@ export const translations: Record<Lang, Translations> = {
 		wpFillFromWaybill: 'Жүкқұжаттан толтыру →',
 		wpLogistTitle: 'Логистерге арналған деректер',
 		wpLogistHint: 'Жүкқұжат бойынша авто-жиынтық — көшіріңіз немесе жіберіңіз',
+		wpLogistLocked: 'Жиынтық жүкқұжат сақталғаннан кейін пайда болады',
+		nmTitle: 'Хабарлама жіберу?',
+		nmConfirmHint: 'Мәтінді өңдеуге болады — «WhatsApp-қа жіберу» түймесін басқаннан кейін клиентке жіберіледі.',
+		nmRecipient: 'Алушы',
+		nmNoPhone: 'Алушының телефоны көрсетілмеген',
+		nmNeedSave: 'Жүкқұжат сақталмаған: авто-жіберу қолжетімсіз. Оны сақтаңыз немесе сілтеме арқылы қолмен жіберіңіз.',
+		nmPreviewWa: 'WhatsApp үшін мәтін',
+		nmPreviewSms: 'SMS үшін мәтін',
+		nmReset: 'Үлгіні қайтару',
+		nmSmsParts: '{n} SMS',
+		nmSendWa: 'WhatsApp-қа жіберу',
+		nmOpenWa: 'WhatsApp-ты ашу',
+		nmSendSms: 'SMS жіберу',
+		nmOpenSms: 'SMS ашу',
+		nmSending: 'Жіберілуде…',
+		nmSentWa: 'WhatsApp-қа жіберілді',
+		nmSentSms: 'SMS жіберілді',
+		nmPending: 'Жеткізу бір минут ішінде расталады — күйі жіберулер тізімінде көрінеді.',
+		nmNoWhatsapp: 'Нөмірде WhatsApp жоқ — SMS жібердік.',
+		nmFailed: 'Жіберу мүмкін болмады',
+		nmManualMode: 'Авто-жіберу бапталмаған — қолмен жіберіңіз',
+		nmManualHint: 'Авто-жіберу қосылмаған: түймелер WhatsApp немесе SMS-ті дайын мәтінмен ашады — жіберуді өзіңіз растайсыз.',
+		nmSmsHint: 'Бөлек түйме сирек керек: нөмірде WhatsApp болмаса, SMS өздігінен жіберіледі.',
+		nmHistory: 'Бұрынғы жіберулер',
+		nmClose: 'Жабу',
+		nmChWhatsapp: 'WhatsApp',
+		nmChSms: 'SMS',
+		nmStPending: 'кезекте',
+		nmStSent: 'жіберілді',
+		nmStDelivered: 'жеткізілді',
+		nmStRead: 'оқылды',
+		nmStFailed: 'қате',
+		wdPlaces: 'Орын',
+		wdWeight: 'Салмағы',
+		wdPositionName: 'Атауы',
+		wdCargoTitle: 'Трекердегі жүк',
+		wdCargoLink: 'Жүк карточкасын ашу',
+		wdDangerHint: 'Жүкқұжат қалпына келтірусіз жойылады',
+		wdBackToCard: 'Жүкқұжатқа',
 		wlLoadError: 'Жүкқұжаттарды жүктеу мүмкін болмады',
 		wlSearchPh: 'Нөмір, аты-жөні, телефон, қала немесе жүк сипаты',
 		wlPayerSender: 'жіберуші төлейді',
@@ -1339,8 +1457,9 @@ export const translations: Record<Lang, Translations> = {
 		lsHint: 'Жиынтық жүкқұжаттан автоматты жиналады (№1 блок). Пішімі — тапсырыс беруші үлгісі бойынша.',
 		lsCopy: 'Көшіру',
 		lsSend: 'Логистке жіберу',
-		lsSendDisabled: 'Жіберу арнасы әзірге қосылмаған',
-		lsSendNote: 'Жіберу арна келісілгеннен кейін қосылады (WhatsApp Business API / Telegram / e-mail). Әзірге — «Көшіру».',
+		lsSendNote: 'WhatsApp дайын мәтінмен ашылады — топ чатын таңдау ғана қалады. Мәтін буферге де көшірілді.',
+		lsSentOpened: 'Мәтін WhatsApp-та дайын',
+		lsOpenGroup: 'Топты ашу',
 		phCountry: 'Елді таңдау',
 		phCountrySearch: 'Ел іздеу…',
 		phNumber: 'Телефон нөмірі',

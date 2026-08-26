@@ -11,6 +11,9 @@ import type {
 	Folder,
 	FolderDetail,
 	FolderRepo,
+	NotifyOutcome,
+	NotifyRepo,
+	NotifyStatus,
 	Preset,
 	PresetRepo,
 	Repos,
@@ -210,6 +213,29 @@ const waybills: WaybillRepo = {
 	},
 }
 
+const notify: NotifyRepo = {
+	async send(waybillId, channel, texts) {
+		const res = await fetch('/api/notify', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				waybillId,
+				...(channel ? { channel } : {}),
+				// Правки оператора. Сервер игнорирует пустые и подставляет шаблон.
+				...(texts?.whatsapp ? { text: texts.whatsapp } : {}),
+				...(texts?.sms ? { smsText: texts.sms } : {}),
+			}),
+		})
+		if (!res.ok) throw new RepoError(res.status, await errorText(res))
+		return (await res.json()) as NotifyOutcome
+	},
+	async status(waybillId) {
+		const res = await fetch(`/api/notify?waybillId=${encodeURIComponent(waybillId)}`)
+		if (!res.ok) throw new RepoError(res.status)
+		return (await res.json()) as NotifyStatus
+	},
+}
+
 // Текст ошибки из тела ответа — чтобы показать в тосте причину отказа сервера.
 async function errorText(res: Response): Promise<string | undefined> {
 	try {
@@ -219,4 +245,4 @@ async function errorText(res: Response): Promise<string | undefined> {
 	}
 }
 
-export const httpRepos: Repos = { cargos, folders, presets, waybills }
+export const httpRepos: Repos = { cargos, folders, presets, waybills, notify }

@@ -1,7 +1,8 @@
-import { CreateWaybillPage } from '@/components/pages/CreateWaybillPage'
+import { WaybillDetailPage } from '@/components/pages/WaybillDetailPage'
 
-// Редактирование сохранённой накладной (ПРАВКИ 2, п.6).
+// Карточка накладной: сначала детальный просмотр, редактирование — по «карандашу»
+// (`?edit=1`), как в карточке груза. Сам редактор — мастер CreateWaybillPage.
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params
-	return <CreateWaybillPage waybillId={id} />
+	return <WaybillDetailPage id={id} />
 }

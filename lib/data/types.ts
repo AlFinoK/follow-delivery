@@ -4,8 +4,9 @@
 import type { Cargo } from '@/components/admin/types'
 import type { Preset } from '@/lib/calculator/presets'
 import type { Waybill as WaybillModel, WaybillStatus } from '@/lib/waybill/model'
+import type { NotificationDTO, NotifyChannel, NotifyOutcome, NotifyStatus, NotifyTexts } from '@/lib/notify/types'
 
-export type { Cargo, Preset, WaybillModel }
+export type { Cargo, Preset, WaybillModel, NotificationDTO, NotifyChannel, NotifyOutcome, NotifyStatus, NotifyTexts }
 
 // ── Грузы ───────────────────────────────────────────────────────────────────
 
@@ -141,11 +142,25 @@ export interface WaybillRepo {
 	remove(id: string): Promise<void>
 }
 
+// ── Уведомления клиенту (WhatsApp через Wazzup + SMS-фолбэк) ─────────────────
+
+export interface NotifyRepo {
+	/**
+	 * Отправить уведомление по накладной. `channel` задаётся только при ЯВНОМ выборе
+	 * оператора; по умолчанию — WhatsApp, а SMS досылает вебхук, если у номера
+	 * WhatsApp не оказалось (см. [lib/notify/send.ts]).
+	 */
+	send(waybillId: string, channel?: NotifyChannel, texts?: NotifyTexts): Promise<NotifyOutcome>
+	/** Журнал отправок по накладной + что из каналов настроено (см. NotifyStatus). */
+	status(waybillId: string): Promise<NotifyStatus>
+}
+
 export interface Repos {
 	cargos: CargoRepo
 	folders: FolderRepo
 	presets: PresetRepo
 	waybills: WaybillRepo
+	notify: NotifyRepo
 }
 
 /** Ошибка репозитория с HTTP-подобным статусом (для веток 404 / прочее). */
