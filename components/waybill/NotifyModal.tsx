@@ -163,7 +163,10 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 					)}
 
 					{/* Текст для WhatsApp — основной канал. Поле редактируемое: шаблон
-					    подставлен по умолчанию, оператор может поправить перед отправкой. */}
+					    подставлен по умолчанию, оператор может поправить перед отправкой.
+					    На время отправки поля блокируются: правка, внесённая после клика,
+					    в уже ушедшее сообщение не попадёт, а на экране выглядела бы так,
+					    будто клиент получил именно её. */}
 					<div>
 						<div className="flex items-center justify-between gap-2 mb-1.5">
 							<p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{t('nmPreviewWa')}</p>
@@ -179,8 +182,9 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						<textarea
 							value={texts.whatsapp}
 							onChange={(e) => setTexts((v) => ({ ...v, whatsapp: e.target.value }))}
+							disabled={busy}
 							rows={10}
-							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-800 dark:text-zinc-100 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y"
+							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-800 dark:text-zinc-100 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y disabled:opacity-60"
 						/>
 					</div>
 
@@ -194,8 +198,9 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						<textarea
 							value={texts.sms}
 							onChange={(e) => setTexts((v) => ({ ...v, sms: e.target.value }))}
+							disabled={busy}
 							rows={3}
-							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-600 dark:text-zinc-300 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y"
+							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-600 dark:text-zinc-300 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y disabled:opacity-60"
 						/>
 					</div>
 

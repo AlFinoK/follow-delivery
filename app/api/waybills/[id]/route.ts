@@ -5,6 +5,10 @@ import { mapWaybill, waybillData, waybillErrors, waybillItems } from '@/lib/mapW
 import { syncCargo } from '@/lib/waybill/cargoSync'
 import { autoNotify } from '@/lib/notify/auto'
 
+// Перевод накладной в «Активна» запускает автоуведомление, а оно ждёт подтверждения
+// доставки от WhatsApp (см. maxDuration в /api/notify).
+export const maxDuration = 30
+
 async function requireAuth() {
 	const session = await getServerSession()
 	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

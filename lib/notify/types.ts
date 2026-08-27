@@ -86,6 +86,16 @@ export interface NotifyStatus {
  */
 export const RECENTLY_SENT = 'RECENTLY_SENT'
 
+/**
+ * WhatsApp принял сообщение, но не доставил (`ack = -1`).
+ *
+ * Отдельный код, а не общая ошибка: он означает не «отправка не удалась», а «отправка
+ * прошла, доставка — нет». Практический случай — ограничение аккаунта
+ * (`error 463: account restricted`), при котором `POST /api/sendText` отвечает 201,
+ * и без проверки ack оператор видел бы «отправлено» при неполученном сообщении.
+ */
+export const DELIVERY_FAILED = 'DELIVERY_FAILED'
+
 /** Ошибка провайдера с машинным кодом (для веток фолбэка). */
 export class NotifyError extends Error {
 	code: string

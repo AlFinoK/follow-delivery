@@ -6,13 +6,19 @@
 //   2. СНАЧАЛА спрашиваем WhatsApp, есть ли номер: GET /api/contacts/check-exists
 //   3. нет → сразу SMS (в журнале две строки: неудачная whatsapp с кодом BAD_CONTACT
 //      и следующая за ней sms с fallbackOf) — оператор видит, почему ушло SMS
-//   4. есть → отправляем текст; статус в журнале уточняет вебхук message.ack
+//   4. есть → отправляем текст
+//   5. ПРОВЕРЯЕМ ack: ответ 201 значит «WAHA приняла», а не «клиент получил»
 //
-// Почему проверка, а не «отправить и посмотреть, что вернётся»: у WAHA проверка
+// Почему проверка номера, а не «отправить и посмотреть, что вернётся»: у WAHA проверка
 // синхронная, поэтому решение о канале принимается ДО отправки и не зависит от того,
 // настроен ли вебхук. (У Wazzup, с которого начинали, такой проверки нет — там SMS
-// пришлось бы досылать асинхронно.) Вебхук остаётся страховкой: ack=ERROR означает,
-// что принятое сообщение всё же не доехало, и тогда SMS уходит из вебхука.
+// пришлось бы досылать асинхронно.)
+//
+// Почему при этом ЕЩЁ и ack: WhatsApp отклоняет сообщение уже после успешного ответа
+// на отправку — например, когда аккаунт под ограничением. Вебхук message.ack такое
+// ловит, но он необязателен, а когда не настроен, отправка молча числится успешной.
+// Поэтому доставка подтверждается синхронно (см. messageAck), а вебхук остаётся
+// вторым рубежом для случаев, где ack проставился уже после ответа оператору.
 //
 // Если WAHA не настроена, отправки не происходит и наружу отдаются ссылки
 // wa.me / sms: — оператор отправляет вручную, кнопка не становится мёртвой.
@@ -21,11 +27,12 @@ import { prisma } from '@/lib/prisma'
 import { mapWaybill, type WaybillRow } from '@/lib/mapWaybill'
 import type { Waybill } from '@/lib/waybill/model'
 import { buildClientMessage, buildClientMessages } from './message'
-import { smsLink, whatsappLink } from './links'
+import { digits, smsLink, whatsappLink } from './links'
 import { sendSms, smsConfigured } from './sms'
-import { checkNumberExists, sendWhatsApp, wahaConfigured } from './waha'
+import { checkNumberExists, messageAck, sendWhatsApp, wahaConfigured } from './waha'
 import {
 	BAD_CONTACT,
+	DELIVERY_FAILED,
 	NOT_CONFIGURED,
 	RECENTLY_SENT,
 	type NotificationDTO,
@@ -171,7 +178,28 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 	await finish(log.id, res)
 	if (!res.ok) return { ...base, channel: null, status: 'failed', notificationId: log.id, code: res.code, error: res.error }
 
-	return { ...base, channel: 'whatsapp', status: 'sent', notificationId: log.id, pendingDelivery: true }
+	// Шаг 3 — подтверждение доставки. Ответ 201 на отправку означает «WAHA приняла»,
+	// а не «клиент получил»: при ограничении аккаунта WhatsApp отклоняет сообщение
+	// уже после этого, выставляя ack = -1. Без этой проверки оператор видел бы
+	// «отправлено» при неполученном сообщении — худший из возможных исходов.
+	// chatId тот же, каким отправляли: у части номеров он приходит как @lid, а не @c.us,
+	// и по неверному идентификатору история чата просто не найдётся.
+	const ack = await messageAck(chatId || `${digits(phone)}@c.us`, res.providerId)
+	if (ack === -1) {
+		await finish(log.id, { ok: false, providerId: res.providerId, code: DELIVERY_FAILED, error: 'WhatsApp не доставил сообщение' })
+		return {
+			...base,
+			channel: null,
+			status: 'failed',
+			notificationId: log.id,
+			code: DELIVERY_FAILED,
+			error: 'WhatsApp принял сообщение, но не доставил его',
+		}
+	}
+
+	// ack не выяснился (undefined) — оставляем как есть: сообщение могло просто ещё
+	// стоять в очереди. Доставку в этом случае уточнит вебхук, если он настроен.
+	return { ...base, channel: 'whatsapp', status: 'sent', notificationId: log.id, pendingDelivery: ack === undefined }
 }
 
 function createLog(w: Waybill, channel: NotifyChannel, text: string, smsText?: string) {
@@ -196,7 +224,9 @@ function createLog(w: Waybill, channel: NotifyChannel, text: string, smsText?: s
  *   2. WhatsApp-канал не настроен
  *      или недоступен (WAHA лежит,
  *      сессия отвалилась)           → SMS (это делает эта функция);
- *   3. SMS тоже не настроен         → ручной режим со ссылками.
+ *   3. WhatsApp принял, но НЕ
+ *      доставил (ack = -1)          → SMS (notifyClient вернёт failed);
+ *   4. SMS тоже не настроен         → ручной режим со ссылками.
  *
  * Повтор, отклонённый защитой от дублей (RECENTLY_SENT), в SMS НЕ уходит: клиенту
  * только что уже написали, второе сообщение другим каналом ему не нужно.

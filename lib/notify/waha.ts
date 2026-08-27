@@ -115,6 +115,52 @@ function messageId(body: unknown): string | undefined {
 	return typeof b.key?.id === 'string' ? b.key.id : undefined
 }
 
+/**
+ * Подтверждение доставки: ack отправленного сообщения.
+ *   -1 ERROR · 0 PENDING · 1 SERVER · 2 DEVICE · 3 READ
+ * `undefined` — статус выяснить не удалось (сообщение ещё в очереди, WAHA не ответила).
+ *
+ * ⚠️ Зачем это вообще нужно. `POST /api/sendText` отвечает 201, как только WAHA приняла
+ * сообщение, — это НЕ доставка. WhatsApp может отклонить его позже и молча: 2026-08-27
+ * аккаунт стоял под ограничением `RESTRICT_ALL_COMPANIONS`, каждое сообщение получало
+ * `error 463: account restricted`, и журнал показывал «отправлено» при неполученном
+ * клиентом сообщении. Штатно такое ловит вебхук `message.ack`, но он необязателен и
+ * легко оказывается недонастроенным — тогда страховки нет вообще.
+ *
+ * Это ЧТЕНИЕ ИЗ ХРАНИЛИЩА САМОЙ WAHA, а не обращение к WhatsApp: на лимиты аккаунта
+ * не влияет, в отличие от `check-exists`.
+ *
+ * Опрашиваем несколько раз с паузами: ack проставляется асинхронно, сразу после
+ * отправки там закономерно 0 (PENDING). Пауз три и они короткие — суммарно ~5,5 с,
+ * потому что вызов происходит внутри HTTP-запроса оператора (см. maxDuration в роуте).
+ */
+const ACK_PROBES_MS = [1200, 1800, 2500]
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+export async function messageAck(chatId: string, messageId?: string): Promise<number | undefined> {
+	if (!messageId) return undefined
+	// Движки отдают id в разной форме, и ответ на отправку может отличаться от того,
+	// что лежит в истории чата («true_7705…@c.us_3EB08…»), — сверяем ещё и по хвосту.
+	const tail = messageId.split('_').pop()
+
+	for (const pause of ACK_PROBES_MS) {
+		await sleep(pause)
+		try {
+			const list = await call<Array<{ id?: string; ack?: number }>>(
+				`/api/${encodeURIComponent(session())}/chats/${encodeURIComponent(chatId)}/messages?limit=10&downloadMedia=false`
+			)
+			const hit = Array.isArray(list) ? list.find((m) => m.id === messageId || m.id?.split('_').pop() === tail) : undefined
+			// 0 (PENDING) — ещё не итог, ждём следующую попытку.
+			if (typeof hit?.ack === 'number' && hit.ack !== 0) return hit.ack
+		} catch {
+			// Не смогли прочитать — это не повод объявлять отправку неудачной.
+			return undefined
+		}
+	}
+	return undefined
+}
+
 /** Отправка текста. chatId лучше передавать из checkNumberExists (см. выше). */
 export async function sendWhatsApp(phone: string, text: string, chatId?: string): Promise<SendResult> {
 	try {

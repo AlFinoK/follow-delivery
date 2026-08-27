@@ -9,6 +9,10 @@ import { autoNotify } from '@/lib/notify/auto'
 
 const PAGE_SIZE = 12
 
+// Сохранение накладной может потянуть за собой автоуведомление, а оно ждёт
+// подтверждения доставки от WhatsApp (см. maxDuration в /api/notify).
+export const maxDuration = 30
+
 // GET /api/waybills — список накладных для админки (auth).
 // ?q=… — поиск по номеру, ФИО отправителя/получателя, городам, характеру груза
 // ?status=draft|active|delivered|cancelled, ?page=N
