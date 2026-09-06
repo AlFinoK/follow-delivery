@@ -28,7 +28,7 @@ import { mapWaybill, type WaybillRow } from '@/lib/mapWaybill'
 import type { Waybill } from '@/lib/waybill/model'
 import { buildClientMessage, buildClientMessages } from './message'
 import { digits, smsLink, whatsappLink } from './links'
-import { sendSms, smsConfigured } from './sms'
+import { sendSms, smsConfigured, smsDeliveryStatus } from './sms'
 import { checkNumberExists, messageAck, sendWhatsApp, wahaConfigured } from './waha'
 import {
 	BAD_CONTACT,
@@ -83,6 +83,37 @@ async function finish(id: string, res: { ok: boolean; providerId?: string; code?
 }
 
 /**
+ * Отправка SMS с подтверждением доставки.
+ *
+ * Успешный ответ шлюза — это «принял», а не «абонент получил». Телефон-шлюз отдаёт
+ * сообщение оператору и рапортует `sent`; дальше оператор может его не доставить
+ * (нулевой баланс SIM, антиспам), и статус так и застревает на `sent`. Поэтому
+ * спрашиваем состояние: `failed` — честная ошибка, `delivered` — подтверждение,
+ * всё остальное остаётся `sent` с пометкой «доставка не подтверждена».
+ */
+async function sendSmsConfirmed(
+	logId: string,
+	phone: string,
+	text: string
+): Promise<{ ok: boolean; delivered: boolean; code?: string; error?: string }> {
+	const res = await sendSms(phone, text, logId)
+	await finish(logId, res)
+	if (!res.ok) return { ok: false, delivered: false, code: res.code, error: res.error }
+
+	const delivery = await smsDeliveryStatus(res.providerId)
+	if (delivery === 'failed') {
+		await finish(logId, { ok: false, providerId: res.providerId, code: DELIVERY_FAILED, error: 'Оператор не доставил SMS' })
+		return { ok: false, delivered: false, code: DELIVERY_FAILED, error: 'Шлюз принял SMS, но оператор её не доставил' }
+	}
+	if (delivery === 'delivered') {
+		await prisma.notification.update({ where: { id: logId }, data: { status: 'delivered' } })
+		return { ok: true, delivered: true }
+	}
+	// Провайдер без проверки статуса или отчёт ещё не пришёл — не выдаём это за доставку.
+	return { ok: true, delivered: false }
+}
+
+/**
  * Отправить уведомление по накладной.
  *
  * `channel` — принудительный выбор канала.
@@ -104,10 +135,9 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 		if (!base.smsAvailable) return { ...base, channel: null, status: 'manual', code: NOT_CONFIGURED, error: 'SMS-шлюз не настроен' }
 		const log = await createLog(w, 'sms', texts.sms)
 		// id строки журнала уходит провайдеру как ключ идемпотентности.
-		const res = await sendSms(phone, texts.sms, log.id)
-		await finish(log.id, res)
+		const res = await sendSmsConfirmed(log.id, phone, texts.sms)
 		return res.ok
-			? { ...base, channel: 'sms', status: 'sent', notificationId: log.id }
+			? { ...base, channel: 'sms', status: 'sent', notificationId: log.id, pendingDelivery: !res.delivered }
 			: { ...base, channel: null, status: 'failed', notificationId: log.id, code: res.code, error: res.error }
 	}
 
@@ -284,8 +314,7 @@ export async function fallbackToSms(
 		},
 	})
 
-	const res = await sendSms(source.phone, text, log.id)
-	await finish(log.id, res)
+	const res = await sendSmsConfirmed(log.id, source.phone, text)
 	return { ok: res.ok, notificationId: log.id, code: res.code, error: res.error }
 }
 

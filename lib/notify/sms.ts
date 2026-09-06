@@ -114,12 +114,59 @@ async function sendViaInfiniReach(phone: string, text: string, externalId?: stri
 			}),
 			cache: 'no-store',
 		})
-		const body = (await safeJson(res)) as { id?: string; data?: { id?: string }; message?: string; error?: string } | null
+		const body = (await safeJson(res)) as
+			| { messageId?: string; id?: string; data?: { messageId?: string; id?: string }; message?: string; error?: string }
+			| null
 		if (!res.ok) return { ok: false, code: `HTTP_${res.status}`, error: describe(body, res.status) }
-		return { ok: true, providerId: body?.id ?? body?.data?.id }
+		// Документация называет поле `messageId`; `id` оставлен на случай, если ответ
+		// придёт в другой форме. Без него нечем спросить статус доставки (см. ниже).
+		return { ok: true, providerId: body?.messageId ?? body?.id ?? body?.data?.messageId ?? body?.data?.id }
 	} catch (e) {
 		return { ok: false, code: 'NETWORK', error: e instanceof Error ? e.message : 'Ошибка сети' }
 	}
+}
+
+/**
+ * Состояние доставки ранее отправленной SMS.
+ *
+ * ⚠️ Зачем. Успешный ответ на отправку означает «шлюз принял», а не «абонент получил»:
+ * телефон-шлюз отдаёт сообщение оператору и рапортует `sent`, после чего оператор может
+ * его не доставить — при нулевом балансе SIM или антиспам-блокировке. 2026-09-06 в
+ * кабинете InfiniReach четыре подряд уведомления так и остались в `sent`, а клиент не
+ * получил ничего, при этом наш журнал показывал «отправлено». Ровно та же ловушка, что
+ * с `ack` у WhatsApp (см. waha.ts).
+ *
+ * Статус выясняется только у InfiniReach: у остальных провайдеров такого эндпоинта нет,
+ * и для них возвращается `undefined` — то есть «подтвердить нечем», а не «не доставлено».
+ */
+export type SmsDelivery = 'queued' | 'sent' | 'delivered' | 'failed'
+
+/** Пауза между опросами: отчёт о доставке приходит от оператора не мгновенно. */
+const SMS_PROBES_MS = [2000, 3000]
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+export async function smsDeliveryStatus(providerId?: string): Promise<SmsDelivery | undefined> {
+	if (!providerId || smsProvider() !== 'infinireach') return undefined
+
+	for (const pause of SMS_PROBES_MS) {
+		await sleep(pause)
+		try {
+			const res = await fetch(`${INFINIREACH_URL}/${encodeURIComponent(providerId)}`, {
+				headers: { 'X-API-Key': process.env.INFINIREACH_API_KEY as string },
+				cache: 'no-store',
+			})
+			if (!res.ok) return undefined
+			const body = (await safeJson(res)) as { status?: string; data?: { status?: string } } | null
+			const status = (body?.status ?? body?.data?.status)?.toLowerCase()
+			// `queued` и `sent` — ещё не итог: ждём следующей попытки.
+			if (status === 'delivered' || status === 'failed') return status
+		} catch {
+			// Не смогли спросить — это не повод объявлять отправку неудачной.
+			return undefined
+		}
+	}
+	return 'sent'
 }
 
 async function safeJson(res: Response): Promise<unknown> {

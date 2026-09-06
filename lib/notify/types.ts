@@ -40,7 +40,11 @@ export interface NotifyOutcome {
 	notificationId?: string
 	code?: string
 	error?: string
-	/** true — WhatsApp принят, но доставка подтвердится вебхуком (тогда же может уйти SMS). */
+	/**
+	 * true — провайдер сообщение принял, но доставку подтвердить не удалось: отчёт ещё
+	 * не пришёл или у канала его вообще нет. НЕ означает неудачу — означает «не знаем».
+	 * Для WhatsApp статус потом уточнит вебхук `message.ack`.
+	 */
 	pendingDelivery?: boolean
 	/** Тексты и ссылки для предпросмотра и ручной отправки. */
 	texts: Record<NotifyChannel, string>
