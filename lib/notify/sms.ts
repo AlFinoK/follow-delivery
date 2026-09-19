@@ -205,7 +205,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  * ссылку, поэтому это тоже доставка.
  */
 const SMSC_DELIVERED = new Set([1, 2, 4])
-const SMSC_FAILED = new Set([-3, 3, 20, 22, 23, 24, 25])
+const SMSC_FAILED = new Set([3, 20, 22, 23, 24, 25])
+
+/**
+ * ⚠️ −3 «сообщение не найдено» — это НЕ провал доставки, а «ответа нет».
+ * Так отвечают в трёх случаях: сообщение отправляли другим провайдером (после смены
+ * шлюза старые строки журнала ищутся у нового и, конечно, не находятся), оно старше
+ * суток и уехало в архив, либо id не наш. Считать это недоставкой — значит задним
+ * числом переписывать историю: ровно так при первом же проходе обхода на проде
+ * доставленная SMS от InfiniReach получила статус «оператор не доставил».
+ */
+const SMSC_UNKNOWN = new Set([-3])
 
 /**
  * @param providerId id сообщения у провайдера
@@ -257,6 +267,7 @@ async function smscProbe(providerId: string, phone?: string): Promise<SmsDeliver
 		if (!res.ok) return undefined
 		const body = (await safeJson(res)) as { status?: number; error?: string } | null
 		if (!body || typeof body.status !== 'number') return undefined
+		if (SMSC_UNKNOWN.has(body.status)) return undefined
 		if (SMSC_DELIVERED.has(body.status)) return 'delivered'
 		if (SMSC_FAILED.has(body.status)) return 'failed'
 		// -1 «ожидает отправки» и 0 «передано оператору» — сообщение ещё в пути.
