@@ -1,26 +1,30 @@
 // Отправка уведомления клиенту: WhatsApp основным каналом, SMS — фолбэком.
 // Только сервер (пишет в БД и знает ключи провайдеров).
 //
-// Схема (WAHA):
+// Схема:
 //   1. кнопка «Уведомить клиента» → POST /api/notify → notifyClient()
-//   2. СНАЧАЛА спрашиваем WhatsApp, есть ли номер: GET /api/contacts/check-exists
+//   2. СНАЧАЛА спрашиваем WhatsApp, есть ли номер у получателя
 //   3. нет → сразу SMS (в журнале две строки: неудачная whatsapp с кодом BAD_CONTACT
 //      и следующая за ней sms с fallbackOf) — оператор видит, почему ушло SMS
 //   4. есть → отправляем текст
-//   5. ПРОВЕРЯЕМ ack: ответ 201 значит «WAHA приняла», а не «клиент получил»
+//   5. пытаемся подтвердить доставку — см. оговорку ниже
 //
-// Почему проверка номера, а не «отправить и посмотреть, что вернётся»: у WAHA проверка
-// синхронная, поэтому решение о канале принимается ДО отправки и не зависит от того,
-// настроен ли вебхук. (У Wazzup, с которого начинали, такой проверки нет — там SMS
-// пришлось бы досылать асинхронно.)
+// Почему проверка номера, а не «отправить и посмотреть, что вернётся»: она синхронная,
+// поэтому решение о канале принимается ДО отправки и не зависит от того, настроен ли
+// вебхук. (У Wazzup, с которого начинали, такой проверки нет — там SMS пришлось бы
+// досылать асинхронно.)
 //
-// Почему при этом ЕЩЁ и ack: WhatsApp отклоняет сообщение уже после успешного ответа
-// на отправку — например, когда аккаунт под ограничением. Вебхук message.ack такое
-// ловит, но он необязателен, а когда не настроен, отправка молча числится успешной.
-// Поэтому доставка подтверждается синхронно (см. messageAck), а вебхук остаётся
-// вторым рубежом для случаев, где ack проставился уже после ответа оператору.
+// ⚠️ Успешный ответ на отправку означает «провайдер принял», а не «клиент получил»:
+// WhatsApp отклоняет сообщение уже после него, например при ограничении аккаунта.
+// Подтверждать доставку синхронно умеет только WAHA; у Green-API журнал сообщений
+// отстаёт до двух минут, и статус приходит вебхуком. Поэтому рубежей три:
+//   — синхронный confirmDelivery (там, где провайдер это умеет);
+//   — вебхук /api/notify/webhook — досылает SMS, когда пришёл статус «не доставлено»;
+//   — /api/notify/sweep — досылает SMS по таймауту, когда статуса нет ВООБЩЕ.
+// Третий рубеж не запасной, а основной для РФ: у клиента с заблокированным WhatsApp
+// сообщение, скорее всего, навсегда останется в статусе «отправлено».
 //
-// Если WAHA не настроена, отправки не происходит и наружу отдаются ссылки
+// Если WhatsApp-канал не настроен, отправки не происходит и наружу отдаются ссылки
 // wa.me / sms: — оператор отправляет вручную, кнопка не становится мёртвой.
 
 import { prisma } from '@/lib/prisma'
@@ -29,7 +33,7 @@ import type { Waybill } from '@/lib/waybill/model'
 import { buildClientMessage, buildClientMessages } from './message'
 import { digits, smsLink, whatsappLink } from './links'
 import { sendSms, smsConfigured, smsDeliveryStatus } from './sms'
-import { checkNumberExists, messageAck, sendWhatsApp, wahaConfigured } from './waha'
+import { checkNumberExists, confirmDelivery, sendWhatsApp, whatsappConfigured } from './whatsapp'
 import {
 	BAD_CONTACT,
 	DELIVERY_FAILED,
@@ -94,13 +98,16 @@ async function finish(id: string, res: { ok: boolean; providerId?: string; code?
 async function sendSmsConfirmed(
 	logId: string,
 	phone: string,
-	text: string
+	text: string,
+	confirm = true
 ): Promise<{ ok: boolean; delivered: boolean; code?: string; error?: string }> {
 	const res = await sendSms(phone, text, logId)
 	await finish(logId, res)
 	if (!res.ok) return { ok: false, delivered: false, code: res.code, error: res.error }
 
-	const delivery = await smsDeliveryStatus(res.providerId)
+	// confirm=false — отправка идёт из обхода /api/notify/sweep, где строк несколько и
+	// ждать отчёта о доставке по каждой нельзя: статус уточнит следующий проход.
+	const delivery = confirm ? await smsDeliveryStatus(res.providerId, phone) : undefined
 	if (delivery === 'failed') {
 		await finish(logId, { ok: false, providerId: res.providerId, code: DELIVERY_FAILED, error: 'Оператор не доставил SMS' })
 		return { ok: false, delivered: false, code: DELIVERY_FAILED, error: 'Шлюз принял SMS, но оператор её не доставил' }
@@ -126,7 +133,7 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 	const base: Pick<NotifyOutcome, 'texts' | 'links' | 'whatsappAvailable' | 'smsAvailable'> = {
 		texts,
 		links: { whatsapp: whatsappLink(phone, texts.whatsapp), sms: smsLink(phone, texts.sms) },
-		whatsappAvailable: wahaConfigured(),
+		whatsappAvailable: whatsappConfigured(),
 		smsAvailable: smsConfigured(),
 	}
 
@@ -142,11 +149,11 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 	}
 
 	if (!base.whatsappAvailable) {
-		return { ...base, channel: null, status: 'manual', code: NOT_CONFIGURED, error: 'WAHA не настроена' }
+		return { ...base, channel: null, status: 'manual', code: NOT_CONFIGURED, error: 'WhatsApp-канал не настроен' }
 	}
 
-	// Защита от повторной отправки. У WAHA нет ключа идемпотентности (у Wazzup был
-	// crmMessageId), поэтому два клика = два сообщения клиенту. Плюс каждая отправка
+	// Защита от повторной отправки. Ключа идемпотентности нет ни у WAHA, ни у Green-API
+	// (у Wazzup был crmMessageId), поэтому два клика = два сообщения. Плюс каждая отправка
 	// тянет за собой обращение к WhatsApp, а лишние обращения — прямой путь к тому,
 	// что аккаунт снова уедет «на проверку».
 	const recent = await prisma.notification.findFirst({
@@ -195,7 +202,7 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 		}
 		chatId = check.chatId
 	} catch (e) {
-		// Проверка не удалась (WAHA недоступна, сессия отвалилась) — это НЕ повод
+		// Проверка не удалась (провайдер недоступен, сессия отвалилась) — это НЕ повод
 		// считать, что WhatsApp у клиента нет, и уж точно не повод молча слать SMS.
 		const code = e instanceof Error && 'code' in e ? String((e as { code: unknown }).code) : 'CHECK_FAILED'
 		const error = e instanceof Error ? e.message : 'Не удалось проверить номер в WhatsApp'
@@ -208,13 +215,10 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 	await finish(log.id, res)
 	if (!res.ok) return { ...base, channel: null, status: 'failed', notificationId: log.id, code: res.code, error: res.error }
 
-	// Шаг 3 — подтверждение доставки. Ответ 201 на отправку означает «WAHA приняла»,
-	// а не «клиент получил»: при ограничении аккаунта WhatsApp отклоняет сообщение
-	// уже после этого, выставляя ack = -1. Без этой проверки оператор видел бы
-	// «отправлено» при неполученном сообщении — худший из возможных исходов.
+	// Шаг 3 — подтверждение доставки, если провайдер умеет его синхронно.
 	// chatId тот же, каким отправляли: у части номеров он приходит как @lid, а не @c.us,
 	// и по неверному идентификатору история чата просто не найдётся.
-	const ack = await messageAck(chatId || `${digits(phone)}@c.us`, res.providerId)
+	const ack = await confirmDelivery(chatId || `${digits(phone)}@c.us`, res.providerId)
 	if (ack === -1) {
 		await finish(log.id, { ok: false, providerId: res.providerId, code: DELIVERY_FAILED, error: 'WhatsApp не доставил сообщение' })
 		return {
@@ -227,8 +231,9 @@ export async function notifyClient(w: Waybill, channel?: NotifyChannel, custom?:
 		}
 	}
 
-	// ack не выяснился (undefined) — оставляем как есть: сообщение могло просто ещё
-	// стоять в очереди. Доставку в этом случае уточнит вебхук, если он настроен.
+	// Доставка не подтверждена (undefined) — это норма для Green-API и для сообщения,
+	// которое ещё в очереди. Помечаем pendingDelivery: статус уточнит вебхук, а если не
+	// уточнит — SMS уйдёт по таймауту из /api/notify/sweep.
 	return { ...base, channel: 'whatsapp', status: 'sent', notificationId: log.id, pendingDelivery: ack === undefined }
 }
 
@@ -281,7 +286,8 @@ export async function notifyWithFallback(w: Waybill, custom?: NotifyTexts): Prom
  * запасным путём — для строк, созданных до появления колонки.
  */
 export async function fallbackToSms(
-	sourceId: string
+	sourceId: string,
+	opts?: { confirm?: boolean }
 ): Promise<{ ok: boolean; notificationId?: string; code?: string; error?: string } | null> {
 	const source = await prisma.notification.findUnique({ where: { id: sourceId } })
 	if (!source) return null
@@ -314,7 +320,7 @@ export async function fallbackToSms(
 		},
 	})
 
-	const res = await sendSmsConfirmed(log.id, source.phone, text)
+	const res = await sendSmsConfirmed(log.id, source.phone, text, opts?.confirm !== false)
 	return { ok: res.ok, notificationId: log.id, code: res.code, error: res.error }
 }
 
