@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Bell, Check, MessageSquare, RotateCcw, Send, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
+import { Spinner } from '@/components/Spinner'
 import { repos } from '@/lib/data/repos'
 import { buildClientMessages } from '@/lib/notify/message'
 import { smsLink, smsParts, whatsappLink } from '@/lib/notify/links'
@@ -30,6 +31,45 @@ interface NotifyModalProps {
 /** «21.08, 14:05» — за день бывает несколько отправок, поэтому со временем. */
 function sentAt(iso: string): string {
 	return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * Индикатор отправки.
+ *
+ * Отправка не мгновенная: сервер шлёт сообщение, а затем подтверждает доставку у
+ * провайдера (у SMS это две проверки статуса с паузами, до ~6 с; при фолбэке
+ * WhatsApp → SMS дольше). Без движения на экране окно выглядит зависшим — оператор
+ * жал кнопку повторно и упирался в защиту от дублей.
+ *
+ * Прогресс неопределённый: сервер не сообщает долю выполнения. Что реально помогает
+ * — счётчик секунд (видно, что процесс живой) и смена подписи на порогах, включая
+ * отдельную строку для затянувшейся отправки, чтобы не закрывали окно раньше времени.
+ */
+function SendingProgress({ channel }: { channel: 'cascade' | NotifyChannel }) {
+	const { t } = useLang()
+	const [sec, setSec] = useState(0)
+
+	useEffect(() => {
+		const id = setInterval(() => setSec((s) => s + 1), 1000)
+		return () => clearInterval(id)
+	}, [])
+
+	const stepKey = sec >= 12 ? 'nmStepSlow' : sec >= 3 ? 'nmStepConfirm' : channel === 'sms' ? 'nmStepSendSms' : 'nmStepSend'
+
+	return (
+		<div className="ltt-fade-up rounded-lg border border-orange-100 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-500/10 px-3 py-2.5">
+			<p className="flex items-center gap-2 text-xs font-medium text-orange-700 dark:text-orange-300">
+				<Spinner className="w-3.5 h-3.5 shrink-0" />
+				<span className="min-w-0">{t(stepKey)}</span>
+				<span className="ml-auto shrink-0 tabular-nums text-orange-500/80 dark:text-orange-400/70">
+					{sec}&thinsp;{t('nmStepSec')}
+				</span>
+			</p>
+			<div className="mt-2 h-1 overflow-hidden rounded-full bg-orange-200/70 dark:bg-orange-500/20">
+				<div className="ltt-notify-bar h-full w-2/5 rounded-full bg-orange-500 dark:bg-orange-400" />
+			</div>
+		</div>
+	)
 }
 
 const STATUS_KEYS = {
@@ -123,7 +163,9 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 	return (
 		<div
 			className="fixed inset-0 z-50 flex items-center justify-center p-4"
-			onClick={onClose}>
+			// Во время отправки клик мимо окна игнорируем: запрос всё равно не отменится,
+			// а оператор потерял бы из виду и индикатор, и результат.
+			onClick={() => !busy && onClose()}>
 			<div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 			<div
 				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-zinc-700 max-h-[90vh] overflow-y-auto"
@@ -210,10 +252,14 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						/>
 					</div>
 
+					{/* Пока идёт отправка — индикатор вместо итога: они взаимоисключающи,
+					    итог появится, когда сервер ответит. */}
+					{sending && <SendingProgress channel={sending} />}
+
 					{/* Итог отправки */}
-					{outcome && (
+					{!busy && outcome && (
 						<div
-							className={`rounded-lg px-3 py-2.5 text-xs border ${
+							className={`ltt-fade-up rounded-lg px-3 py-2.5 text-xs border ${
 								outcome.status === 'sent'
 									? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
 									: outcome.status === 'manual'
@@ -250,7 +296,7 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 								disabled={!phone || busy}
 								onClick={() => send()}
 								className="inline-flex w-full items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors">
-								<Send className="w-4 h-4" />
+								{sending === 'cascade' ? <Spinner /> : <Send className="w-4 h-4" />}
 								{sending === 'cascade' ? t('nmSending') : t('nmSend')}
 							</button>
 						)}
@@ -260,7 +306,7 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 								disabled={!phone || busy}
 								onClick={() => (waAuto ? send('whatsapp') : openManual('whatsapp'))}
 								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
-								<Send className="w-4 h-4 shrink-0" />
+								{sending === 'whatsapp' ? <Spinner className="w-4 h-4 shrink-0" /> : <Send className="w-4 h-4 shrink-0" />}
 								<span className="truncate">{sending === 'whatsapp' ? t('nmSending') : waAuto ? t('nmSendWa') : t('nmOpenWa')}</span>
 							</button>
 							<button
@@ -268,7 +314,7 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 								disabled={!phone || busy}
 								onClick={() => (smsAuto ? send('sms') : openManual('sms'))}
 								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
-								<MessageSquare className="w-4 h-4 shrink-0" />
+								{sending === 'sms' ? <Spinner className="w-4 h-4 shrink-0" /> : <MessageSquare className="w-4 h-4 shrink-0" />}
 								<span className="truncate">{sending === 'sms' ? t('nmSending') : smsAuto ? t('nmSendSms') : t('nmOpenSms')}</span>
 							</button>
 						</div>

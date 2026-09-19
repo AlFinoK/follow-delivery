@@ -48,10 +48,31 @@ button {
 .ltt-fade-up {
 	animation: ltt-fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* ─── Индикатор отправки уведомления (NotifyModal) ───
+   Полоса «бегунком»: отправка идёт от секунды до десятка секунд (подтверждение
+   доставки у провайдера), и без движения на экране окно выглядит зависшим.
+   Прогресс именно неопределённый — сервер не сообщает долю выполнения, рисовать
+   ползущие проценты было бы враньём. */
+@keyframes ltt-notify-bar {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(350%); }
+}
+.ltt-notify-bar {
+	animation: ltt-notify-bar 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+	will-change: transform;
+}
 @media (prefers-reduced-motion: reduce) {
 	.ltt-blob,
 	.ltt-fade-up {
 		animation: none;
+	}
+	/* Без анимации бегунок остался бы за краем — показываем статичную заливку,
+	   индикатор всё равно виден, пока идёт отправка. */
+	.ltt-notify-bar {
+		animation: none;
+		transform: none;
+		width: 100%;
+		opacity: 0.55;
 	}
 }
 

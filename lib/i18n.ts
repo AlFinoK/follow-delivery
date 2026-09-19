@@ -460,6 +460,11 @@ export type Translations = {
 	nmSendSms: string
 	nmOpenSms: string
 	nmSending: string
+	nmStepSend: string
+	nmStepSendSms: string
+	nmStepConfirm: string
+	nmStepSlow: string
+	nmStepSec: string
 	nmSentWa: string
 	nmSentSms: string
 	nmPending: string
@@ -946,6 +951,11 @@ export const translations: Record<Lang, Translations> = {
 		nmSendSms: 'SMS',
 		nmOpenSms: 'Открыть SMS',
 		nmSending: 'Отправка…',
+		nmStepSend: 'Отправляем сообщение…',
+		nmStepSendSms: 'Отправляем SMS…',
+		nmStepConfirm: 'Ждём подтверждения от сервиса…',
+		nmStepSlow: 'Дольше обычного — отправка идёт, не закрывайте окно',
+		nmStepSec: 'с',
 		nmSentWa: 'Отправлено в WhatsApp',
 		nmSentSms: 'SMS отправлено',
 		nmPending: 'Доставка пока не подтверждена. Если WhatsApp не дойдёт, клиенту автоматически уйдёт SMS.',
@@ -1427,6 +1437,11 @@ export const translations: Record<Lang, Translations> = {
 		nmSendSms: 'SMS',
 		nmOpenSms: 'SMS ашу',
 		nmSending: 'Жіберілуде…',
+		nmStepSend: 'Хабарлама жіберілуде…',
+		nmStepSendSms: 'SMS жіберілуде…',
+		nmStepConfirm: 'Қызметтің растауын күтудеміз…',
+		nmStepSlow: 'Әдеттегіден ұзақ — жіберу жүріп жатыр, терезені жаппаңыз',
+		nmStepSec: 'с',
 		nmSentWa: 'WhatsApp-қа жіберілді',
 		nmSentSms: 'SMS жіберілді',
 		nmPending: 'Жеткізу әзірге расталған жоқ. WhatsApp жетпесе, клиентке SMS автоматты түрде жіберіледі.',
