@@ -133,7 +133,10 @@ async function handleStatus(messageId: string, next: string | null) {
 	}
 
 	if ((RANK[next] ?? 0) <= (RANK[log.status] ?? 0)) return
-	await prisma.notification.update({ where: { id: log.id }, data: { status: next } })
+	// Причину ошибки снимаем: статус мог подняться из `failed` — например, когда
+	// подтверждение доставки пришло уже после того, как сработал таймаут в sweep.
+	// Иначе в журнале осталась бы строка «доставлено» с текстом «не доставлено».
+	await prisma.notification.update({ where: { id: log.id }, data: { status: next, error: null } })
 }
 
 /**
