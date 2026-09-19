@@ -32,9 +32,15 @@ export function whatsappConfigured(): boolean {
 	return whatsappProvider() !== 'none'
 }
 
-/** Есть ли у номера WhatsApp. Бросает NotifyError, если спросить не удалось. */
+/**
+ * Есть ли у номера WhatsApp. Бросает NotifyError, если спросить не удалось.
+ *
+ * ⚠️ Отвечает осмысленно только WAHA. У Green-API метод проверки врёт (возвращает «есть»
+ * на любой номер, см. greenapi.ts), поэтому там ответ всегда `true`, а отсутствие
+ * WhatsApp у клиента выясняется уже после отправки — вебхуком или таймаутом.
+ */
 export async function checkNumberExists(phone: string): Promise<{ exists: boolean; chatId?: string }> {
-	return whatsappProvider() === 'greenapi' ? greenapi.checkNumberExists(phone) : waha.checkNumberExists(phone)
+	return whatsappProvider() === 'greenapi' ? greenapi.checkNumberExists() : waha.checkNumberExists(phone)
 }
 
 export async function sendWhatsApp(phone: string, text: string, chatId?: string): Promise<SendResult> {

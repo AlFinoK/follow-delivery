@@ -63,32 +63,27 @@ async function call<T>(method: string, body: unknown): Promise<T> {
 }
 
 /**
- * Кэш ответов checkWhatsapp. Проверка номера — обращение к WhatsApp, а не локальная
- * операция, и именно такие обращения Meta считает признаком неофициального клиента
- * (2026-08-26 номер компании уехал «на проверку» после серии переподключений).
+ * Есть ли у номера WhatsApp — для Green-API вопрос БЕЗ ОТВЕТА, поэтому запроса нет.
  *
- * Кэш живёт в памяти процесса: на Vercel он свой у каждого инстанса, и это нормально —
- * задача не «сэкономить запрос любой ценой», а убрать очевидные повторы.
- */
-const existsCache = new Map<string, { exists: boolean; chatId?: string; at: number }>()
-const EXISTS_TTL_MS = 6 * 60 * 60 * 1000
-
-/**
- * Есть ли у номера WhatsApp.
+ * ⚠️ Проверено живыми запросами 2026-09-19: `checkWhatsapp` возвращает
+ * `existsWhatsapp: true` на любой номер, включая заведомо несуществующие
+ * (`77000000001`, `79990000001`) — и из кэша, и с `force: true`, который бьёт прямо в
+ * WhatsApp. То есть метод отвечает не «номер зарегистрирован», а «вот его lid».
+ * Похоже на приватность на стороне WhatsApp: наличие регистрации больше не раскрывают.
  *
- * `chatId` передаём цифрами: поле принимает и `79001234567`, и `…@c.us`, а `phoneNumber`
- * в документации помечено устаревшим. `force` не ставим — по умолчанию Green-API
- * отвечает из своего кэша, и это ещё один пропущенный запрос к WhatsApp.
+ * Звать его ради ответа «true» бессмысленно и вредно: это лишнее обращение к WhatsApp
+ * на каждое уведомление, а именно такие обращения Meta считает признаком неофициального
+ * клиента (2026-08-26 номер компании уехал «на проверку»).
+ *
+ * Поэтому канал выбирается иначе, чем у WAHA: отправляем в WhatsApp всегда, а «у номера
+ * нет WhatsApp» выясняется ПОСЛЕ отправки — статусом `noAccount` в вебхуке, а если
+ * статуса не будет вовсе, сработает досылка SMS по таймауту в /api/notify/sweep.
+ *
+ * ⚠️ Заодно: `chatId` в этот метод надо передавать с суффиксом (`номер@c.us`), на голые
+ * цифры он отвечает 400 — хотя в документации пример именно с цифрами.
  */
-export async function checkNumberExists(phone: string): Promise<{ exists: boolean; chatId?: string }> {
-	const key = digits(phone)
-	const hit = existsCache.get(key)
-	if (hit && Date.now() - hit.at < EXISTS_TTL_MS) return { exists: hit.exists, chatId: hit.chatId }
-
-	const res = await call<{ existsWhatsapp?: boolean; chatId?: string }>('checkWhatsapp', { chatId: key })
-	const out = { exists: res?.existsWhatsapp === true, chatId: res?.chatId ?? undefined }
-	existsCache.set(key, { ...out, at: Date.now() })
-	return out
+export async function checkNumberExists(): Promise<{ exists: boolean; chatId?: string }> {
+	return { exists: true }
 }
 
 /**
