@@ -24,10 +24,22 @@ import type { NotifyChannel } from './types'
  * записан как «8 708 703 77 11», поэтому приводим к международному виду.
  */
 function contactPhone(): string {
-	const dept = COMPANY.departments.find((d) => d.title.includes('доставки')) ?? COMPANY.departments[0]
-	const digits = (dept?.phone ?? '').replace(/\D/g, '').slice(-10)
-	return digits.length === 10 ? `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}` : (dept?.phone ?? '')
+	const digits = contactDigits()
+	return digits.length === 10 ? `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}` : deliveryDept()
 }
+
+/** Тот же телефон без пробелов: «+77087037711». В SMS каждый символ на счету. */
+function contactPhoneCompact(): string {
+	const digits = contactDigits()
+	return digits.length === 10 ? `+7${digits}` : deliveryDept()
+}
+
+function deliveryDept(): string {
+	const dept = COMPANY.departments.find((d) => d.title.includes('доставки')) ?? COMPANY.departments[0]
+	return dept?.phone ?? ''
+}
+
+const contactDigits = () => deliveryDept().replace(/\D/g, '').slice(-10)
 
 /**
  * Полный текст для WhatsApp — по образцу заказчика, включая эмодзи и капслок в
@@ -83,19 +95,24 @@ function whatsappText(w: Waybill): string {
  * Это ВРЕМЕННО: ссылку вернём, когда компания зарегистрирует собственное имя
  * отправителя — от своего имени операторы ссылки обычно пропускают.
  *
- * Про длину. Кириллица кодируется UCS-2: 70 символов на одиночное сообщение и 67 на
- * часть составного. Текущий текст с суммой и телефоном укладывается в две части.
- * Отсюда два решения, которые выглядят мелочью, но таковой не являются:
- *   — никаких эмодзи: они намертво удерживают сообщение в UCS-2 и съедают ёмкость;
- *   — «тг» вместо «тенге»: на длинных суммах это ровно разница между 2 и 3 частями.
+ * ⚠️ Про длину — здесь экономия не ради экономии. Кириллица кодируется UCS-2: 70
+ * символов на одиночное сообщение и 67 на часть составного. Вторая часть удваивает
+ * цену, а в Россию сегмент стоит ~200 ₸ (против ~20 ₸ по Казахстану), то есть каждое
+ * уведомление — 200 ₸ вместо 400 ₸. Поэтому текст ужат до одной части:
+ *   — «LTT» вместо «Leader Trans Team» — решение заказчика ради одной части;
+ *   — «Оплата» вместо «К оплате»: на восьмизначных суммах это ровно граница;
+ *   — телефон без пробелов;
+ *   — никаких эмодзи: они намертво удерживают сообщение в UCS-2 и съедают ёмкость.
+ * Самый длинный реальный случай (пятизначный номер + сумма в миллионах) — 69
+ * символов. Добавляете что-нибудь в текст — перепроверьте длину.
  *
  * Пустые поля выпадают: при нулевой сумме строки про оплату нет — иначе клиент
- * получил бы «К оплате 0 тг».
+ * получил бы «Оплата 0 тг».
  */
 function smsText(w: Waybill): string {
-	const head = `Leader Trans Team: груз принят.${w.number ? ` Накладная ${w.number}.` : ''}`
-	const pay = w.amount ? `К оплате ${fmtMoney(w.amount)} тг.` : ''
-	return [head, [pay, `Тел. ${contactPhone()}`].filter(Boolean).join(' ')].join('\n')
+	const head = `LTT: груз принят${w.number ? `, накладная ${w.number}` : ''}.`
+	const pay = w.amount ? `Оплата ${fmtMoney(w.amount)} тг.` : ''
+	return [head, pay, contactPhoneCompact()].filter(Boolean).join(' ')
 }
 
 /** Текст уведомления под конкретный канал. */

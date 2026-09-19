@@ -88,13 +88,19 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 			// Правки передаём только если они есть: иначе шаблон соберёт сервер сам.
 			const res = await repos.notify.send(docId, channel, edited ? texts : undefined)
 			setOutcome(res)
-			if (res.status === 'sent') {
-				onToast(res.channel === 'sms' ? t('nmSentSms') : t('nmSentWa'))
-			} else if (res.status === 'failed') {
-				onToast(res.error || t('nmFailed'), 'error')
-			}
 			setAuto({ whatsapp: res.whatsappAvailable, sms: res.smsAvailable })
 			void loadStatus()
+
+			if (res.status === 'sent') {
+				// Успех — закрываем окно: результат оператор увидит в тосте, а держать
+				// открытой форму, которая уже сделала своё дело, незачем.
+				onToast(res.channel === 'sms' ? t('nmSentSms') : t('nmSentWa'))
+				onClose()
+				return
+			}
+			// Неудача — окно оставляем открытым: в нём видно причину, и оператор может
+			// сразу отправить другим каналом, не открывая всё заново.
+			if (res.status === 'failed') onToast(res.error || t('nmFailed'), 'error')
 		} catch (e) {
 			onToast(e instanceof Error && e.message ? e.message : t('nmFailed'), 'error')
 		} finally {
