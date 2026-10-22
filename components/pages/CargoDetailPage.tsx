@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Pencil, Copy, Check, Trash2, Package, MapPin, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Pencil, Copy, Check, Trash2, Package, MapPin, ArrowRight, Folder } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
-import { ToastItem } from '@/components/Toast'
+import { RepoError } from '@/lib/data/types'
+import { TOAST_VIEWPORT, ToastItem, newToastId } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { DeleteModal } from '@/components/admin/DeleteModal'
 import { CargoWaybillBlock } from '@/components/admin/CargoWaybillBlock'
@@ -15,54 +16,20 @@ import { CitySelect, StatusSelect, PaymentSelect, CurrencySelect } from '@/compo
 import { DatePickerField } from '@/components/admin/DatePickerField'
 import { TimeframeInput } from '@/components/admin/TimeframeInput'
 import { Spinner } from '@/components/Spinner'
-import { formatDate, toInputDate, getCurrencySymbol, displayTimeframe } from '@/lib/format'
+import { getStatusUi, getPaymentUi } from '@/components/admin/statusUi'
+import {
+	cargoToDraft,
+	draftToPayload,
+	buildCargoPatch,
+	sanitizeCargoNumberInput,
+	type DraftState,
+} from '@/components/admin/cargoDraft'
+import { formatDate, formatMoney, formatPaymentDetail, getCurrencySymbol, displayTimeframe, safeLocalPath, isAbortError } from '@/lib/format'
 import type { Toast } from '@/components/Toast'
 import type { Cargo } from '@/components/admin/types'
 
-interface DraftState {
-	cargoNumber: string
-	name: string
-	fromCity: string
-	currentCity: string
-	toCity: string
-	acceptanceDate: string
-	shipmentDate: string
-	deliveryTimeframe: string
-	deliveryAmount: string
-	currency: string
-	paymentStatus: string
-	partialPaymentDetail: string
-	status: string
-}
-
-function cargoToDraft(cargo: Cargo): DraftState {
-	return {
-		cargoNumber: cargo.cargoNumber != null ? String(cargo.cargoNumber) : '',
-		name: cargo.name ?? '',
-		fromCity: cargo.fromCity,
-		currentCity: cargo.currentCity,
-		toCity: cargo.toCity,
-		acceptanceDate: toInputDate(cargo.acceptanceDate),
-		shipmentDate: toInputDate(cargo.shipmentDate),
-		deliveryTimeframe: cargo.deliveryTimeframe ?? '',
-		deliveryAmount: cargo.deliveryAmount?.toString() ?? '',
-		currency: cargo.currency ?? 'KZT',
-		paymentStatus: cargo.paymentStatus ?? 'none',
-		partialPaymentDetail: cargo.partialPaymentDetail ?? '',
-		status: cargo.status,
-	}
-}
-
 const INPUT_CLS =
 	'w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 text-sm font-medium placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all'
-
-function statusConfig(status: string, t: (k: any) => string) {
-	if (status === 'в пути')
-		return { label: t('statusInTransit'), cls: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/25', dot: 'bg-blue-500' }
-	if (status === 'прибыл')
-		return { label: t('statusArrived'), cls: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/25', dot: 'bg-emerald-500' }
-	return { label: t('statusWaiting'), cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/25', dot: 'bg-amber-500' }
-}
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 	<p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">{children}</p>
@@ -89,11 +56,23 @@ export function CargoDetailPage({ id }: { id: string }) {
 	const repo = repos
 	const searchParams = useSearchParams()
 	const backToList = () => {
-		const returnTo = searchParams.get('returnTo')
-		if (returnTo) { router.push(returnTo); return }
-		const qs = searchParams.toString()
+		const params = new URLSearchParams(searchParams.toString())
+		const returnTo = params.get('returnTo')
+		params.delete('returnTo')
+		// returnTo приходит из адреса — подделываемый вход: только внутренний путь, иначе открытый редирект.
+		if (returnTo) { router.push(safeLocalPath(returnTo)); return }
+		const qs = params.toString()
 		router.push(qs ? `/admin?${qs}` : `/admin`)
 	}
+	// Свежие t и backToList для эффектов: их смена (язык, URL) не должна перезапрашивать груз.
+	const tRef = useRef(t)
+	const backToListRef = useRef(backToList)
+	useLayoutEffect(() => {
+		tRef.current = t
+		backToListRef.current = backToList
+	})
+	// Слепок черновика на момент входа в правку: от него считается, что оператор реально изменил.
+	const baseDraftRef = useRef<DraftState | null>(null)
 	const [mounted, setMounted] = useState(false)
 	const [cargo, setCargo] = useState<Cargo | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -107,7 +86,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 	const [showArrivedConfirm, setShowArrivedConfirm] = useState(false)
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const tid = Date.now().toString()
+		const tid = newToastId()
 		setToasts((prev) => [...prev, { id: tid, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.map((t) => (t.id === tid ? { ...t, exiting: true } : t)))
@@ -115,27 +94,43 @@ export function CargoDetailPage({ id }: { id: string }) {
 		}, 5000)
 	}, [])
 
-	const loadCargo = useCallback(async () => {
-		try {
-			const data = await repo.cargos.get(id)
-			if (data === null) { backToList(); return }
-			setCargo(data)
-		} catch {
-			addToast(t('loadError'), 'error')
-		} finally {
-			setLoading(false)
-		}
-	}, [id, router, addToast, t])
-
 	useEffect(() => {
 		setMounted(true)
-		loadCargo()
+		const ctrl = new AbortController()
+		void (async () => {
+			try {
+				const data = await repo.cargos.get(id, ctrl.signal)
+				if (ctrl.signal.aborted) return
+				if (data === null) { backToListRef.current(); return }
+				setCargo(data)
+			} catch (e) {
+				if (isAbortError(e) || ctrl.signal.aborted) return
+				addToast(tRef.current('loadError'), 'error')
+			} finally {
+				if (!ctrl.signal.aborted) setLoading(false)
+			}
+		})()
 		const timer = setTimeout(() => setMinLoadDone(true), 444)
-		return () => clearTimeout(timer)
-	}, [loadCargo])
+		return () => { ctrl.abort(); clearTimeout(timer) }
+	}, [id, repo, addToast])
 
-	const startEdit = () => { if (!cargo) return; setDraft(cargoToDraft(cargo)); setEditMode(true) }
-	const cancelEdit = () => { setDraft(null); setEditMode(false) }
+	// Тихое обновление после сохранения: ответ PATCH мог не содержать папку, а параллельные
+	// правки (папка, накладная) должны быть видны сразу.
+	const refreshCargo = async () => {
+		try {
+			const fresh = await repo.cargos.get(id)
+			if (fresh) setCargo(fresh)
+		} catch {}
+	}
+
+	const startEdit = () => {
+		if (!cargo) return
+		const base = cargoToDraft(cargo)
+		baseDraftRef.current = base
+		setDraft({ ...base })
+		setEditMode(true)
+	}
+	const cancelEdit = () => { baseDraftRef.current = null; setDraft(null); setEditMode(false) }
 	const setField = <K extends keyof DraftState>(key: K, value: DraftState[K]) =>
 		setDraft((d) => d && { ...d, [key]: value })
 
@@ -143,27 +138,22 @@ export function CargoDetailPage({ id }: { id: string }) {
 		if (!cargo || !draft) return
 		setSaving(true)
 		try {
-			const data = await repo.cargos.update(cargo.docId, {
-				cargoNumber: draft.cargoNumber.trim() ? Number(draft.cargoNumber.trim()) : null,
-				name: draft.name.trim() || null,
-				fromCity: draft.fromCity.trim(),
-				currentCity: draft.currentCity.trim(),
-				toCity: draft.toCity.trim(),
-				status: draft.status,
-				acceptanceDate: draft.acceptanceDate || null,
-				shipmentDate: draft.shipmentDate || null,
-				deliveryTimeframe: draft.deliveryTimeframe || null,
-				deliveryAmount: draft.deliveryAmount ? Number(draft.deliveryAmount) : null,
-				currency: draft.currency,
-				paymentStatus: draft.paymentStatus,
-				partialPaymentDetail: draft.paymentStatus === 'partial' ? draft.partialPaymentDetail || null : null,
-			})
-			setCargo(data)
+			// Шлём только то, что оператор изменил: весь черновик затирал бы параллельные правки
+			// (массовое обновление папки, синхронизация накладной delivered → «прибыл»).
+			const base = baseDraftRef.current
+			const patch = base ? buildCargoPatch(base, draft) : draftToPayload(draft)
+			if (Object.keys(patch).length > 0) {
+				setCargo(await repo.cargos.update(cargo.docId, patch))
+			}
+			baseDraftRef.current = null
 			setEditMode(false)
 			setDraft(null)
 			addToast(t('detailsUpdated'), 'success')
-		} catch {
-			addToast(t('detailsUpdateError'), 'error')
+			void refreshCargo()
+		} catch (e) {
+			// 409 — номер груза уже у другого груза
+			if (e instanceof RepoError && e.status === 409) addToast(t('cargoNumberTaken'), 'error')
+			else addToast(t('detailsUpdateError'), 'error')
 		} finally {
 			setSaving(false)
 		}
@@ -173,7 +163,8 @@ export function CargoDetailPage({ id }: { id: string }) {
 		if (!cargo || !draft) return
 		if (!draft.fromCity.trim() || !draft.currentCity.trim() || !draft.toCity.trim()) { addToast(t('cityEmpty'), 'error'); return }
 		// Подтверждение при первой смене статуса на "прибыл" (без него легко промахнуться в селекте).
-		if (cargo.status !== 'прибыл' && draft.status === 'прибыл') {
+		const base = baseDraftRef.current
+		if (draft.status === 'прибыл' && (base ? base.status !== 'прибыл' : cargo.status !== 'прибыл')) {
 			setShowArrivedConfirm(true)
 			return
 		}
@@ -191,17 +182,26 @@ export function CargoDetailPage({ id }: { id: string }) {
 		backToList()
 	}
 
-	const handleCopy = () => {
+	const handleCopy = async () => {
 		if (!cargo) return
-		navigator.clipboard.writeText(cargo.id)
-		setCopied(true)
-		setTimeout(() => setCopied(false), 2000)
+		try {
+			// clipboard недоступен без HTTPS/разрешения — писать «Скопировано» до результата нельзя
+			await navigator.clipboard.writeText(cargo.id)
+			setCopied(true)
+			setTimeout(() => setCopied(false), 2000)
+		} catch {
+			addToast(t('copyError'), 'error')
+		}
 	}
 
 	if (!mounted) return <div suppressHydrationWarning />
 
-	const currSym = getCurrencySymbol(cargo?.currency ?? 'KZT')
 	const draftSym = getCurrencySymbol(draft?.currency ?? 'KZT')
+	const statusUi = getStatusUi(cargo?.status ?? '', t)
+	const paymentUi = getPaymentUi(cargo?.paymentStatus, t)
+	const deliveryMoney = formatMoney(cargo?.deliveryAmount, cargo?.currency)
+	// Валюта дописывается, только если в деталях одно число (иначе «Оплачено 50 000 ₸ ₸»)
+	const partialDetail = formatPaymentDetail(cargo?.partialPaymentDetail, cargo?.currency)
 	const d = draft!
 
 	return (
@@ -209,7 +209,7 @@ export function CargoDetailPage({ id }: { id: string }) {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -220,15 +220,15 @@ export function CargoDetailPage({ id }: { id: string }) {
 				{!loading && minLoadDone && cargo && (
 				<main className="flex-1 overflow-y-auto">
 					<div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-						{/* Back + title */}
-						<div className="flex items-center justify-between gap-3 mb-5">
+						{/* Назад + заголовок: оба слева, заголовок под ссылкой (единый шаблон страниц деталей) */}
+						<div className="mb-5">
 							<button
 								onClick={backToList}
-								className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
+								className="inline-flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
 								<ArrowLeft className="w-4 h-4" />
 								{t('backToList')}
 							</button>
-							<h1 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('cargoDetailTitle')}</h1>
+							<h1 className="mt-1.5 text-xl font-semibold text-slate-900 dark:text-zinc-100">{t('cargoDetailTitle')}</h1>
 						</div>
 
 						{/* Main card */}
@@ -243,11 +243,10 @@ export function CargoDetailPage({ id }: { id: string }) {
 												<div className="w-24 shrink-0">
 													<FieldLabel>{t('cargoNumberLabel')}</FieldLabel>
 													<input
-														type="number"
-														min="0"
-														step="1"
+														type="text"
+														inputMode="numeric"
 														value={d.cargoNumber}
-														onChange={(e) => setField('cargoNumber', e.target.value)}
+														onChange={(e) => setField('cargoNumber', sanitizeCargoNumberInput(e.target.value, d.cargoNumber))}
 														placeholder={t('enterCargoNumber')}
 														className={INPUT_CLS}
 													/>
@@ -272,12 +271,30 @@ export function CargoDetailPage({ id }: { id: string }) {
 													)}
 													{cargo.name || <span className="text-slate-400 dark:text-zinc-500 italic font-medium text-base">{t('noName')}</span>}
 												</h2>
-												<button
-													onClick={handleCopy}
-													className={`inline-flex items-center gap-1.5 text-xs font-mono mt-2 transition-colors max-w-full min-w-0 ${copied ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
-													<span className="truncate">{copied ? t('copied') : cargo.id}</span>
-													{copied ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
-												</button>
+												{/* Статус и папка — рядом с названием (раньше статус жил в дублирующей секции «Маршрут») */}
+												<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
+													<span
+														className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border shrink-0 ${statusUi.cls}`}
+														title={t('statusCardLabel')}>
+														<span className={`w-1.5 h-1.5 rounded-full ${statusUi.dot}`} />
+														{statusUi.label}
+													</span>
+													{/* Папка груза — только для чтения: назначается в разделе «Папки» */}
+													{cargo.folderId && (
+														<span
+															className="inline-flex items-center gap-1 min-w-0 max-w-full text-xs font-medium text-slate-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-md px-2 py-1"
+															title={t('folderLabel')}>
+															<Folder className="w-3.5 h-3.5 shrink-0" />
+															<span className="truncate">{cargo.folderName ?? t('folderInBadge')}</span>
+														</span>
+													)}
+													<button
+														onClick={handleCopy}
+														className={`inline-flex items-center gap-1.5 text-xs font-mono transition-colors max-w-full min-w-0 ${copied ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
+														<span className="truncate">{copied ? t('copied') : cargo.id}</span>
+														{copied ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
+													</button>
+												</div>
 											</div>
 										)}
 									</div>
@@ -292,76 +309,61 @@ export function CargoDetailPage({ id }: { id: string }) {
 									)}
 								</div>
 
-								{/* Route bar */}
-								<div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg p-4">
-									<div className="flex items-center gap-2">
-										<div className="flex-1 min-w-0 text-center">
-											<Package className="w-4 h-4 text-slate-400 dark:text-zinc-500 mx-auto mb-1.5" />
-											<p className="text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-0.5">{t('fromCardLabel')}</p>
-											<p className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate">{editMode ? d.fromCity || cargo.fromCity : cargo.fromCity}</p>
-										</div>
-										<ArrowRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0" />
-										<div className="flex-1 min-w-0 text-center">
-											<MapPin className="w-4 h-4 text-orange-500 mx-auto mb-1.5" />
-											<p className="text-[10px] font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-0.5">{t('currentLabel')}</p>
-											<p className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate">{editMode ? d.currentCity || cargo.currentCity : cargo.currentCity}</p>
-										</div>
-										<ArrowRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0" />
-										<div className="flex-1 min-w-0 text-center">
-											<Check className="w-4 h-4 text-slate-400 dark:text-zinc-500 mx-auto mb-1.5" />
-											<p className="text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-0.5">{t('toCardLabel')}</p>
-											<p className="text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate">{editMode ? d.toCity || cargo.toCity : cargo.toCity}</p>
-										</div>
-									</div>
-								</div>
-
-								{/* Маршрут */}
-								<div>
-									<SectionTitle>{t('secRoute')}</SectionTitle>
-									<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
-										<Field editMode={editMode}>
-											<FieldLabel>{t('fromCardLabel')}</FieldLabel>
-											{editMode
-												? <CitySelect value={d.fromCity} onChange={(v) => setField('fromCity', v)} />
-												: <FieldValue>{cargo.fromCity}</FieldValue>}
-										</Field>
-										<Field editMode={editMode}>
-											<FieldLabel>{t('toCardLabel')}</FieldLabel>
-											{editMode
-												? <CitySelect value={d.toCity} onChange={(v) => setField('toCity', v)} />
-												: <FieldValue>{cargo.toCity}</FieldValue>}
-										</Field>
-										<Field editMode={editMode}>
-											<FieldLabel>{t('currentLocationLabel')}</FieldLabel>
-											{editMode
-												? <CitySelect value={d.currentCity} onChange={(v) => setField('currentCity', v)} />
-												: <FieldValue>{cargo.currentCity}</FieldValue>}
-										</Field>
-										{/* Папка груза — только для чтения: назначается в разделе «Папки» */}
-										{cargo.folderId && (
-											<Field editMode={editMode}>
-												<FieldLabel>{t('folderLabel')}</FieldLabel>
-												<FieldValue>{cargo.folderName ?? '—'}</FieldValue>
+								{/* Маршрут. В просмотре — только визуальная полоса откуда → сейчас → куда
+								    (раньше под ней шла секция с теми же тремя полями — дубль). В правке полоса
+								    уступает место редактируемым полям, статус правится там же. */}
+								{editMode ? (
+									<div>
+										<SectionTitle>{t('secRoute')}</SectionTitle>
+										<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
+											<Field editMode>
+												<FieldLabel>{t('fromCardLabel')}</FieldLabel>
+												<CitySelect value={d.fromCity} onChange={(v) => setField('fromCity', v)} />
 											</Field>
-										)}
-										<Field editMode={editMode}>
-											<FieldLabel>{t('statusCardLabel')}</FieldLabel>
-											{editMode ? (
+											<Field editMode>
+												<FieldLabel>{t('toCardLabel')}</FieldLabel>
+												<CitySelect value={d.toCity} onChange={(v) => setField('toCity', v)} />
+											</Field>
+											<Field editMode>
+												<FieldLabel>{t('currentLocationLabel')}</FieldLabel>
+												<CitySelect value={d.currentCity} onChange={(v) => setField('currentCity', v)} />
+											</Field>
+											<Field editMode>
+												<FieldLabel>{t('statusCardLabel')}</FieldLabel>
 												<StatusSelect value={d.status} onChange={(v) => setField('status', v)} />
-											) : (
-												(() => {
-													const cfg = statusConfig(cargo.status, t)
-													return (
-														<span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${cfg.cls}`}>
-															<span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-															{cfg.label}
-														</span>
-													)
-												})()
+											</Field>
+											{/* Папка груза — только для чтения: назначается в разделе «Папки» */}
+											{cargo.folderId && (
+												<Field editMode>
+													<FieldLabel>{t('folderLabel')}</FieldLabel>
+													<p className="px-3 py-2 text-sm font-medium text-slate-600 dark:text-zinc-300 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg truncate">{cargo.folderName ?? '—'}</p>
+												</Field>
 											)}
-										</Field>
+										</div>
 									</div>
-								</div>
+								) : (
+									<div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg p-4">
+										<div className="flex items-center gap-2">
+											<div className="flex-1 min-w-0 text-center">
+												<Package className="w-4 h-4 text-slate-400 dark:text-zinc-500 mx-auto mb-1.5" />
+												<p className="text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-0.5">{t('fromCardLabel')}</p>
+												<p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate" title={cargo.fromCity}>{cargo.fromCity}</p>
+											</div>
+											<ArrowRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0" />
+											<div className="flex-1 min-w-0 text-center">
+												<MapPin className="w-4 h-4 text-orange-500 mx-auto mb-1.5" />
+												<p className="text-[10px] font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-0.5">{t('currentLabel')}</p>
+												<p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate" title={cargo.currentCity}>{cargo.currentCity}</p>
+											</div>
+											<ArrowRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0" />
+											<div className="flex-1 min-w-0 text-center">
+												<Check className="w-4 h-4 text-slate-400 dark:text-zinc-500 mx-auto mb-1.5" />
+												<p className="text-[10px] font-medium text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-0.5">{t('toCardLabel')}</p>
+												<p className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate" title={cargo.toCity}>{cargo.toCity}</p>
+											</div>
+										</div>
+									</div>
+								)}
 
 								{/* Даты */}
 								<div>
@@ -400,8 +402,8 @@ export function CargoDetailPage({ id }: { id: string }) {
 													<div className="w-32 shrink-0"><CurrencySelect value={d.currency} onChange={(v) => setField('currency', v)} /></div>
 												</div>
 											) : (
-												<FieldValue empty={cargo.deliveryAmount == null}>
-													{cargo.deliveryAmount != null ? `${cargo.deliveryAmount.toLocaleString()} ${currSym}` : t('notSpecified')}
+												<FieldValue empty={!deliveryMoney}>
+													{deliveryMoney || t('notSpecified')}
 												</FieldValue>
 											)}
 										</Field>
@@ -410,8 +412,8 @@ export function CargoDetailPage({ id }: { id: string }) {
 											{editMode ? (
 												<PaymentSelect value={d.paymentStatus} onChange={(v) => setDraft((prev) => prev ? { ...prev, paymentStatus: v, partialPaymentDetail: v !== 'partial' ? '' : prev.partialPaymentDetail } : prev)} />
 											) : (
-												<span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-md ${cargo.paymentStatus === 'full' ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : cargo.paymentStatus === 'partial' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300'}`}>
-													{cargo.paymentStatus === 'full' ? t('paymentFull') : cargo.paymentStatus === 'partial' ? t('paymentPartial') : t('paymentNone')}
+												<span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-md border ${paymentUi.cls}`}>
+													{paymentUi.label}
 												</span>
 											)}
 										</Field>
@@ -420,12 +422,14 @@ export function CargoDetailPage({ id }: { id: string }) {
 												<FieldLabel>{t('partialPaymentDetailLabel')}</FieldLabel>
 												{editMode ? (
 													<div className="flex items-center gap-2">
-														<input type="number" min="0" value={d.partialPaymentDetail} onChange={(e) => setField('partialPaymentDetail', e.target.value)} placeholder={t('enterAmount')} className={`${INPUT_CLS} flex-1`} />
+														{/* text, а не number: в поле может лежать свободный текст («Оплачено 50 000»),
+														    и number показал бы его пустым — оператор решил бы, что деталей нет */}
+														<input type="text" inputMode="decimal" value={d.partialPaymentDetail} onChange={(e) => setField('partialPaymentDetail', e.target.value)} placeholder={t('enterAmount')} className={`${INPUT_CLS} flex-1 min-w-0`} />
 														<span className="text-slate-500 dark:text-zinc-400 font-medium text-sm shrink-0">{draftSym}</span>
 													</div>
 												) : (
-													<FieldValue empty={!cargo.partialPaymentDetail}>
-														{cargo.partialPaymentDetail ? `${!isNaN(Number(cargo.partialPaymentDetail)) ? Number(cargo.partialPaymentDetail).toLocaleString() : cargo.partialPaymentDetail} ${currSym}` : t('notSpecified')}
+													<FieldValue empty={!partialDetail}>
+														{partialDetail || t('notSpecified')}
 													</FieldValue>
 												)}
 											</Field>

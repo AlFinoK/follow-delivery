@@ -7,7 +7,8 @@ import { repos } from '@/lib/data/repos'
 import type { WaybillDTO } from '@/lib/data/types'
 import { Spinner } from '@/components/Spinner'
 import { openWaybillPrint } from '@/lib/waybill/print'
-import { fmtDecimal, fmtMoney, totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { fmtDecimal, totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { formatMoney } from '@/lib/format'
 import { STATUS_KEYS } from '@/lib/waybill/statusI18n'
 import { useLang } from '@/contexts/LangContext'
 
@@ -34,19 +35,18 @@ export function CargoWaybillBlock({ cargoDocId }: { cargoDocId: string }) {
 	const repo = repos
 	const [waybill, setWaybill] = useState<WaybillDTO | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [popupBlocked, setPopupBlocked] = useState(false) // окно печати заблокировано браузером
 
 	useEffect(() => {
-		let alive = true
+		const ctrl = new AbortController()
 		repo.waybills
-			.getByCargo(cargoDocId)
-			.then((found) => alive && setWaybill(found))
+			.getByCargo(cargoDocId, ctrl.signal)
+			.then((found) => !ctrl.signal.aborted && setWaybill(found))
 			.catch(() => {
-				/* нет доступа/ошибка сети — просто покажем «накладной нет» */
+				/* нет доступа/ошибка сети — просто покажем «накладной нет»; AbortError — тоже тишина */
 			})
-			.finally(() => alive && setLoading(false))
-		return () => {
-			alive = false
-		}
+			.finally(() => !ctrl.signal.aborted && setLoading(false))
+		return () => ctrl.abort()
 	}, [cargoDocId, repo])
 
 	if (loading) {
@@ -61,10 +61,10 @@ export function CargoWaybillBlock({ cargoDocId }: { cargoDocId: string }) {
 		return (
 			<div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-dashed border-slate-300 dark:border-zinc-600 px-3.5 py-3">
 				<p className="flex-1 text-xs text-slate-500 dark:text-zinc-400">
-					{t('wbNone')}
+					{t('wbNoneLinked')}
 				</p>
 				<Link
-					href={`/admin/waybills/new`}
+					href={`/admin/waybills/new?cargoId=${encodeURIComponent(cargoDocId)}`}
 					className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/15 border border-orange-200 dark:border-orange-500/25 rounded-lg transition-colors shrink-0">
 					<FilePlus className="w-4 h-4" /> {t('createWaybillButton')}
 				</Link>
@@ -88,7 +88,7 @@ export function CargoWaybillBlock({ cargoDocId }: { cargoDocId: string }) {
 				<div className="flex items-center gap-2">
 					<button
 						type="button"
-						onClick={() => openWaybillPrint(waybill)}
+						onClick={() => setPopupBlocked(!openWaybillPrint(waybill))}
 						className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 rounded-lg transition-colors">
 						<FileDown className="w-3.5 h-3.5" /> PDF
 					</button>
@@ -99,6 +99,11 @@ export function CargoWaybillBlock({ cargoDocId }: { cargoDocId: string }) {
 					</Link>
 				</div>
 			</div>
+			{popupBlocked && (
+				<p role="alert" className="mb-3 text-xs text-red-700 dark:text-red-300">
+					{t('wpPopupBlocked')}
+				</p>
+			)}
 
 			<div className="grid grid-cols-1 gap-2 lg:grid-cols-3 lg:gap-3">
 				<Row label={t('wfSenderTitle')}>{waybill.sender.fullName || '—'}</Row>
@@ -108,7 +113,7 @@ export function CargoWaybillBlock({ cargoDocId }: { cargoDocId: string }) {
 				<Row label={t('wbPlacesWeight')}>
 					{places || '—'} / {fmtDecimal(weight, 1)} {t('calcKg')}
 				</Row>
-				<Row label={t('wfAmount')}>{fmtMoney(waybill.amount)} ₸</Row>
+				<Row label={t('wfAmount')}>{formatMoney(waybill.amount, 'KZT') || '—'}</Row>
 				<Row label={t('wbPackaging')}>
 					{waybill.packagingOk ? (
 						<span className="text-emerald-700 dark:text-emerald-300">{t('wbPackagingOk')}</span>

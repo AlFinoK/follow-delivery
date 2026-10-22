@@ -27,8 +27,10 @@ console.log('bad districtIdx:', badDist, '| bad regionIdx:', badReg, '| bad code
 const kld = settle.items.filter((it) => settle.regions[it[1]] === 'Калининградская область').length
 console.log('Kaliningrad-oblast settlements (must be 0):', kld)
 
-// 4) распределение surcharge: сколько НП попадает под +30%
+// 4) сколько НП лежит в шести округах, где надбавка вообще возможна. Реальные ставки
+// (по областям, improves2.0) считает resolveSurcharge() из lib/calculator/districts.ts —
+// они проверяются тестом test/calculator-districts.test.ts, а не этим скриптом.
 const SUR = new Set(['south','caucasus','volga','ural','central','northwest'])
 let sur = 0
 for (const it of settle.items) if (SUR.has(DIST[it[2]])) sur++
-console.log('settlements with +30% surcharge:', sur, '/', settle.items.length, '(' + Math.round((sur / settle.items.length) * 100) + '%)')
+console.log('settlements in surcharge-eligible districts:', sur, '/', settle.items.length, '(' + Math.round((sur / settle.items.length) * 100) + '%)')

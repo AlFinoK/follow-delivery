@@ -3,15 +3,18 @@
 import { memo, useState } from 'react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
+import { RepoError } from '@/lib/data/types'
 import { getCurrencySymbol } from '@/lib/format'
 import { INPUT_CLS } from './constants'
+import { sanitizeCargoNumberInput } from './cargoDraft'
 import { CitySelect, StatusSelect, PaymentSelect, CurrencySelect } from './Selects'
 import { DatePickerField } from './DatePickerField'
 import { TimeframeInput } from './TimeframeInput'
 import { Spinner } from '@/components/Spinner'
 
 interface NewCargoFormProps {
-	onCreated: () => Promise<void>
+	/** Груз создан: страница уходит на список и переносит тост (CLAUDE.md §6). */
+	onCreated: (createdId: string) => Promise<void> | void
 	addToast: (message: string, type?: 'success' | 'error') => void
 	wide?: boolean
 }
@@ -25,7 +28,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 )
 
 export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wide }: NewCargoFormProps) {
-	const { t, tf } = useLang()
+	const { t } = useLang()
 	const repo = repos
 	const [fromCity, setFromCity] = useState('')
 	const [toCity, setToCity] = useState('')
@@ -52,6 +55,7 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 			return
 		}
 		setLoading(true)
+		let created = false
 		try {
 			const normalizedId = generateId().toUpperCase().trim()
 			await repo.cargos.create({
@@ -70,24 +74,16 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 				partialPaymentDetail: paymentStatus === 'partial' ? partialPaymentDetail || null : null,
 				currency,
 			})
-			addToast(tf('cargoCreated', { id: normalizedId }), 'success')
-			setFromCity('')
-			setToCity('')
-			setCargoNumber('')
-			setCargoName('')
-			setStatus('ожидает отправления')
-			setAcceptanceDate('')
-			setShipmentDate('')
-			setDeliveryTimeframe('')
-			setDeliveryAmount('')
-			setPaymentStatus('none')
-			setPartialPaymentDetail('')
-			setCurrency('KZT')
-			await onCreated()
-		} catch {
-			addToast(t('createError'), 'error')
+			// Груз создан: форму не сбрасываем и кнопку не разблокируем — идёт переход на список,
+			// а повторный клик за это время создал бы дубликат.
+			created = true
+			await onCreated(normalizedId)
+		} catch (e) {
+			// 409 — номер груза уже занят другим грузом
+			if (!created && e instanceof RepoError && e.status === 409) addToast(t('cargoNumberTaken'), 'error')
+			else addToast(t('createError'), 'error')
 		} finally {
-			setLoading(false)
+			if (!created) setLoading(false)
 		}
 	}
 
@@ -115,11 +111,13 @@ export const NewCargoForm = memo(function NewCargoForm({ onCreated, addToast, wi
 					<div>
 						<Label>{t('cargoNumberLabel')}</Label>
 						<input
-							type="number"
-							min="0"
-							step="1"
+							type="text"
+							inputMode="numeric"
 							value={cargoNumber}
-							onChange={(e) => setCargoNumber(e.target.value)}
+							onChange={(e) => {
+								const v = e.target.value
+								setCargoNumber((prev) => sanitizeCargoNumberInput(v, prev))
+							}}
 							placeholder={t('enterCargoNumber')}
 							className={INPUT_CLS}
 						/>

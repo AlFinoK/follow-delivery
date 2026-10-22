@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useLayoutEffect, type ReactNode } from 'react'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 
 // Скоуп тёмной темы: класс .dark вешается на <html>, но ТОЛЬКО пока смонтирована
@@ -9,7 +9,8 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 // заодно даёт тёмные нативные элементы (скроллбар, спиннеры полей).
 function Scope({ children }: { children: ReactNode }) {
 	const { dark } = useTheme()
-	useEffect(() => {
+	// useLayoutEffect: класс вешается до первой отрисовки, без вспышки светлой темы у тёмного оператора.
+	useLayoutEffect(() => {
 		const html = document.documentElement
 		html.classList.toggle('dark', dark)
 		html.style.colorScheme = dark ? 'dark' : ''

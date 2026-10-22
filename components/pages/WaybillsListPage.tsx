@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, FileDown, FileText, Inbox, Plus, Search, SearchX, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
@@ -9,9 +9,11 @@ import type { WaybillDTO, WaybillsResponse } from '@/lib/data/types'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
-import { ToastItem, type Toast } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, type Toast } from '@/components/Toast'
 import { openWaybillPrint } from '@/lib/waybill/print'
-import { fmtMoney, totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { totalWeight, type WaybillStatus } from '@/lib/waybill/model'
+import { formatMoney } from '@/lib/format'
+import { NotifyBadge } from '@/components/waybill/NotifyBadge'
 import { STATUS_KEYS, STATUS_ORDER } from '@/lib/waybill/statusI18n'
 
 // Список сохранённых накладных (ПРАВКИ 2, п.6 — «непонятно, где хранятся накладные»).
@@ -47,9 +49,11 @@ export function WaybillsListPage() {
 	const [search, setSearch] = useState('')
 	const [query, setQuery] = useState('')
 	const [toasts, setToasts] = useState<Toast[]>([])
+	const toastSeq = useRef(0) // счётчик id тостов (Date.now() может совпасть)
+	const hasData = useRef(false) // данные уже показаны — дальнейшие загрузки тихие
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const id = `${Date.now()}-${Math.random()}`
+		const id = `toast-${++toastSeq.current}`
 		setToasts((prev) => [...prev, { id, message, type }])
 		setTimeout(() => setToasts((prev) => prev.filter((tt) => tt.id !== id)), 4000)
 	}, [])
@@ -81,27 +85,44 @@ export function WaybillsListPage() {
 		return () => clearTimeout(timer)
 	}, [search, query])
 
-	const load = useCallback(
-		async (silent: boolean) => {
-			if (silent) setRefreshing(true)
-			else setLoading(true)
-			try {
-				setData(await repo.waybills.list({ status: tab, q: query, page }))
-			} catch {
-				addToast(t('wlLoadError'), 'error')
-			} finally {
-				setLoading(false)
-				setRefreshing(false)
-			}
-		},
-		[repo, tab, query, page, addToast]
-	)
-
+	// Загрузка списка. Каждый запрос отменяется при следующем изменении фильтра/страницы,
+	// поэтому ответ устаревшего запроса не может перезаписать свежий (быстрый ввод в
+	// поиске раньше показывал список не по тому запросу, что в поле).
 	useEffect(() => {
 		if (!mounted) return
-		void load(data != null)
+		const ctrl = new AbortController()
+		if (hasData.current) setRefreshing(true)
+		else setLoading(true)
+		repo.waybills
+			.list({ status: tab, q: query, page }, ctrl.signal)
+			.then((res) => {
+				if (ctrl.signal.aborted) return
+				// Страница вышла за пределы (удалили записи/сменили фильтр): уходим на последнюю
+				// и перезагружаем — состояние загрузки оставляем, его снимет следующий проход.
+				const pages = Math.max(1, Math.ceil(res.total / res.pageSize))
+				if (res.total > 0 && page !== pages && (page > pages || res.items.length === 0)) {
+					setPage(pages)
+					return
+				}
+				hasData.current = true
+				setData(res)
+				setLoading(false)
+				setRefreshing(false)
+			})
+			.catch((e) => {
+				if (ctrl.signal.aborted || (e instanceof DOMException && e.name === 'AbortError')) return
+				addToast(t('wlLoadError'), 'error')
+				setLoading(false)
+				setRefreshing(false)
+			})
+		return () => ctrl.abort()
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [mounted, tab, query, page])
+	}, [mounted, tab, query, page, repo, addToast])
+
+	// openWaybillPrint вернёт false, если браузер заблокировал окно печати
+	const printWaybill = (w: WaybillDTO) => {
+		if (!openWaybillPrint(w)) addToast(t('wpPopupBlocked'), 'error')
+	}
 
 	if (!mounted) return <div suppressHydrationWarning />
 	if (!minLoadDone) return <PageLoader />
@@ -118,7 +139,7 @@ export function WaybillsListPage() {
 			suppressHydrationWarning>
 			<AdminSidebar />
 
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+			<div className={TOAST_VIEWPORT}>
 				{toasts.map((tt) => (
 					<ToastItem
 						key={tt.id}
@@ -224,30 +245,33 @@ export function WaybillsListPage() {
 												key={w.docId}
 												waybill={w}
 												href={`/admin/waybills/${w.docId}`}
+												onPrint={printWaybill}
 											/>
 										))}
 									</div>
-
-									{totalPages > 1 && (
-										<div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-200 dark:border-zinc-700">
-											<button
-												onClick={() => setPage(Math.max(1, currentPage - 1))}
-												disabled={currentPage === 1}
-												className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-												<ChevronLeft className="w-4 h-4" />
-											</button>
-											<span className="text-xs text-slate-500 dark:text-zinc-400">
-												{tf('pageOf', { page: currentPage, pages: totalPages })}
-											</span>
-											<button
-												onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-												disabled={currentPage >= totalPages}
-												className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-												<ChevronRight className="w-4 h-4" />
-											</button>
-										</div>
-									)}
 								</>
+							)}
+
+							{/* Пагинация — вне веток списка: страница может оказаться пустой
+							    (вышла за пределы), и пользователю всё равно нужен выход. */}
+							{!loading && totalPages > 1 && (
+								<div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-200 dark:border-zinc-700">
+									<button
+										onClick={() => setPage(Math.max(1, currentPage - 1))}
+										disabled={currentPage === 1}
+										className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+										<ChevronLeft className="w-4 h-4" />
+									</button>
+									<span className="text-xs text-slate-500 dark:text-zinc-400">
+										{tf('pageOf', { page: currentPage, pages: totalPages })}
+									</span>
+									<button
+										onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+										disabled={currentPage >= totalPages}
+										className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+										<ChevronRight className="w-4 h-4" />
+									</button>
+								</div>
 							)}
 						</div>
 					</div>
@@ -258,7 +282,7 @@ export function WaybillsListPage() {
 	)
 }
 
-function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string }) {
+function WaybillRow({ waybill: w, href, onPrint }: { waybill: WaybillDTO; href: string; onPrint: (w: WaybillDTO) => void }) {
 	const { t, tf } = useLang()
 	const weight = totalWeight(w.positions)
 	return (
@@ -275,6 +299,7 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 							<span className={`text-[11px] font-medium px-1.5 py-0.5 rounded border ${BADGE[w.status]}`}>
 								{t(STATUS_KEYS[w.status])}
 							</span>
+							<NotifyBadge note={w.lastNotification} />
 							{w.nature && <span className="text-xs text-slate-500 dark:text-zinc-400 truncate">{w.nature}</span>}
 						</div>
 						<p className="text-[13px] text-slate-700 dark:text-zinc-200 mt-1.5 truncate">
@@ -286,7 +311,7 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 						</p>
 					</div>
 					<div className="text-right shrink-0">
-						<p className="text-sm font-bold text-slate-900 dark:text-zinc-100">{fmtMoney(w.amount)} ₸</p>
+						<p className="text-sm font-bold text-slate-900 dark:text-zinc-100">{w.amount ? formatMoney(w.amount) : '—'}</p>
 						<p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-0.5">
 							{w.payer === 'sender' ? t('wlPayerSender') : t('wlPayerReceiver')}
 						</p>
@@ -295,7 +320,7 @@ function WaybillRow({ waybill: w, href }: { waybill: WaybillDTO; href: string })
 			</Link>
 			<button
 				type="button"
-				onClick={() => openWaybillPrint(w)}
+				onClick={() => onPrint(w)}
 				title={t('wpDownloadPdf')}
 				aria-label={tf('wlPdfAria', { number: w.number })}
 				className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors">

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Plus, Package, Pencil, Trash2, Bike, Truck, Eye, EyeOff, DownloadCloud, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { ToastItem } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
@@ -12,10 +12,12 @@ import { PresetForm, type PresetFormValues } from '@/components/admin/PresetForm
 import { repos } from '@/lib/data/repos'
 import type { Preset } from '@/lib/calculator/presets'
 import type { Toast } from '@/components/Toast'
+import { formatMoney } from '@/lib/format'
 
 const ru = (n: number) => n.toLocaleString('ru-RU')
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').trim()
-const PAGE_SIZE = 8
+// Шаблонов десятки, а не сотни: по 8 на странице список рвался на 2–3 страницы без нужды.
+const PAGE_SIZE = 50
 
 function CatIcon({ category }: { category: string | null }) {
 	const cls = 'w-5 h-5 text-orange-500'
@@ -58,16 +60,28 @@ export function PresetsPage() {
 		}, 5000)
 	}, [])
 
-	const loadPresets = useCallback(async () => {
-		setLoading(true)
-		try {
-			setPresets(await repo.presets.list(true))
-		} catch {
-			addToast(t('loadError'), 'error')
-		} finally {
-			setLoading(false)
-		}
-	}, [repo, addToast, t])
+	// Актуальный t — через ref: loadPresets не должен зависеть от t, иначе смена языка
+	// перезапускала бы загрузку, показывала PageLoader и стирала недозаполненную PresetForm.
+	const tRef = useRef(t)
+	useEffect(() => {
+		tRef.current = t
+	}, [t])
+
+	// silent=true — обновление без PageLoader (после «Загрузить стандартные»); полный
+	// лоадер показывается только при первой загрузке страницы.
+	const loadPresets = useCallback(
+		async (silent = false) => {
+			if (!silent) setLoading(true)
+			try {
+				setPresets(await repo.presets.list(true))
+			} catch {
+				addToast(tRef.current('loadError'), 'error')
+			} finally {
+				setLoading(false)
+			}
+		},
+		[repo, addToast]
+	)
 
 	useEffect(() => {
 		setMounted(true)
@@ -131,7 +145,7 @@ export function PresetsPage() {
 		try {
 			const data = await repo.presets.seed()
 			addToast(tf('presetSeedDone', { count: data.seeded ?? 0 }), 'success')
-			await loadPresets()
+			await loadPresets(true)
 		} catch {
 			addToast(t('presetSeedError'), 'error')
 		} finally {
@@ -147,7 +161,7 @@ export function PresetsPage() {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -261,8 +275,8 @@ export function PresetsPage() {
 																)}
 															</div>
 															<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} см · {ru(p.weight)} кг
-																{p.goodsPrice > 0 && ` · ${t('presetGoodsShort')} ${ru(p.goodsPrice)} ₸`}
+																{ru(p.length)}×{ru(p.width)}×{ru(p.height)} {t('calcUnitCm')} · {ru(p.weight)} {t('calcKg')}
+																{p.goodsPrice > 0 && ` · ${t('presetGoodsShort')} ${formatMoney(p.goodsPrice)}`}
 															</p>
 														</div>
 													</div>

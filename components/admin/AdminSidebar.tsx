@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { LogOut, Home, Package, Folder, Calculator, Boxes, Menu, X, FileText } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ConfirmModal } from '@/components/admin/ConfirmModal'
+import { useModal } from '@/components/admin/useModal'
 
 function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLogout: () => void }) {
 	const { t } = useLang()
@@ -72,12 +73,13 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 					<LangSwitcher />
 				</div>
 				<ThemeToggle />
-				<a
+				<Link
 					href="/"
+					onClick={onLinkClick}
 					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors">
 					<Home className="w-4 h-4" />
 					<span>{t('goHome')}</span>
-				</a>
+				</Link>
 				<button
 					onClick={onLogout}
 					className="inline-flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors text-left">
@@ -91,10 +93,11 @@ function SidebarBody({ onLinkClick, onLogout }: { onLinkClick?: () => void; onLo
 
 export function AdminSidebar() {
 	const { t } = useLang()
-	const router = useRouter()
 	const [drawerOpen, setDrawerOpen] = useState(false)
 	const [confirmLogout, setConfirmLogout] = useState(false)
 	const pathname = usePathname()
+	// Escape, фокус внутрь и ловушка Tab — как у модалок (общий хук).
+	const drawerRef = useModal<HTMLElement>(drawerOpen, () => setDrawerOpen(false))
 
 	// Логаут через подтверждение (чтобы случайный клик не разлогинивал)
 	const requestLogout = () => {
@@ -150,7 +153,13 @@ export function AdminSidebar() {
 						className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
 						onClick={() => setDrawerOpen(false)}
 					/>
-					<aside className="relative bg-white dark:bg-zinc-900 w-72 max-w-[85%] flex flex-col border-r border-slate-200 dark:border-zinc-800 shadow-xl">
+					<aside
+						ref={drawerRef}
+						role="dialog"
+						aria-modal="true"
+						aria-label={t('adminNavSubtitle')}
+						tabIndex={-1}
+						className="relative bg-white dark:bg-zinc-900 w-72 max-w-[85%] flex flex-col border-r border-slate-200 dark:border-zinc-800 shadow-xl outline-none">
 						<button
 							onClick={() => setDrawerOpen(false)}
 							className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"

@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { format } from 'date-fns'
 import { Save, FileDown, Bell, RotateCcw, ChevronLeft, ChevronRight, Calculator, ArrowLeft, Trash2 } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
+import { RepoError, type WaybillDTO } from '@/lib/data/types'
 import type { CalcResult } from '@/lib/calculator/engine'
 import { CalculatorForm, type CalcCargoSnapshot } from '@/components/calculator/CalculatorForm'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
-import { ToastItem, type Toast } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, type Toast } from '@/components/Toast'
 import { DeleteModal } from '@/components/admin/DeleteModal'
 import { Stepper } from '@/components/waybill/Stepper'
 import { WaybillForm } from '@/components/waybill/WaybillForm'
 import { LogistSummary } from '@/components/waybill/LogistSummary'
 import { NotifyModal } from '@/components/waybill/NotifyModal'
+import { notifyErrorText } from '@/components/waybill/notifyErrors'
 import { openWaybillPrint } from '@/lib/waybill/print'
 import { effectiveVolume, initialWaybill, totalWeight, validateWaybill, type Waybill } from '@/lib/waybill/model'
 
@@ -30,7 +33,10 @@ import { effectiveVolume, initialWaybill, totalWeight, validateWaybill, type Way
 
 const STEP_KEYS = ['wpStep1', 'wpStep2', 'wpStep3'] as const
 
-export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
+/** Сегодняшняя дата ЛОКАЛЬНО (toISOString даёт UTC: с 00:00 до 05:00 по Алматы это был бы вчерашний день). */
+const localToday = () => format(new Date(), 'yyyy-MM-dd')
+
+export function CreateWaybillPage({ waybillId, onSaved }: { waybillId?: string; onSaved?: (saved: WaybillDTO) => void } = {}) {
 	const { t, tf } = useLang()
 	const router = useRouter()
 	const repo = repos
@@ -50,9 +56,14 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 	const [maxStep, setMaxStep] = useState(0)
 	const [showErrors, setShowErrors] = useState(false) // подсветка обязательных полей после «Сохранить»
 	const numberInit = useRef(false) // номер запрашиваем ровно один раз (StrictMode-safe)
+	const toastSeq = useRef(0) // счётчик id тостов: Date.now() совпадает при нескольких тостах за одну миллисекунду
+	// Груз, с карточки которого открыли «Создать накладную» (?cargoId=): накладная привяжется именно к нему.
+	const cargoIdRef = useRef<string | null>(null)
+	// Снимок последней сохранённой накладной (JSON). Сравнение с формой показывает несохранённые правки.
+	const [savedJson, setSavedJson] = useState<string | null>(null)
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const id = `${Date.now()}-${Math.random()}`
+		const id = `toast-${++toastSeq.current}`
 		setToasts((prev) => [...prev, { id, message, type }])
 		setTimeout(() => setToasts((prev) => prev.filter((tt) => tt.id !== id)), 4000)
 	}, [])
@@ -80,6 +91,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 						return
 					}
 					setWaybill(found)
+					setSavedJson(JSON.stringify(found))
 					setLoaded(true)
 				})
 				.catch(() => alive && setNotFound(true))
@@ -88,7 +100,8 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			}
 		}
 
-		const today = new Date().toISOString().slice(0, 10)
+		cargoIdRef.current = new URLSearchParams(window.location.search).get('cargoId')
+		const today = localToday()
 		setWaybill((w) => ({ ...w, acceptanceDate: w.acceptanceDate || today }))
 		repo.waybills
 			.reserveNumber()
@@ -186,18 +199,26 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			const isNew = !payload.docId
 			const saved = payload.docId
 				? await repo.waybills.update(payload.docId, payload)
-				: await repo.waybills.create(payload)
+				: await repo.waybills.create(cargoIdRef.current ? { ...payload, cargoId: cargoIdRef.current } : payload)
 			setWaybill(saved)
+			setSavedJson(JSON.stringify(saved))
+			onSaved?.(saved)
 
 			// Автоуведомление уходит на сервере в момент перехода накладной в «активна».
 			// Оператор должен видеть, что именно случилось: молча отправленное клиенту
-			// сообщение — худший вид «магии».
+			// сообщение — худший вид «магии». Причину переводим по коду: текст сервера русский.
 			const n = saved.notified
+			const failReason =
+				n && n.status !== 'sent' && n.status !== 'manual'
+					? n.status === 'skipped' && !n.code
+						? t('neBadPhone')
+						: notifyErrorText(t, n.code, n.error, '')
+					: ''
 			const notifyNote =
 				n?.status === 'sent'
-					? ` ${n.channel === 'sms' ? t('wpAutoSms') : t('wpAutoWa')}`
+					? ` ${t('wpAutoWa')}`
 					: n && n.status !== 'manual'
-						? ` ${t('wpAutoFailed')}${n.error ? `: ${n.error}` : ''}`
+						? ` ${t('wpAutoFailed')}${failReason ? `: ${failReason}` : ''}`
 						: ''
 			const savedMsg = tf('wpSaved', { number: saved.number ?? '' }) + notifyNote
 			const savedType = n && n.status !== 'sent' && n.status !== 'manual' ? 'error' : 'success'
@@ -216,14 +237,18 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			// history.state сохраняем — иначе «Назад» после сохранения сбросит визард.
 			if (isNew) window.history.replaceState({ wizardStep: step }, '', `/admin/waybills/${saved.docId}`)
 		} catch (e) {
-			addToast(e instanceof Error && e.message ? e.message : t('wpSaveError'), 'error')
+			// Текст ошибки сервера русский — оператору показываем перевод и код ответа.
+			// Повторное «Сохранить» безопасно: сервер на повторный POST с тем же зарезервированным
+			// номером возвращает уже сохранённую накладную, а не создаёт дубль.
+			addToast(e instanceof RepoError ? tf('wpSaveFailedStatus', { status: e.status }) : t('wpSaveFailedNet'), 'error')
 		} finally {
 			setSaving(false)
 		}
 	}
 
 	const reset = async () => {
-		setWaybill({ ...initialWaybill(), acceptanceDate: new Date().toISOString().slice(0, 10) })
+		cargoIdRef.current = null // новая накладная — уже не «с карточки груза»
+		setWaybill({ ...initialWaybill(), acceptanceDate: localToday() })
 		setStep(0)
 		setMaxStep(0)
 		setShowErrors(false)
@@ -248,6 +273,10 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 		}
 	}
 
+	// Несохранённые правки сохранённой накладной: считаем, только пока открыто окно уведомления
+	// (JSON небольшой, но зачем делать это на каждый ввод символа).
+	const notifyDirty = notifyOpen && !!waybill.docId && savedJson !== null && JSON.stringify(waybill) !== savedJson
+
 	if (!mounted) return <div suppressHydrationWarning />
 	if (!minLoadDone || (!loaded && !notFound)) return <PageLoader />
 
@@ -258,7 +287,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			<AdminSidebar />
 
 			{/* Toasts */}
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+			<div className={TOAST_VIEWPORT}>
 				{toasts.map((tt) => (
 					<ToastItem
 						key={tt.id}
@@ -270,6 +299,7 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 			<NotifyModal
 				isOpen={notifyOpen}
 				waybill={waybill}
+				dirty={notifyDirty}
 				onClose={() => setNotifyOpen(false)}
 				onToast={addToast}
 			/>
@@ -413,11 +443,13 @@ export function CreateWaybillPage({ waybillId }: { waybillId?: string } = {}) {
 													</button>
 													<button
 														type="button"
-														onClick={() => openWaybillPrint(waybill)}
+														onClick={() => {
+								if (!openWaybillPrint(waybill)) addToast(t('wpPopupBlocked'), 'error')
+							}}
 														className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
 														<FileDown className="w-4 h-4" /> {t('wpDownloadPdf')}
 													</button>
-													{/* Уведомление клиенту: WhatsApp через Wazzup, SMS — фолбэком */}
+													{/* Уведомление клиенту в WhatsApp */}
 													<button
 														type="button"
 														onClick={() => setNotifyOpen(true)}

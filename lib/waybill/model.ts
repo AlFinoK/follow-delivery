@@ -166,12 +166,32 @@ export function validateWaybill(w: Waybill): WaybillError[] {
 		errs.push({ step: 0, key: 'wvCompanyName' })
 	if (!w.sender.address.trim()) errs.push({ step: 0, key: 'wvSenderAddress' })
 	if (!w.sender.city.trim()) errs.push({ step: 0, key: 'wvSenderCity' })
+	// Страну без значения сервер НЕ подменяет «по умолчанию» (подстановка только для
+	// отсутствующего поля), поэтому очищенную страну ловим здесь.
+	if (!w.sender.country.trim()) errs.push({ step: 0, key: 'wvSenderCountry' })
 	if (!w.receiver.fullName.trim()) errs.push({ step: 0, key: 'wvReceiverName' })
 	if (!isPhoneValid(w.receiver.phone)) errs.push({ step: 0, key: 'wvPhone' })
 	if (!w.receiver.address.trim()) errs.push({ step: 0, key: 'wvDeliveryAddress' })
 	if (!w.receiver.city.trim()) errs.push({ step: 0, key: 'wvDeliveryCity' })
+	if (!w.receiver.country.trim()) errs.push({ step: 0, key: 'wvReceiverCountry' })
 	// Шаг 1 — груз
 	if (!w.nature.trim()) errs.push({ step: 1, key: 'wvNature' })
+	// Накладная без единого места с весом/габаритами (или с пустым списком позиций)
+	// печатала бы «0 кг, 0 м³»: нужна хотя бы одна позиция, по которой груз можно оценить.
+	const hasSize =
+		w.positions.some((p) => p.weight > 0 || (p.length > 0 && p.width > 0 && p.height > 0)) ||
+		(w.manualVolume && w.volume > 0)
+	if (!hasSize) errs.push({ step: 1, key: 'wvPositions' })
+	// Отрицательные числа сервер молча обнулит — лучше сказать оператору сразу.
+	const negative =
+		w.positions.some((p) => [p.quantity, p.length, p.width, p.height, p.weight, p.price].some((n) => n < 0)) ||
+		(w.manualVolume && w.volume < 0)
+	if (negative) errs.push({ step: 1, key: 'wvPositionNegative' })
+	// Сумма 0 — допустима (бесплатная доставка, расчёт позже), отрицательная — нет.
+	// Поле суммы — блок «Оплата», он на шаге «Груз».
+	if (w.amount < 0) errs.push({ step: 1, key: 'wvAmountNegative' })
+	// Шаг 2 — итог и отправка
+	if (!w.acceptanceDate.trim()) errs.push({ step: 2, key: 'wvAcceptanceDate' })
 	return errs
 }
 

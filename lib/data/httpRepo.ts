@@ -26,23 +26,24 @@ import { RepoError } from './types'
 import type { Cargo } from '@/components/admin/types'
 
 const cargos: CargoRepo = {
-	async search(query) {
-		const res = await fetch(`/api/cargos?trackingId=${encodeURIComponent(query)}`)
+	async search(query, signal) {
+		// 429 — лимит публичного поиска: RepoError(429), UI показывает отдельное сообщение
+		const res = await fetch(`/api/cargos?trackingId=${encodeURIComponent(query)}`, { signal })
 		if (res.status === 404) return null
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as Cargo
 	},
-	async list(params: CargoListParams): Promise<CargosResponse> {
+	async list(params: CargoListParams, signal?: AbortSignal): Promise<CargosResponse> {
 		const qs = new URLSearchParams()
 		if (params.status && params.status !== 'all') qs.set('status', params.status)
 		if (params.q && params.q.trim()) qs.set('q', params.q.trim())
 		if (params.page && params.page > 1) qs.set('page', String(params.page))
-		const res = await fetch(`/api/cargos?${qs.toString()}`)
+		const res = await fetch(`/api/cargos?${qs.toString()}`, { signal })
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as CargosResponse
 	},
-	async get(docId) {
-		const res = await fetch(`/api/cargos/${docId}`)
+	async get(docId, signal) {
+		const res = await fetch(`/api/cargos/${docId}`, { signal })
 		if (res.status === 404) return null
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as Cargo
@@ -72,8 +73,8 @@ const cargos: CargoRepo = {
 }
 
 const folders: FolderRepo = {
-	async list() {
-		const res = await fetch('/api/folders')
+	async list(signal) {
+		const res = await fetch('/api/folders', { signal })
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as Folder[]
 	},
@@ -86,11 +87,11 @@ const folders: FolderRepo = {
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as Folder
 	},
-	async get(id, params) {
+	async get(id, params, signal) {
 		const qs = new URLSearchParams()
-		if (params.tab) qs.set('tab', params.tab)
-		if (params.page && params.page > 1) qs.set('page', String(params.page))
-		const res = await fetch(`/api/folders/${id}?${qs.toString()}`)
+		if (params?.tab) qs.set('tab', params.tab)
+		if (params?.page && params.page > 1) qs.set('page', String(params.page))
+		const res = await fetch(`/api/folders/${id}?${qs.toString()}`, { signal })
 		if (res.status === 404) return null
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as FolderDetail
@@ -169,24 +170,24 @@ const waybills: WaybillRepo = {
 		if (!res.ok) throw new RepoError(res.status)
 		return ((await res.json()) as { number: number }).number
 	},
-	async list(params: WaybillListParams) {
+	async list(params: WaybillListParams, signal?: AbortSignal) {
 		const qs = new URLSearchParams()
 		if (params.status && params.status !== 'all') qs.set('status', params.status)
 		if (params.q && params.q.trim()) qs.set('q', params.q.trim())
 		if (params.page && params.page > 1) qs.set('page', String(params.page))
 		if (params.cargoId) qs.set('cargoId', params.cargoId)
-		const res = await fetch(`/api/waybills?${qs.toString()}`)
+		const res = await fetch(`/api/waybills?${qs.toString()}`, { signal })
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as WaybillsResponse
 	},
-	async get(id) {
-		const res = await fetch(`/api/waybills/${id}`)
+	async get(id, signal) {
+		const res = await fetch(`/api/waybills/${id}`, { signal })
 		if (res.status === 404) return null
 		if (!res.ok) throw new RepoError(res.status)
 		return (await res.json()) as WaybillDTO
 	},
-	async getByCargo(cargoId) {
-		const { items } = await this.list({ cargoId })
+	async getByCargo(cargoId, signal) {
+		const { items } = await this.list({ cargoId }, signal)
 		return items[0] ?? null
 	},
 	async create(body) {
@@ -214,17 +215,12 @@ const waybills: WaybillRepo = {
 }
 
 const notify: NotifyRepo = {
-	async send(waybillId, channel, texts) {
+	async send(waybillId, text) {
 		const res = await fetch('/api/notify', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				waybillId,
-				...(channel ? { channel } : {}),
-				// Правки оператора. Сервер игнорирует пустые и подставляет шаблон.
-				...(texts?.whatsapp ? { text: texts.whatsapp } : {}),
-				...(texts?.sms ? { smsText: texts.sms } : {}),
-			}),
+			// Правка оператора. Сервер игнорирует пустую и подставляет шаблон.
+			body: JSON.stringify({ waybillId, ...(text ? { text } : {}) }),
 		})
 		if (!res.ok) throw new RepoError(res.status, await errorText(res))
 		return (await res.json()) as NotifyOutcome

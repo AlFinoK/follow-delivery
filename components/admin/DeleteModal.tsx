@@ -1,7 +1,9 @@
 'use client'
 
+import { useId } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
+import { useModal } from './useModal'
 
 interface DeleteModalProps {
 	isOpen: boolean
@@ -13,6 +15,9 @@ interface DeleteModalProps {
 
 export function DeleteModal({ isOpen, itemName, itemId, onConfirm, onCancel }: DeleteModalProps) {
 	const { t } = useLang()
+	const titleId = useId()
+	const descId = useId()
+	const dialogRef = useModal<HTMLDivElement>(isOpen, onCancel)
 
 	if (!isOpen) return null
 
@@ -22,14 +27,20 @@ export function DeleteModal({ isOpen, itemName, itemId, onConfirm, onCancel }: D
 			onClick={onCancel}>
 			<div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 			<div
-				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-sm p-6 border border-slate-200 dark:border-zinc-700"
+				ref={dialogRef}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				aria-describedby={descId}
+				tabIndex={-1}
+				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-sm p-6 border border-slate-200 dark:border-zinc-700 outline-none"
 				onClick={(e) => e.stopPropagation()}>
 				<div className="flex items-center justify-center w-10 h-10 mx-auto mb-4 rounded-full bg-red-50 dark:bg-red-500/15">
-					<Trash2 className="w-5 h-5 text-red-600 dark:text-red-300" />
+					<Trash2 aria-hidden="true" className="w-5 h-5 text-red-600 dark:text-red-300" />
 				</div>
 
-				<h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100 text-center mb-1">{t('deleteButton')}</h3>
-				<p className="text-sm text-slate-500 dark:text-zinc-400 text-center mb-5">{t('confirmDelete')}</p>
+				<h3 id={titleId} className="text-base font-semibold text-slate-900 dark:text-zinc-100 text-center mb-1">{t('deleteButton')}</h3>
+				<p id={descId} className="text-sm text-slate-500 dark:text-zinc-400 text-center mb-5">{t('confirmDelete')}</p>
 
 				{(itemName || itemId) && (
 					<div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 mb-5 text-center">
@@ -40,11 +51,13 @@ export function DeleteModal({ isOpen, itemName, itemId, onConfirm, onCancel }: D
 
 				<div className="flex gap-2">
 					<button
+						type="button"
 						onClick={onCancel}
 						className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800/60 rounded-lg transition-colors">
 						{t('cancelButton')}
 					</button>
 					<button
+						type="button"
 						onClick={onConfirm}
 						className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
 						{t('deleteButton')}

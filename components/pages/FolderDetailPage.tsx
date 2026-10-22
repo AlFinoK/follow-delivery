@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -8,15 +8,19 @@ import {
 	ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { ToastItem } from '@/components/Toast'
+import { showCurrentCity } from '@/components/admin/statusUi'
+import { TOAST_VIEWPORT, ToastItem } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { DeleteModal } from '@/components/admin/DeleteModal'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
-import { CitySelect, StatusSelect } from '@/components/admin/Selects'
+import { CitySelect } from '@/components/admin/Selects'
+import { Select } from '@/components/waybill/Select'
 import { repos } from '@/lib/data/repos'
+import { parseCargoNumbers } from '@/lib/data/parseNumbers'
 import type { Toast } from '@/components/Toast'
 import type { Cargo } from '@/components/admin/types'
+import type { TranslationKey } from '@/lib/i18n'
 
 interface FolderResponse {
 	folder: { id: string; name: string; createdAt: string; updatedAt: string }
@@ -27,13 +31,25 @@ interface FolderResponse {
 	counts: { all: number; active: number; delivered: number }
 }
 
-function getStatusBadge(status: string, t: (k: any) => string) {
+function getStatusBadge(status: string, t: (k: TranslationKey) => string) {
 	if (status === 'в пути') return { label: t('statusInTransit'), cls: 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/25' }
 	if (status === 'прибыл') return { label: t('statusArrived'), cls: 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/25' }
 	return { label: t('statusWaiting'), cls: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/25' }
 }
 
 type CargoTab = 'active' | 'delivered' | 'all'
+
+/**
+ * Основная (оранжевая) кнопка формы. Недоступна из-за пустого ввода — нейтральная серая:
+ * бледно-оранжевая `opacity-50` выглядела почти как рабочая. Во время запроса — оранжевая
+ * со спиннером (это «работаю», а не «нельзя»).
+ */
+const primaryBtn = (blocked: boolean, busy: boolean) =>
+	busy
+		? 'bg-orange-500 text-white opacity-80 cursor-wait'
+		: blocked
+			? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 border border-slate-200 dark:border-zinc-700 cursor-not-allowed'
+			: 'bg-orange-500 hover:bg-orange-600 text-white border border-transparent'
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
 	<p className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3">{children}</p>
@@ -48,6 +64,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 	const [minLoadDone, setMinLoadDone] = useState(false)
 	const [data, setData] = useState<FolderResponse | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [refreshing, setRefreshing] = useState(false)
 	const [toasts, setToasts] = useState<Toast[]>([])
 
 	const [renaming, setRenaming] = useState(false)
@@ -66,8 +83,9 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 	const [tab, setTab] = useState<CargoTab>('active')
 	const [page, setPage] = useState(1)
 
+	const toastSeq = useRef(0) // счётчик id: handleAddCargos может выдать несколько тостов за одну миллисекунду
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const tid = Date.now().toString()
+		const tid = `toast-${++toastSeq.current}`
 		setToasts((prev) => [...prev, { id: tid, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.map((x) => (x.id === tid ? { ...x, exiting: true } : x)))
@@ -75,18 +93,43 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 		}, 5000)
 	}, [])
 
-	const loadFolder = useCallback(async (silent = false) => {
-		if (!silent) setLoading(true)
+	// Загрузка папки. Полноэкранный лоадер — только пока данных ещё нет; смена вкладки/страницы
+	// и перезагрузка после действий идут «тихо» (список остаётся на экране, рядом крутится
+	// маленький индикатор — как в списке грузов). Каждый запрос отменяет предыдущий, поэтому
+	// устаревший ответ не перезапишет свежий.
+	const abortRef = useRef<AbortController | null>(null)
+	const hasData = useRef(false)
+	const loadFolder = useCallback(async () => {
+		abortRef.current?.abort()
+		const ctrl = new AbortController()
+		abortRef.current = ctrl
+		if (hasData.current) setRefreshing(true)
+		else setLoading(true)
 		try {
-			const result = await repo.folders.get(folderId, { tab, page })
+			const result = await repo.folders.get(folderId, { tab, page }, ctrl.signal)
+			if (ctrl.signal.aborted) return
 			if (result === null) { router.push(`/admin/folders`); return }
+			// Страница вышла за пределы (например, убрали последний груз на последней странице):
+			// переходим на последнюю — смена page перезапустит загрузку, состояние не снимаем.
+			const pages = Math.max(1, Math.ceil(result.total / result.pageSize))
+			if (result.total > 0 && page !== pages && (page > pages || result.items.length === 0)) {
+				setPage(pages)
+				return
+			}
+			hasData.current = true
 			setData(result)
-		} catch {
+			setLoading(false)
+			setRefreshing(false)
+		} catch (e) {
+			if (ctrl.signal.aborted || (e instanceof DOMException && e.name === 'AbortError')) return
 			addToast(t('loadError'), 'error')
-		} finally {
-			if (!silent) setLoading(false)
+			setLoading(false)
+			setRefreshing(false)
 		}
-	}, [folderId, router, addToast, t, tab, page, repo])
+		// t нарочно не в зависимостях: он пересоздаётся на каждый рендер провайдера, и из-за него
+		// загрузка перезапускалась бы без причины.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [folderId, router, addToast, tab, page, repo])
 
 	useEffect(() => {
 		setMounted(true)
@@ -96,7 +139,13 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 
 	useEffect(() => { void loadFolder() }, [loadFolder])
 
-	useEffect(() => { setPage(1) }, [tab])
+	// Смена вкладки сбрасывает страницу ТЕМ ЖЕ обновлением состояния, что и вкладку: отдельный
+	// эффект «tab → setPage(1)» давал два запроса подряд (сначала со старой страницей).
+	const selectTab = (key: CargoTab) => {
+		if (key === tab) return
+		setTab(key)
+		setPage(1)
+	}
 
 	const folder = data?.folder
 	const items = data?.items ?? []
@@ -137,23 +186,10 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 		}
 	}
 
-	const parseNumbers = (raw: string): number[] => {
-		return Array.from(
-			new Set(
-				raw
-					.split(/[\s,;]+/)
-					.map((s) => s.trim())
-					.filter(Boolean)
-					.map((s) => Number(s))
-					.filter((n) => Number.isInteger(n) && n > 0),
-			),
-		)
-	}
-
 	const handleAddCargos = async (e: React.FormEvent) => {
 		e.preventDefault()
 		if (!folder) return
-		const numbers = parseNumbers(addInput)
+		const numbers = parseCargoNumbers(addInput) // принимает и «№3001»
 		if (numbers.length === 0) return
 		setAdding(true)
 		try {
@@ -164,7 +200,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 			if (result.notFound.length > 0) addToast(tf('cargosNotFoundToast', { numbers: result.notFound.join(', ') }), 'error')
 			if (result.alreadyDelivered.length > 0) addToast(tf('cargosAlreadyDeliveredToast', { numbers: result.alreadyDelivered.join(', ') }), 'error')
 			setAddInput('')
-			if (result.added.length > 0 || result.movedFromOtherFolder.length > 0) await loadFolder(true)
+			if (result.added.length > 0 || result.movedFromOtherFolder.length > 0) await loadFolder()
 		} catch {
 			addToast(t('createError'), 'error')
 		} finally {
@@ -185,7 +221,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 			addToast(tf('bulkUpdatedToast', { count: result.updated }), 'success')
 			setBulkCity('')
 			setBulkStatus('')
-			await loadFolder(true)
+			await loadFolder()
 		} catch {
 			addToast(t('bulkUpdateError'), 'error')
 		} finally {
@@ -196,7 +232,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 	const handleRemoveFromFolder = async (docId: string) => {
 		try {
 			await repo.cargos.update(docId, { folderId: null })
-			await loadFolder(true)
+			await loadFolder()
 		} catch {
 			addToast(t('removeFromFolderError'), 'error')
 		}
@@ -211,7 +247,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -219,14 +255,16 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 				<div className="max-w-4xl mx-auto">
-					<div className="flex items-center justify-between gap-3 mb-5">
-						<button
-							onClick={() => router.push(`/admin/folders`)}
-							className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
+					{/* Заголовок слева, рядом со ссылкой «назад» — как в карточке накладной */}
+					<div className="flex items-center gap-2 mb-5 min-w-0">
+						<Link
+							href="/admin/folders"
+							className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors shrink-0">
 							<ArrowLeft className="w-4 h-4" />
 							{t('backToList')}
-						</button>
-						<h1 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('foldersNavLink')}</h1>
+						</Link>
+						<span className="text-slate-300 dark:text-zinc-600" aria-hidden="true">/</span>
+						<h1 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">{t('foldersNavLink')}</h1>
 					</div>
 
 					<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-700 mb-4">
@@ -295,13 +333,16 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 							<button
 								type="submit"
 								disabled={adding || !addInput.trim()}
-								className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
+								className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 font-semibold rounded-lg transition-colors text-sm ${primaryBtn(!addInput.trim(), adding)}`}>
 								{adding ? <Spinner className="w-4 h-4 text-white" /> : <Plus className="w-4 h-4" />}
 								{t('addCargosButton')}
 							</button>
 						</form>
 					</div>
 
+					{/* Массовое обновление — только когда есть что обновлять: в пустой папке
+					    (или где все грузы уже прибыли) блок с формой был бессмысленным. */}
+					{counts.active > 0 && (
 					<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-700 p-5 sm:p-6 mb-4">
 						<SectionTitle>{t('bulkUpdateTitle')}</SectionTitle>
 						<p className="text-xs text-slate-500 dark:text-zinc-400 mb-3">{t('bulkUpdateHint')}</p>
@@ -313,22 +354,35 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 								</div>
 								<div>
 									<p className="text-xs font-medium text-slate-700 dark:text-zinc-200 mb-1.5">{t('statusCardLabel')}</p>
-									<StatusSelect value={bulkStatus || 'ожидает отправления'} onChange={setBulkStatus} />
+									<Select
+											value={bulkStatus}
+											onChange={setBulkStatus}
+											options={[
+												{ value: '', label: t('bulkStatusKeep') },
+												{ value: 'ожидает отправления', label: t('statusOptionWaiting') },
+												{ value: 'в пути', label: t('statusOptionInTransit') },
+												{ value: 'прибыл', label: t('statusOptionArrived') },
+											]}
+										/>
 								</div>
 							</div>
 							<button
 								type="submit"
 								disabled={bulkUpdating || (!bulkCity.trim() && !bulkStatus)}
-								className="self-end inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
+								className={`self-end inline-flex items-center gap-1.5 px-4 py-2 font-semibold rounded-lg transition-colors text-sm ${primaryBtn(!bulkCity.trim() && !bulkStatus, bulkUpdating)}`}>
 								{bulkUpdating ? <Spinner className="w-4 h-4 text-white" /> : <Check className="w-4 h-4" />}
 								{t('bulkUpdateButton')}
 							</button>
 						</form>
 					</div>
+					)}
 
 					<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-700 p-5 sm:p-6">
 						<div className="flex items-center justify-between gap-3 mb-4">
-							<h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100">{t('cargosTitle')}</h3>
+							<div className="flex items-center gap-2">
+									<h3 className="text-base font-semibold text-slate-900 dark:text-zinc-100">{t('cargosTitle')}</h3>
+									{refreshing && <Spinner className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />}
+								</div>
 						</div>
 
 						<div className="flex flex-wrap gap-1.5 mb-4">
@@ -341,7 +395,7 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 								return (
 									<button
 										key={tt.key}
-										onClick={() => setTab(tt.key)}
+										onClick={() => selectTab(tt.key)}
 										className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
 											isActive
 												? 'bg-slate-900 text-white border-slate-900'
@@ -382,9 +436,15 @@ export function FolderDetailPage({ id: folderId }: { id: string }) {
 															<Package className="w-3 h-3 shrink-0" />
 															<span className="truncate">{c.fromCity}</span>
 															<ArrowRight className="w-2.5 h-2.5 shrink-0" />
-															<MapPin className="w-3 h-3 text-orange-500 shrink-0" />
-															<span className="text-slate-700 dark:text-zinc-200 font-medium truncate">{c.currentCity}</span>
-															<ArrowRight className="w-2.5 h-2.5 shrink-0" />
+															{/* Текущий город — только если он не совпадает с началом/концом маршрута,
+															    как в общем списке грузов (иначе «Караганда → 📍Караганда → Омск»). */}
+															{showCurrentCity(c) && (
+																<>
+																	<MapPin className="w-3 h-3 text-orange-500 shrink-0" />
+																	<span className="text-slate-700 dark:text-zinc-200 font-medium truncate">{c.currentCity}</span>
+																	<ArrowRight className="w-2.5 h-2.5 shrink-0" />
+																</>
+															)}
 															<span className="truncate">{c.toCity}</span>
 														</div>
 													</div>

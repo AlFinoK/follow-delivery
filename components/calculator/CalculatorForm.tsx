@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapPin, Lock, Ruler, ClipboardList, LayoutGrid, ClipboardCheck } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
-import { ORIGIN_CITY, ORIGIN_COUNTRY, RUB_TO_KZT } from '@/lib/calculator/config'
+import { RUB_TO_KZT } from '@/lib/calculator/config'
 import {
 	calcShipment,
+	convertPlaceUnit,
 	findDirection,
+	placeQuantity,
 	sumPlaces,
 	type CalcResult,
 	type LengthUnit,
@@ -19,6 +21,7 @@ import { PlacesEditor } from './PlacesEditor'
 import { PresetPicker } from './PresetPicker'
 import { ResultPanel } from './ResultPanel'
 import { DecimalInput } from './DecimalInput'
+import { StickyPriceBar } from './StickyPriceBar'
 
 type Mode = 'presets' | 'dimensions' | 'totals'
 
@@ -38,6 +41,7 @@ export interface CalcCargoPosition {
 }
 export interface CalcCargoSnapshot {
 	positions: CalcCargoPosition[]
+	// зарезервировано, мастер накладной пока не читает (берёт только positions и price)
 	volume: number // м³
 	weight: number // кг
 	price: number // стоимость доставки, ₸
@@ -75,6 +79,16 @@ export function CalculatorForm({
 	const [presets, setPresets] = useState<Preset[]>([])
 	const [presetsLoading, setPresetsLoading] = useState<boolean>(true)
 	const [quantities, setQuantities] = useState<Record<string, number>>({})
+
+	// Нижняя плашка с ценой на телефоне (P6). В мастере накладной (captureCargo) её нет:
+	// там своя навигация по шагам, и плашка легла бы поверх неё.
+	const stickyBar = !captureCargo
+	const rootRef = useRef<HTMLDivElement>(null)
+	const resultRef = useRef<HTMLDivElement>(null)
+	const [resultInView, setResultInView] = useState<boolean>(false)
+	// Форма реально на экране (не внутри скрытой вкладки): плашка рендерится порталом
+	// в <body> и сама не знает, что вкладка «Калькулятор» на главной скрыта атрибутом hidden.
+	const [displayed, setDisplayed] = useState<boolean>(true)
 
 	// Актуальный курс ₽→₸ (Нацбанк РК); при ошибке остаётся запасной из конфига
 	useEffect(() => {
@@ -151,6 +165,26 @@ export function CalculatorForm({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [result])
 
+	// Панель результата в кадре → плашка не нужна (цена и так видна).
+	// Скрытие формы (display: none у предка) ловим ResizeObserver: размер падает до нуля.
+	useEffect(() => {
+		if (!stickyBar) return
+		const el = resultRef.current
+		const root = rootRef.current
+		if (!el || !root || typeof IntersectionObserver === 'undefined' || typeof ResizeObserver === 'undefined') return
+		const io = new IntersectionObserver(([entry]) => setResultInView(entry.isIntersecting), { threshold: 0.15 })
+		const ro = new ResizeObserver(() => setDisplayed(root.getClientRects().length > 0))
+		io.observe(el)
+		ro.observe(root)
+		return () => {
+			io.disconnect()
+			ro.disconnect()
+		}
+	}, [stickyBar])
+
+	const hasPrice = result.ok && typeof result.price === 'number'
+	const showResult = () => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
 	// Приём габаритов из накладной. Родитель перемонтирует форму (key) с новым prefill,
 	// поэтому эффект отрабатывает один раз при монтировании.
 	useEffect(() => {
@@ -160,10 +194,16 @@ export function CalculatorForm({
 			if (typeof prefill.volume === 'number') setVolume(prefill.volume)
 			if (typeof prefill.weight === 'number') setWeight(prefill.weight)
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [prefill])
 
-	const updatePlace = (index: number, patch: Partial<Place>) =>
+	// Переключение м ↔ см пересчитывает уже введённые габариты (иначе числа, набранные в
+	// сантиметрах при выбранных метрах, дают абсурдную цену без предупреждения).
+	const changeUnit = (next: LengthUnit) => {
+		if (next === unit) return
+		setPlaces((prev) => prev.map((p) => convertPlaceUnit(p, unit, next)))
+		setUnit(next)
+	}
+	const updatePlace =(index: number, patch: Partial<Place>) =>
 		setPlaces((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)))
 	const addPlace = () => setPlaces((prev) => [...prev, emptyPlace()])
 	const removePlace = (index: number) => setPlaces((prev) => prev.filter((_, i) => i !== index))
@@ -193,14 +233,14 @@ export function CalculatorForm({
 		const positions: CalcCargoPosition[] =
 			mode === 'dimensions'
 				? places
-						.filter((p) => (p.quantity || 0) > 0 && !isEmptyPlace(p))
+						.filter((p) => !isEmptyPlace(p))
 						.map((p) => ({
 							name: p.name?.trim() ?? '',
 							length: (p.length || 0) * toCm,
 							width: (p.width || 0) * toCm,
 							height: (p.height || 0) * toCm,
 							weight: p.weight || 0,
-							quantity: p.quantity || 1,
+							quantity: placeQuantity(p), // пустое «Кол-во» = 1, как и в расчёте цены
 							price: p.unitCost ?? 0,
 						}))
 				: mode === 'presets'
@@ -248,7 +288,8 @@ export function CalculatorForm({
 	)
 
 	return (
-		<div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+		// Пока есть плашка с ценой, снизу на телефоне запас под неё: конец страницы не прячется за ней
+		<div ref={rootRef} className={`grid grid-cols-1 lg:grid-cols-5 gap-5 ${stickyBar && hasPrice ? 'pb-20 lg:pb-0' : ''}`}>
 			{/* Form */}
 			<div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-sm p-4 sm:p-5 flex flex-col gap-3.5">
 				{/* Origin (fixed) */}
@@ -259,7 +300,7 @@ export function CalculatorForm({
 					<div className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-lg">
 						<MapPin className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
 						<span className="flex-1 text-sm font-medium text-slate-700 dark:text-zinc-200">
-							{ORIGIN_CITY}, {ORIGIN_COUNTRY}
+							{t('calcOriginValue')}
 						</span>
 						<Lock className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600" />
 					</div>
@@ -303,7 +344,7 @@ export function CalculatorForm({
 					<PlacesEditor
 						places={places}
 						unit={unit}
-						onUnitChange={setUnit}
+						onUnitChange={changeUnit}
 						onUpdate={updatePlace}
 						onAdd={addPlace}
 						onRemove={removePlace}
@@ -327,10 +368,13 @@ export function CalculatorForm({
 
 			{/* Result */}
 			<div className="lg:col-span-2">
-				<div className="lg:sticky lg:top-6">
+				{/* scroll-mt: при прокрутке с плашки панель не прилипает к самому краю экрана */}
+				<div ref={resultRef} className="lg:sticky lg:top-6 scroll-mt-4">
 					<ResultPanel result={result} showDisclaimer={showDisclaimer} />
 				</div>
 			</div>
+
+			{stickyBar && <StickyPriceBar result={result} visible={hasPrice && displayed && !resultInView} onShow={showResult} />}
 		</div>
 	)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 const KEY = 'ltt-theme'
@@ -23,10 +23,10 @@ const ThemeContext = createContext<{ theme: Theme; dark: boolean; toggle: () => 
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
 	// Старт с 'light' — совпадает с SSR (без ошибки гидратации). Реальную тему
-	// подставляем после монтирования; .dark применяется в AdminThemeShell по `dark`,
-	// а контент админки и так скрыт за PageLoader до монтирования — «моргания» не видно.
+	// подставляем после монтирования в layout-эффекте (до первой отрисовки); .dark применяется
+	// в AdminThemeShell по `dark` тоже в layout-эффекте — светлого кадра перед тёмным нет.
 	const [theme, setTheme] = useState<Theme>('light')
-	useEffect(() => {
+	useLayoutEffect(() => {
 		setTheme(readInitial())
 	}, [])
 	const toggle = () =>

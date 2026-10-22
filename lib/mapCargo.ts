@@ -25,6 +25,30 @@ export interface CargoRow {
 	createdAt: Date
 }
 
+/**
+ * Публичный DTO для поиска по трек-номеру (без авторизации). Намеренно УЖЕ, чем mapCargo:
+ * без docId (primary key для PATCH/DELETE), folderId/folderName и cargoNumber — это
+ * внутренние данные, посторонним их отдавать незачем. id = трек-номер, как и в mapCargo.
+ */
+export function mapPublicCargo(cargo: CargoRow) {
+	return {
+		id: cargo.trackingId,
+		name: cargo.name,
+		fromCity: cargo.fromCity,
+		currentCity: cargo.currentCity,
+		toCity: cargo.toCity,
+		status: cargo.status,
+		acceptanceDate: cargo.acceptanceDate ? cargo.acceptanceDate.toISOString() : null,
+		shipmentDate: cargo.shipmentDate ? cargo.shipmentDate.toISOString() : null,
+		deliveryTimeframe: cargo.deliveryTimeframe,
+		deliveryAmount: cargo.deliveryAmount,
+		paymentStatus: cargo.paymentStatus,
+		partialPaymentDetail: cargo.partialPaymentDetail,
+		currency: cargo.currency,
+		createdAt: cargo.createdAt,
+	}
+}
+
 export function mapCargo(cargo: CargoRow) {
 	return {
 		docId: cargo.id,

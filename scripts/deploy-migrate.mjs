@@ -19,6 +19,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PrismaClient } from '@prisma/client'
 
+// Preview-сборки Vercel НЕ мигрируют: DATABASE_URL у них обычно тот же, что у прода
+// (переменные окружения проекта общие), и пуш в любую ветку менял бы схему боевой базы
+// ещё до ревью. Миграции применяет только production-сборка (и локальный запуск).
+if (process.env.VERCEL_ENV === 'preview') {
+	console.log('[deploy-migrate] VERCEL_ENV=preview — миграции пропущены (preview-сборки не трогают базу)')
+	process.exit(0)
+}
+
 // Локально .env.local/.env имеют приоритет (как у Next), перебивая системный DATABASE_URL.
 // На Vercel этих файлов нет → используется DATABASE_URL из окружения (прод).
 // DEPLOY_MIGRATE_DB_URL — явный override поверх всего (тесты/CI на отдельной базе).

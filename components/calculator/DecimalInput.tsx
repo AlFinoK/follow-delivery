@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 interface DecimalInputProps {
 	value: number
@@ -13,6 +13,8 @@ interface DecimalInputProps {
 	placeholder?: string
 	className?: string
 	ariaLabel?: string
+	/** потеря фокуса — родитель может нормализовать значение (напр. пустое «Кол-во» → 1) */
+	onBlur?: () => void
 }
 
 /** Разбор строки с дробным числом: принимает и запятую, и точку, и ведущий минус. */
@@ -46,18 +48,19 @@ export function DecimalInput({
 	placeholder = '0',
 	className = '',
 	ariaLabel,
+	onBlur,
 }: DecimalInputProps) {
 	const [text, setText] = useState(value === 0 ? '' : formatNum(value))
 	// последнее значение, которое мы сами отдали наверх — чтобы отличать внешние
-	// изменения value (автозаполнение, сброс) от собственного эха.
-	const lastEmitted = useRef(value)
+	// изменения value (автозаполнение, сброс, нормализация родителем) от собственного эха.
+	const [emitted, setEmitted] = useState(value)
 
-	useEffect(() => {
-		if (value !== lastEmitted.current) {
-			setText(value === 0 ? '' : formatNum(value))
-			lastEmitted.current = value
-		}
-	}, [value])
+	// Внешнее изменение value → обновляем буфер прямо при рендере (паттерн React
+	// «подстройка состояния под проп»), без setState в эффекте.
+	if (value !== emitted) {
+		setEmitted(value)
+		setText(value === 0 ? '' : formatNum(value))
+	}
 
 	const handle = (raw: string) => {
 		const allowNeg = min < 0
@@ -80,7 +83,7 @@ export function DecimalInput({
 		n = Math.max(min, n)
 		// если зажали до границы — приводим буфер к каноничному значению (иначе на экране остаётся «вне диапазона»)
 		if (n !== parsed) setText(n === 0 ? '' : formatNum(n))
-		lastEmitted.current = n
+		setEmitted(n)
 		onChange(n)
 	}
 
@@ -91,6 +94,7 @@ export function DecimalInput({
 			value={text}
 			onChange={(e) => handle(e.target.value)}
 			onFocus={(e) => e.currentTarget.select()}
+			onBlur={onBlur}
 			placeholder={placeholder}
 			aria-label={ariaLabel}
 			className={className}

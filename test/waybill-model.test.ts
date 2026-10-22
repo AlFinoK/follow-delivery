@@ -44,6 +44,7 @@ const filled = (over: Partial<Waybill> = {}): Waybill => ({
 	nature: 'Мототехника',
 	positions: [pos()],
 	amount: 2363000,
+	acceptanceDate: '2026-09-01',
 	...over,
 })
 
@@ -111,6 +112,12 @@ describe('валидация перед сохранением', () => {
 		const w = filled()
 		const errs = validateWaybill({ ...w, sender: { ...w.sender, type: 'company', companyName: '' } })
 		expect(errs.some((e) => e.key === 'wvCompanyName')).toBe(true)
+	})
+
+	it('пустая накладная из initialWaybill не проходит (нет даты приёма, груза и веса)', () => {
+		const keys = validateWaybill(initialWaybill()).map((e) => e.key)
+		expect(keys).toContain('wvAcceptanceDate')
+		expect(keys).toContain('wvPositions')
 	})
 })
 

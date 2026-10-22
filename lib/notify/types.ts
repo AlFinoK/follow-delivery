@@ -1,11 +1,8 @@
 // Контракт слоя уведомлений клиенту.
 //
-// Каналов два и они НЕ равнозначны: WhatsApp — основной, SMS — фолбэк на случай,
-// когда у номера получателя WhatsApp нет. Провайдеры подключаются через env
-// (см. .env.example), и если ни один не настроен, отправка не падает, а возвращает
-// готовые ссылки для ручной отправки оператором (wa.me / sms:).
-
-export type NotifyChannel = 'whatsapp' | 'sms'
+// Канал один — WhatsApp (SMS убран целиком). Провайдеры подключаются через env
+// (см. CLAUDE.md §12), и если ни один не настроен, отправка не падает, а возвращает
+// готовую ссылку wa.me для ручной отправки оператором.
 
 /** Итог одной попытки отправки конкретным провайдером. */
 export interface SendResult {
@@ -22,9 +19,9 @@ export interface SendResult {
 export const NOT_CONFIGURED = 'NOT_CONFIGURED'
 
 /**
- * У номера нет WhatsApp — причина, по которой уведомление ушло SMS. Выясняется ДО
- * отправки: WAHA умеет проверять номер синхронно (GET /api/contacts/check-exists),
- * поэтому канал выбирается заранее и фолбэк не зависит от вебхука.
+ * У номера нет WhatsApp. Выясняется ДО отправки: WAHA умеет проверять номер синхронно
+ * (GET /api/contacts/check-exists). У Green-API проверка недостоверна, поэтому там
+ * то же самое приходит позже вебхуком (`noAccount`).
  */
 export const BAD_CONTACT = 'BAD_CONTACT'
 
@@ -33,8 +30,6 @@ export const BAD_CONTACT = 'BAD_CONTACT'
  * Живёт здесь, а не в [send.ts]: тот тянет prisma, а тип нужен и клиентской модалке.
  */
 export interface NotifyOutcome {
-	/** Каким каналом реально ушло. null — не ушло (ручной режим или ошибка). */
-	channel: NotifyChannel | null
 	/** sent — ушло; failed — провайдер отказал; manual — провайдера нет, отправляет оператор. */
 	status: 'sent' | 'failed' | 'manual'
 	notificationId?: string
@@ -42,15 +37,13 @@ export interface NotifyOutcome {
 	error?: string
 	/**
 	 * true — провайдер сообщение принял, но доставку подтвердить не удалось: отчёт ещё
-	 * не пришёл или у канала его вообще нет. НЕ означает неудачу — означает «не знаем».
-	 * Для WhatsApp статус потом уточнит вебхук `message.ack`.
+	 * не пришёл. НЕ означает неудачу — означает «не знаем». Статус потом уточнит вебхук.
 	 */
 	pendingDelivery?: boolean
-	/** Тексты и ссылки для предпросмотра и ручной отправки. */
-	texts: Record<NotifyChannel, string>
-	links: Record<NotifyChannel, string>
+	/** Текст и ссылка wa.me для предпросмотра и ручной отправки. */
+	text: string
+	link: string
 	whatsappAvailable: boolean
-	smsAvailable: boolean
 }
 
 /** Строка журнала уведомлений в том виде, в каком её показывает модалка. */
@@ -64,16 +57,7 @@ export interface NotificationDTO {
 }
 
 /**
- * Правки оператора к шаблону. Пустые/отсутствующие поля означают «взять шаблон»,
- * поэтому очистить сообщение в ноль нельзя — уйдёт стандартный текст.
- */
-export interface NotifyTexts {
-	whatsapp?: string
-	sms?: string
-}
-
-/**
- * Состояние канала уведомлений по накладной: журнал отправок + что вообще настроено.
+ * Состояние канала уведомлений по накладной: журнал отправок + настроен ли WhatsApp.
  * Модалка спрашивает его ПРИ ОТКРЫТИИ — иначе она не знает, рисовать кнопку
  * «Отправить» (авто) или «Открыть WhatsApp» (ручной режим), и первый клик оператора
  * уходил бы вхолостую.
@@ -81,12 +65,11 @@ export interface NotifyTexts {
 export interface NotifyStatus {
 	items: NotificationDTO[]
 	whatsappAvailable: boolean
-	smsAvailable: boolean
 }
 
 /**
  * Уведомление по этой накладной уже уходило только что — повтор отклонён.
- * У WAHA нет ключа идемпотентности, поэтому дублей избегаем на своей стороне.
+ * Ключа идемпотентности у провайдеров нет, поэтому дублей избегаем на своей стороне.
  */
 export const RECENTLY_SENT = 'RECENTLY_SENT'
 
@@ -100,7 +83,20 @@ export const RECENTLY_SENT = 'RECENTLY_SENT'
  */
 export const DELIVERY_FAILED = 'DELIVERY_FAILED'
 
-/** Ошибка провайдера с машинным кодом (для веток фолбэка). */
+/**
+ * Провайдер не ответил за отведённое время (или автоуведомление не уложилось в общий
+ * дедлайн сохранения). Это «не знаем»: сообщение могло уйти, поэтому оператору стоит
+ * проверить чат, а не просто нажимать «Повторить».
+ */
+export const TIMEOUT = 'TIMEOUT'
+
+/** Автоуведомление пропущено: у получателя нет корректного телефона. */
+export const BAD_PHONE = 'BAD_PHONE'
+
+/** Автоуведомление пропущено: груз в трекере не создан, ссылка отслеживания была бы мёртвой. */
+export const NO_CARGO = 'NO_CARGO'
+
+/** Ошибка провайдера с машинным кодом. */
 export class NotifyError extends Error {
 	code: string
 	constructor(code: string, message?: string) {

@@ -1,23 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Folder, ChevronRight, FolderOpen } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { ToastItem } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import type { Toast } from '@/components/Toast'
 import { repos } from '@/lib/data/repos'
-
-interface FolderItem {
-	id: string
-	name: string
-	cargoCount: number
-	createdAt: string
-	updatedAt: string
-}
+import type { Folder as FolderItem } from '@/lib/data/types'
+import { formatDate } from '@/lib/format'
 
 export function FoldersPage() {
 	const { t, tf } = useLang()
@@ -32,8 +26,9 @@ export function FoldersPage() {
 	const [showCreate, setShowCreate] = useState(false)
 	const [toasts, setToasts] = useState<Toast[]>([])
 
+	const toastSeq = useRef(0) // счётчик id тостов (Date.now() может совпасть)
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const tid = Date.now().toString()
+		const tid = `toast-${++toastSeq.current}`
 		setToasts((prev) => [...prev, { id: tid, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.map((x) => (x.id === tid ? { ...x, exiting: true } : x)))
@@ -96,7 +91,7 @@ export function FoldersPage() {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -136,7 +131,15 @@ export function FoldersPage() {
 										<button
 											type="submit"
 											disabled={creating || !newName.trim()}
-											className="flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm">
+											// Пустое название — нейтральная серая кнопка (бледно-оранжевая выглядела рабочей),
+											// во время запроса — оранжевая со спиннером.
+											className={`flex-1 sm:flex-initial inline-flex items-center justify-center px-4 py-2 font-semibold rounded-lg transition-colors text-sm border ${
+												creating
+													? 'bg-orange-500 text-white border-transparent opacity-80 cursor-wait'
+													: !newName.trim()
+														? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 border-slate-200 dark:border-zinc-700 cursor-not-allowed'
+														: 'bg-orange-500 hover:bg-orange-600 text-white border-transparent'
+											}`}>
 											{creating ? <Spinner className="w-4 h-4 text-white" /> : t('saveFolderName')}
 										</button>
 										<button
@@ -169,7 +172,21 @@ export function FoldersPage() {
 												<FolderOpen className="w-5 h-5 text-orange-500 shrink-0" />
 												<div className="min-w-0 flex-1">
 													<p className="font-semibold text-slate-900 dark:text-zinc-100 text-sm truncate group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">{f.name}</p>
-													<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">{tf('foldersCount', { count: f.cargoCount })}</p>
+													{/* Активные — главное (оранжевым); прибывшие и всего — если API их отдаёт; дата создания */}
+													<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex flex-wrap gap-x-1.5">
+														<span className={f.cargoCount > 0 ? 'text-orange-600 dark:text-orange-400 font-medium' : ''}>
+															{tf('foldersCount', { count: f.cargoCount })}
+														</span>
+														{f.deliveredCount != null && (
+															<span>· {tf('fdDeliveredCount', { count: f.deliveredCount })}</span>
+														)}
+														{f.totalCount != null && <span>· {tf('fdTotalCount', { count: f.totalCount })}</span>}
+														{f.createdAt && (
+															<span className="text-slate-400 dark:text-zinc-500">
+																· {tf('fdCreatedOn', { date: formatDate(f.createdAt) })}
+															</span>
+														)}
+													</p>
 												</div>
 											</div>
 											<ChevronRight className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />

@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Calculator, Zap, Radio, AlertCircle } from 'lucide-react'
+import { Search, Calculator, Zap, UserCheck, AlertCircle } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { LangSwitcher } from '@/components/LangSwitcher'
-import { ToastItem } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, newToastId } from '@/components/Toast'
 import { CargoResultCard } from '@/components/home/CargoResultCard'
 import { CalculatorForm } from '@/components/calculator/CalculatorForm'
 import { PageLoader } from '@/components/PageLoader'
 import { Spinner } from '@/components/Spinner'
 import type { Toast } from '@/components/Toast'
 import { repos } from '@/lib/data/repos'
+import { RepoError } from '@/lib/data/types'
 
 interface CargoData {
 	id: string
@@ -19,7 +20,7 @@ interface CargoData {
 	currentCity: string
 	toCity: string
 	status: string
-	createdAt?: any
+	createdAt?: string | Date | null
 	acceptanceDate?: string | null
 	shipmentDate?: string | null
 	deliveryTimeframe?: string | null
@@ -47,6 +48,13 @@ export function TrackingHome() {
 	const [toasts, setToasts] = useState<Toast[]>([])
 	// Номер из ссылки, который не нашёлся (для постоянного сообщения вместо тоста)
 	const [missedId, setMissedId] = useState<string | null>(null)
+	// Текст сбоя поиска по ссылке (лимит запросов / ошибка сети) — тоже постоянно, а не тостом
+	const [linkError, setLinkError] = useState<string | null>(null)
+	// Калькулятор монтируем при первом открытии вкладки и больше не размонтируем:
+	// иначе переключение вкладок стирает введённое и заново грузит курс и шаблоны.
+	const [calcVisited, setCalcVisited] = useState<boolean>(false)
+	// Идёт поиск по ссылке «?id=» — герой сворачивается сразу, а не после ответа (без прыжка вёрстки)
+	const [linkLoading, setLinkLoading] = useState<boolean>(false)
 
 	useEffect(() => {
 		setMounted(true)
@@ -55,7 +63,7 @@ export function TrackingHome() {
 	}, [])
 
 	const addToast = (message: string, type: 'success' | 'error' = 'success') => {
-		const id = Date.now().toString()
+		const id = newToastId()
 		setToasts((prev) => [...prev, { id, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -65,12 +73,15 @@ export function TrackingHome() {
 	const runSearch = async (raw: string, fromLink = false) => {
 		setCargo(null)
 		setMissedId(null)
+		setLinkError(null)
 		setLoading(true)
+		setLinkLoading(fromLink)
 
 		const searchId = raw.trim().toUpperCase()
 		if (!searchId) {
 			addToast(t('enterCargoId'), 'error')
 			setLoading(false)
+			setLinkLoading(false)
 			return
 		}
 
@@ -86,11 +97,14 @@ export function TrackingHome() {
 				setTrackingId('')
 				addToast(t('cargoFound'), 'success')
 			}
-		} catch {
-			addToast(t('searchError'), 'error')
-			if (fromLink) setMissedId(searchId)
+		} catch (err) {
+			// 429 — сработал лимит запросов на публичный поиск: говорим об этом прямо
+			const message = err instanceof RepoError && err.status === 429 ? t('searchRateLimited') : t('searchError')
+			addToast(message, 'error')
+			if (fromLink) setLinkError(message)
 		} finally {
 			setLoading(false)
+			setLinkLoading(false)
 		}
 	}
 
@@ -112,10 +126,18 @@ export function TrackingHome() {
 
 	if (!mounted || !minLoadDone) return <PageLoader />
 
+	// Статусы ведут логисты вручную — «реальное время» обещало больше, чем есть (P8)
 	const features = [
-		{ Icon: Zap, label: t('featureInstant') },
-		{ Icon: Radio, label: t('featureRealtime') },
+		{ id: 'instant', Icon: Zap, label: t('featureInstant') },
+		{ id: 'status', Icon: UserCheck, label: t('featureLogistStatus') },
 	]
+
+	// Показан результат поиска (или сообщение «не найдено» по ссылке): на узком экране,
+	// где панель бренда стоит НАД контентом, сворачиваем её до шапки (лого + язык),
+	// чтобы клиент из WhatsApp сразу видел свой груз, а не ~500 px заголовка.
+	// На xl (две колонки) ничего не меняется.
+	const compactHero =
+		(!SHOW_CALCULATOR || tab === 'track') && (cargo !== null || missedId !== null || linkError !== null || linkLoading)
 
 	const tabs = [
 		{ id: 'track' as const, Icon: Search, label: t('tabTrack'), short: t('tabTrackShort') },
@@ -126,15 +148,18 @@ export function TrackingHome() {
 		<div
 			className="min-h-screen xl:grid xl:grid-cols-[38%_62%] bg-slate-50"
 			suppressHydrationWarning>
-			{/* Toasts */}
-			<div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+			{/* Тосты — общий контейнер снизу по центру (см. TOAST_VIEWPORT) */}
+			<div className={TOAST_VIEWPORT}>
 				{toasts.map((toast) => (
 					<ToastItem key={toast.id} toast={toast} />
 				))}
 			</div>
 
 			{/* ── Left: brand panel ── */}
-			<aside className="relative overflow-hidden flex flex-col p-8 sm:p-10 xl:p-12 text-white xl:sticky xl:top-0 xl:h-screen bg-gradient-to-b from-slate-900 to-slate-950">
+			<aside
+				className={`relative overflow-hidden flex flex-col text-white xl:sticky xl:top-0 xl:h-screen xl:p-12 bg-gradient-to-b from-slate-900 to-slate-950 ${
+					compactHero ? 'px-5 py-3 sm:px-8 sm:py-4' : 'p-8 sm:p-10'
+				}`}>
 				{/* subtle dot grid */}
 				<div
 					className="absolute inset-0 opacity-[0.06]"
@@ -162,18 +187,21 @@ export function TrackingHome() {
 				</div>
 
 				{/* middle: hero copy */}
-				<div className="relative flex-1 flex flex-col justify-center py-12 xl:py-0 max-w-md ltt-fade-up">
+				<div
+					className={`relative flex-1 flex-col justify-center py-12 xl:py-0 max-w-md ltt-fade-up ${
+						compactHero ? 'hidden xl:flex' : 'flex'
+					}`}>
 					<div className="w-10 h-1 rounded-full bg-orange-500 mb-6" />
 					<h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.12]">
 						{t('homeHeroTitle')}
 					</h1>
 					<p className="mt-4 text-slate-300 text-sm sm:text-[15px] leading-relaxed max-w-sm">
-						{t('homeHeroSubtitle')}
+						{t('homeHeroSubtitleStatus')}
 					</p>
 
 					<ul className="mt-9 space-y-3.5">
-						{features.map(({ Icon, label }) => (
-							<li key={label} className="flex items-center gap-3">
+						{features.map(({ id, Icon, label }) => (
+							<li key={id} className="flex items-center gap-3">
 								<span className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/10 border border-white/10 backdrop-blur">
 									<Icon className="w-4 h-4 text-orange-400" />
 								</span>
@@ -201,7 +229,10 @@ export function TrackingHome() {
 										<button
 											key={id}
 											type="button"
-											onClick={() => setTab(id)}
+											onClick={() => {
+												setTab(id)
+												if (id === 'calc') setCalcVisited(true)
+											}}
 											className={`flex-1 sm:flex-initial justify-center inline-flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
 												active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
 											}`}>
@@ -218,60 +249,71 @@ export function TrackingHome() {
 
 						{/* Tab content — табы сверху; поиск груза центрируем по вертикали,
 						    калькулятор оставляем у верха (он высокий и должен влезать без скролла) */}
-						<div
-							key={tab}
-							className={`flex-1 flex flex-col ltt-fade-up${tab === 'track' || !SHOW_CALCULATOR ? ' justify-center' : ''}`}>
-
-							{!SHOW_CALCULATOR || tab === 'track' ? (
-								<div className="w-full max-w-md mx-auto">
-									{!cargo ? (
-										<div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_50px_-20px_rgba(15,23,42,0.22)] p-5 sm:p-6">
-											<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">
-												{t('tabTrack')}
-											</p>
-											{/* Клиент пришёл по ссылке из накладной, а груза с таким номером нет —
-											    сообщаем явно, а не исчезающим тостом. */}
-											{missedId && !loading && (
-												<div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
-													<AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
-													<span>
-														{tf('trackLinkNotFound', { id: missedId })}
+						{/* Обе панели остаются в DOM, скрывается неактивная (hidden): калькулятор не
+						    размонтируется при переключении, и введённые данные не теряются. */}
+						<div className={`flex-1 flex flex-col${tab === 'track' || !SHOW_CALCULATOR ? ' justify-center' : ''}`}>
+							{/* Ширина: форма поиска чуть шире прежней (на десктопе она терялась в пустоте),
+							    карточка результата — ещё шире, чтобы маршрут в три колонки не рвал названия городов. */}
+							<div
+								hidden={SHOW_CALCULATOR && tab !== 'track'}
+								className={`w-full mx-auto ltt-fade-up ${cargo ? 'max-w-xl' : 'max-w-md sm:max-w-lg'}`}>
+								{!cargo ? (
+									<div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_18px_50px_-20px_rgba(15,23,42,0.22)] p-5 sm:p-7">
+										<p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-3">
+											{t('tabTrack')}
+										</p>
+										{/* Клиент пришёл по ссылке из накладной, а груза с таким номером нет —
+										    сообщаем явно, а не исчезающим тостом. */}
+										{missedId && !loading && (
+											<div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
+												<AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+												<span>
+													{tf('trackLinkNotFound', { id: missedId })}
+												</span>
+											</div>
+										)}
+										{linkError && !loading && (
+											<div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
+												<AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+												<span>{linkError}</span>
+											</div>
+										)}
+										<form onSubmit={handleSubmit} className="flex flex-col gap-3">
+											<div className="relative">
+												<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+												<input
+													type="text"
+													value={trackingId}
+													onChange={(e) => setTrackingId(e.target.value)}
+													placeholder={t('trackInputPlaceholder')}
+													className="w-full pl-10 pr-4 py-3 sm:py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm sm:text-[15px] font-medium"
+													required
+												/>
+											</div>
+											<button
+												type="submit"
+												disabled={loading}
+												className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-semibold py-3 sm:py-3.5 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm sm:text-[15px] shadow-sm shadow-orange-500/20">
+												{loading ? (
+													<span className="inline-flex items-center justify-center gap-2">
+														<Spinner className="w-4 h-4 text-white" />
+														{t('searching')}
 													</span>
-												</div>
-											)}
-											<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-												<div className="relative">
-													<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-													<input
-														type="text"
-														value={trackingId}
-														onChange={(e) => setTrackingId(e.target.value)}
-														placeholder={t('trackInputPlaceholder')}
-														className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm font-medium"
-														required
-													/>
-												</div>
-												<button
-													type="submit"
-													disabled={loading}
-													className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.99] text-white font-semibold py-3 rounded-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm shadow-sm shadow-orange-500/20">
-													{loading ? (
-														<span className="inline-flex items-center justify-center gap-2">
-															<Spinner className="w-4 h-4 text-white" />
-															{t('searching')}
-														</span>
-													) : (
-														t('trackButton')
-													)}
-												</button>
-											</form>
-										</div>
-									) : (
-										<CargoResultCard cargo={cargo} onNewSearch={() => setCargo(null)} />
-									)}
+												) : (
+													t('trackButton')
+												)}
+											</button>
+										</form>
+									</div>
+								) : (
+									<CargoResultCard cargo={cargo} onNewSearch={() => setCargo(null)} />
+								)}
+							</div>
+
+							{SHOW_CALCULATOR && calcVisited && (
+								<div hidden={tab !== 'calc'} className="ltt-fade-up">
+									<CalculatorForm />
 								</div>
-							) : (
-								<CalculatorForm />
 							)}
 						</div>
 					</div>

@@ -132,7 +132,15 @@ export function PresetForm({ initial, saving, onSubmit, onCancel }: PresetFormPr
 				<button
 					type="submit"
 					disabled={saving || !name.trim()}
-					className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg disabled:opacity-50 transition-colors text-sm inline-flex items-center gap-2">
+					// Без названия — нейтральная серая (бледно-оранжевая выглядела рабочей),
+					// во время сохранения — оранжевая со спиннером.
+					className={`px-4 py-2 font-semibold rounded-lg transition-colors text-sm inline-flex items-center gap-2 border ${
+						saving
+							? 'bg-orange-500 text-white border-transparent opacity-80 cursor-wait'
+							: !name.trim()
+								? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 border-slate-200 dark:border-zinc-700 cursor-not-allowed'
+								: 'bg-orange-500 hover:bg-orange-600 text-white border-transparent'
+					}`}>
 					{saving ? <Spinner className="w-4 h-4 text-white" /> : t('presetSaveButton')}
 				</button>
 				<button

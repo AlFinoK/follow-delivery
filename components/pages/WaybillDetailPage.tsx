@@ -1,24 +1,25 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Bell, FileDown, Pencil, Trash2, Truck } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { repos } from '@/lib/data/repos'
-import type { WaybillDTO } from '@/lib/data/types'
+import type { LastNotification, NotificationDTO, WaybillDTO } from '@/lib/data/types'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { DeleteModal } from '@/components/admin/DeleteModal'
 import { PageLoader } from '@/components/PageLoader'
-import { ToastItem, type Toast } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, type Toast } from '@/components/Toast'
 import { CreateWaybillPage } from '@/components/pages/CreateWaybillPage'
 import { LogistSummary } from '@/components/waybill/LogistSummary'
 import { NotifyModal } from '@/components/waybill/NotifyModal'
+import { NotifyBadge } from '@/components/waybill/NotifyBadge'
 import { openWaybillPrint } from '@/lib/waybill/print'
 import { STATUS_KEYS } from '@/lib/waybill/statusI18n'
-import { effectiveVolume, fmtDecimal, fmtMoney, totalWeight, trimNum } from '@/lib/waybill/totals'
+import { effectiveVolume, fmtDecimal, totalWeight, trimNum } from '@/lib/waybill/totals'
 import type { WaybillStatus } from '@/lib/waybill/model'
-import { displayTimeframe } from '@/lib/format'
+import { displayTimeframe, formatMoney } from '@/lib/format'
 
 // Детальный просмотр накладной — по образцу карточки груза ([CargoDetailPage.tsx]):
 // сначала read-only карточка, редактирование открывается кнопкой с карандашом.
@@ -88,54 +89,73 @@ export function WaybillDetailPage({ id }: { id: string }) {
 	const [toasts, setToasts] = useState<Toast[]>([])
 	const [confirmDelete, setConfirmDelete] = useState(false)
 	const [notifyOpen, setNotifyOpen] = useState(false)
+	// Последнее уведомление клиенту. Отдельно от накладной: окно уведомления сообщает свежий
+	// журнал, и перезапись самой накладной сбросила бы открытое окно (текст, итог отправки).
+	const [lastNote, setLastNote] = useState<LastNotification | null>(null)
 
+	const toastSeq = useRef(0) // счётчик id тостов (Date.now() может совпасть)
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const tid = `${Date.now()}-${Math.random()}`
+		const tid = `toast-${++toastSeq.current}`
 		setToasts((prev) => [...prev, { id: tid, message, type }])
 		setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== tid)), 4000)
 	}, [])
 
+	// Журнал из окна уведомления (новые сверху): после отправки метка в шапке обновляется сразу.
+	const onNotifyHistory = useCallback((items: NotificationDTO[]) => {
+		const last = items[0]
+		setLastNote(last ? { status: last.status, createdAt: last.createdAt, error: last.error } : null)
+	}, [])
+
 	useEffect(() => {
 		// Пауза 444 мс — общая для админки (плавность), см. CLAUDE.md §8.
-		const timer = setTimeout(() => {
-			setReady(true)
-			// Тост, перенесённый с другой страницы — например «Накладная №N сохранена»
-			// после выхода из режима редактирования.
-			const pending = sessionStorage.getItem('pendingToast')
-			if (!pending) return
-			sessionStorage.removeItem('pendingToast')
-			try {
-				const { message, type } = JSON.parse(pending) as { message: string; type?: 'success' | 'error' }
-				const tid = `pending-${Date.now()}`
-				setToasts([{ id: tid, message, type: type ?? 'success' }])
-				setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== tid)), 4000)
-			} catch {
-				/* битый JSON — игнорируем */
-			}
-		}, 444)
+		const timer = setTimeout(() => setReady(true), 444)
 		return () => clearTimeout(timer)
 	}, [])
 
-	// Накладную грузим и в режиме редактирования тоже — мастер тянет её сам, но
-	// без этого при возврате из редактора карточка показывала бы прежние данные.
+	// Тост, перенесённый с другой страницы — например «Накладная №N сохранена» после выхода
+	// из режима редактирования. Читаем не только при монтировании: переход
+	// /admin/waybills/<id>?edit=1 → /admin/waybills/<id> эту страницу НЕ перемонтирует
+	// (Next не включает search params в ключ страницы), поэтому эффект привязан к смене
+	// режима: сработает и при первом показе карточки, и при каждом возврате из правки.
+	useEffect(() => {
+		if (!ready || editMode) return
+		const pending = sessionStorage.getItem('pendingToast')
+		if (!pending) return
+		sessionStorage.removeItem('pendingToast')
+		try {
+			const { message, type } = JSON.parse(pending) as { message: string; type?: 'success' | 'error' }
+			addToast(message, type ?? 'success')
+		} catch {
+			/* битый JSON — игнорируем */
+		}
+	}, [ready, editMode, addToast])
+
+	// Накладную перечитываем при каждом выходе из режима редактирования, иначе карточка
+	// показывала бы прежние данные. Запрос отменяется при смене режима/id.
 	useEffect(() => {
 		if (editMode) return
-		let alive = true
+		const ctrl = new AbortController()
 		repos.waybills
-			.get(id)
+			.get(id, ctrl.signal)
 			.then((found) => {
-				if (!alive) return
+				if (ctrl.signal.aborted) return
 				if (!found) setNotFound(true)
-				else setWaybill(found)
+				else {
+					setWaybill(found)
+					setLastNote(found.lastNotification ?? null)
+				}
 			})
-			.catch(() => alive && setNotFound(true))
-		return () => {
-			alive = false
-		}
+			.catch((e) => {
+				if (ctrl.signal.aborted || (e instanceof DOMException && e.name === 'AbortError')) return
+				setNotFound(true)
+			})
+		return () => ctrl.abort()
 	}, [id, editMode])
 
 	// Редактирование — это мастер целой страницей, поэтому отдаём его как есть.
-	if (editMode) return <CreateWaybillPage waybillId={id} />
+	// onSaved подставляет сохранённую накладную сразу — карточка не мелькает прежними данными,
+	// пока идёт перечитывание.
+	if (editMode) return <CreateWaybillPage waybillId={id} onSaved={setWaybill} />
 
 	if (!ready || (!waybill && !notFound)) return <PageLoader />
 
@@ -166,7 +186,7 @@ export function WaybillDetailPage({ id }: { id: string }) {
 			suppressHydrationWarning>
 			<AdminSidebar />
 
-			<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+			<div className={TOAST_VIEWPORT}>
 				{toasts.map((toast) => (
 					<ToastItem
 						key={toast.id}
@@ -189,6 +209,7 @@ export function WaybillDetailPage({ id }: { id: string }) {
 						waybill={w}
 						onClose={() => setNotifyOpen(false)}
 						onToast={addToast}
+						onHistory={onNotifyHistory}
 					/>
 				</>
 			)}
@@ -207,20 +228,28 @@ export function WaybillDetailPage({ id }: { id: string }) {
 							</div>
 						) : (
 							<>
-								<div className="flex items-center justify-between gap-3 mb-5">
+								{/* Заголовок страницы слева, рядом со ссылкой «назад» — как хлебные крошки */}
+								<div className="flex items-center gap-2 mb-5 min-w-0">
 									<Link
 										href="/admin/waybills"
-										className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
+										className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors shrink-0">
 										<ArrowLeft className="w-4 h-4" />
 										{t('backToList')}
 									</Link>
-									<h1 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('wpWaybill')}</h1>
+									<span
+										className="text-slate-300 dark:text-zinc-600"
+										aria-hidden="true">
+										/
+									</span>
+									<h1 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">{t('wpWaybill')}</h1>
 								</div>
 
 								<div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-zinc-700">
 									<div className="p-5 sm:p-6 flex flex-col gap-6">
-										{/* Шапка: номер, статус, кнопка редактирования */}
-										<div className="flex items-start justify-between gap-4">
+										{/* Шапка: номер, статус, уведомление клиента — и главные действия справа.
+										    Раньше PDF/«Уведомить»/«Редактировать» жили в самом низу, под сводкой
+										    логистам, а «Редактировать» дублировался. */}
+										<div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 											<div className="min-w-0">
 												<h2 className="text-xl font-semibold text-slate-900 dark:text-zinc-100 leading-snug">
 													<span className="text-orange-600 dark:text-orange-400">№{w.number ?? '—'}</span>
@@ -229,19 +258,37 @@ export function WaybillDetailPage({ id }: { id: string }) {
 													<span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-md border ${BADGE[w.status]}`}>
 														{t(STATUS_KEYS[w.status])}
 													</span>
+													<NotifyBadge
+														note={lastNote}
+														size="md"
+													/>
 													{w.nature.trim() && (
 														<span className="text-xs text-slate-500 dark:text-zinc-400">{w.nature}</span>
 													)}
 												</div>
 											</div>
-											<button
-												type="button"
-												onClick={() => router.push(`/admin/waybills/${id}?edit=1`)}
-												title={t('editButton')}
-												className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700 rounded-lg transition-colors shrink-0">
-												<Pencil className="w-3.5 h-3.5" />
-												<span className="hidden sm:inline">{t('editButton')}</span>
-											</button>
+											<div className="flex flex-wrap gap-2 md:justify-end md:shrink-0">
+												<button
+													type="button"
+													onClick={() => {
+														if (!openWaybillPrint(w)) addToast(t('wpPopupBlocked'), 'error')
+													}}
+													className="inline-flex grow md:grow-0 items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 dark:hover:border-orange-500/40 text-slate-700 dark:text-zinc-200 font-semibold px-3.5 py-2 rounded-lg text-sm transition-colors whitespace-nowrap">
+													<FileDown className="w-4 h-4" /> {t('wpDownloadPdf')}
+												</button>
+												<button
+													type="button"
+													onClick={() => setNotifyOpen(true)}
+													className="inline-flex grow md:grow-0 items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 dark:hover:border-orange-500/40 text-slate-700 dark:text-zinc-200 font-semibold px-3.5 py-2 rounded-lg text-sm transition-colors whitespace-nowrap">
+													<Bell className="w-4 h-4" /> {t('wpNotifyClient')}
+												</button>
+												<button
+													type="button"
+													onClick={() => router.push(`/admin/waybills/${id}?edit=1`)}
+													className="inline-flex grow md:grow-0 items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-3.5 py-2 rounded-lg text-sm transition-colors whitespace-nowrap">
+													<Pencil className="w-4 h-4" /> {t('editButton')}
+												</button>
+											</div>
 										</div>
 
 										{/* Итоги отправления одной полосой */}
@@ -249,9 +296,9 @@ export function WaybillDetailPage({ id }: { id: string }) {
 											<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 												{[
 													{ label: t('wdPlaces'), value: places ? trimNum(places) : '—' },
-													{ label: t('wdWeight'), value: weight ? `${fmtDecimal(weight, 1)} кг` : '—' },
-													{ label: t('wfVolume'), value: volume ? `${fmtDecimal(volume)} м³` : '—' },
-													{ label: t('wfAmount'), value: w.amount ? `${fmtMoney(w.amount)} ₸` : '—' },
+													{ label: t('wdWeight'), value: weight ? `${fmtDecimal(weight, 1)} ${t('calcKg')}` : '—' },
+													{ label: t('wfVolume'), value: volume ? `${fmtDecimal(volume)} ${t('unitM3')}` : '—' },
+													{ label: t('wfAmount'), value: w.amount ? formatMoney(w.amount) : '—' },
 												].map((stat) => (
 													<div
 														key={stat.label}
@@ -393,7 +440,7 @@ export function WaybillDetailPage({ id }: { id: string }) {
 																	/>
 																	<PosRow
 																		label={t('wfCost')}
-																		value={p.price ? fmtMoney(p.price) : ''}
+																		value={p.price ? formatMoney(p.price) : ''}
 																	/>
 																</dl>
 															</div>
@@ -430,7 +477,7 @@ export function WaybillDetailPage({ id }: { id: string }) {
 																		{p.weight ? trimNum(p.weight) : '—'}
 																	</td>
 																	<td className="py-2 pl-3 text-right text-slate-700 dark:text-zinc-300">
-																		{p.price ? fmtMoney(p.price) : '—'}
+																		{p.price ? formatMoney(p.price) : '—'}
 																	</td>
 																</tr>
 															))}
@@ -455,7 +502,7 @@ export function WaybillDetailPage({ id }: { id: string }) {
 												/>
 												<Field
 													label={t('wfAmount')}
-													value={w.amount ? `${fmtMoney(w.amount)} ₸` : t('notSpecified')}
+													value={w.amount ? formatMoney(w.amount) : t('notSpecified')}
 													empty={!w.amount}
 												/>
 											</Grid>
@@ -509,29 +556,10 @@ export function WaybillDetailPage({ id }: { id: string }) {
 										{/* Сводка логистам */}
 										<div className="border-t border-slate-200 dark:border-zinc-700 pt-5">
 											<SectionTitle>{t('wpLogistTitle')}</SectionTitle>
-											<LogistSummary waybill={w} />
-										</div>
-
-										{/* Действия */}
-										<div className="border-t border-slate-200 dark:border-zinc-700 pt-4 flex flex-wrap gap-2">
-											<button
-												type="button"
-												onClick={() => openWaybillPrint(w)}
-												className="inline-flex grow sm:grow-0 items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-												<FileDown className="w-4 h-4" /> {t('wpDownloadPdf')}
-											</button>
-											<button
-												type="button"
-												onClick={() => setNotifyOpen(true)}
-												className="inline-flex grow sm:grow-0 items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 text-slate-700 dark:text-zinc-200 font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-												<Bell className="w-4 h-4" /> {t('wpNotifyClient')}
-											</button>
-											<button
-												type="button"
-												onClick={() => router.push(`/admin/waybills/${id}?edit=1`)}
-												className="inline-flex grow sm:grow-0 items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors">
-												<Pencil className="w-4 h-4" /> {t('editButton')}
-											</button>
+											<LogistSummary
+												waybill={w}
+												collapsible
+											/>
 										</div>
 									</div>
 								</div>

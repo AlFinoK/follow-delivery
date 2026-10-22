@@ -9,12 +9,13 @@
 // к нему по сети, поэтому WAHA_URL должен быть доступен из окружения приложения, а
 // WAHA_API_KEY обязателен, если контейнер смотрит в интернет.
 //
-// Главное отличие от Wazzup, из-за которого архитектура проще: у WAHA ЕСТЬ синхронная
-// проверка «есть ли у номера WhatsApp» — GET /api/contacts/check-exists. Поэтому канал
-// выбирается ДО отправки, и SMS-фолбэк не зависит от вебхука.
+// У WAHA ЕСТЬ синхронная проверка «есть ли у номера WhatsApp» —
+// GET /api/contacts/check-exists. Поэтому отсутствие WhatsApp выясняется ДО отправки и
+// не зависит от вебхука.
 
 import { NotifyError, NOT_CONFIGURED, type SendResult } from './types'
 import { digits } from './links'
+import { fetchText, REQUEST_TIMEOUT_MS } from './http'
 
 /** Сессия WAHA, с которой работаем. Одна на компанию — один номер. */
 const session = () => process.env.WAHA_SESSION?.trim() || 'default'
@@ -23,22 +24,29 @@ export function wahaConfigured(): boolean {
 	return !!process.env.WAHA_URL?.trim()
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+/** Таймаут опроса ack: проб три, и они идут внутри запроса оператора, поэтому короткий. */
+const ACK_TIMEOUT_MS = 3000
+
+async function call<T>(path: string, init?: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
 	const base = process.env.WAHA_URL?.trim().replace(/\/+$/, '')
 	if (!base) throw new NotifyError(NOT_CONFIGURED, 'Не задан WAHA_URL')
 
 	const key = process.env.WAHA_API_KEY?.trim()
-	const res = await fetch(`${base}${path}`, {
-		...init,
-		headers: {
-			'Content-Type': 'application/json',
-			...(key ? { 'X-Api-Key': key } : {}),
-			...(init?.headers ?? {}),
+	// Таймаут — в fetchText: зависший ответ становится NotifyError(TIMEOUT), а не вечным ожиданием.
+	const res = await fetchText(
+		`${base}${path}`,
+		{
+			...init,
+			headers: {
+				'Content-Type': 'application/json',
+				...(key ? { 'X-Api-Key': key } : {}),
+				...(init?.headers ?? {}),
+			},
 		},
-		cache: 'no-store',
-	})
+		timeoutMs
+	)
 
-	const raw = await res.text()
+	const raw = res.raw
 	let body: unknown = null
 	try {
 		body = raw ? JSON.parse(raw) : null
@@ -138,17 +146,21 @@ const ACK_PROBES_MS = [1200, 1800, 2500]
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-export async function messageAck(chatId: string, messageId?: string): Promise<number | undefined> {
+export async function messageAck(chatId: string, messageId?: string, deadlineAt?: number): Promise<number | undefined> {
 	if (!messageId) return undefined
 	// Движки отдают id в разной форме, и ответ на отправку может отличаться от того,
 	// что лежит в истории чата («true_7705…@c.us_3EB08…»), — сверяем ещё и по хвосту.
 	const tail = messageId.split('_').pop()
 
 	for (const pause of ACK_PROBES_MS) {
+		// Общий бюджет времени (см. send.ts): не начинаем пробу, которая не уложится.
+		if (deadlineAt !== undefined && Date.now() + pause + ACK_TIMEOUT_MS > deadlineAt) return undefined
 		await sleep(pause)
 		try {
 			const list = await call<Array<{ id?: string; ack?: number }>>(
-				`/api/${encodeURIComponent(session())}/chats/${encodeURIComponent(chatId)}/messages?limit=10&downloadMedia=false`
+				`/api/${encodeURIComponent(session())}/chats/${encodeURIComponent(chatId)}/messages?limit=10&downloadMedia=false`,
+				undefined,
+				ACK_TIMEOUT_MS
 			)
 			const hit = Array.isArray(list) ? list.find((m) => m.id === messageId || m.id?.split('_').pop() === tail) : undefined
 			// 0 (PENDING) — ещё не итог, ждём следующую попытку.

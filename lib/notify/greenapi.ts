@@ -10,8 +10,8 @@
 // НЕЛЬЗЯ опросить сразу после отправки. Журнал сообщений (`getMessage`) отстаёт до двух
 // минут, и документация прямо отправляет за статусами в вебхук `outgoingMessageStatus`.
 // Поэтому здесь нет аналога messageAck: доставку подтверждает вебхук, а если статуса
-// нет совсем (клиент с заблокированным WhatsApp так и висит в `sent`), SMS досылается
-// по таймауту из /api/notify/sweep.
+// нет совсем (клиент с заблокированным WhatsApp так и висит в `sent`), строка журнала
+// остаётся в `sent` — узнать о недоставке можно только от самого клиента.
 //
 // Переменные окружения:
 //   GREENAPI_URL          — адрес API инстанса (выдаётся в кабинете)
@@ -25,6 +25,7 @@
 
 import { NotifyError, NOT_CONFIGURED, type SendResult } from './types'
 import { digits } from './links'
+import { fetchText } from './http'
 
 const base = () => process.env.GREENAPI_URL?.trim().replace(/\/+$/, '') ?? ''
 
@@ -37,14 +38,14 @@ async function call<T>(method: string, body: unknown): Promise<T> {
 	if (!greenApiConfigured()) throw new NotifyError(NOT_CONFIGURED, 'Green-API не настроена')
 
 	const url = `${base()}/waInstance${process.env.GREENAPI_ID_INSTANCE?.trim()}/${method}/${process.env.GREENAPI_TOKEN?.trim()}`
-	const res = await fetch(url, {
+	// Таймаут — в fetchText: зависший ответ становится NotifyError(TIMEOUT), а не вечным ожиданием.
+	const res = await fetchText(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(body),
-		cache: 'no-store',
 	})
 
-	const raw = await res.text()
+	const raw = res.raw
 	let parsed: unknown = null
 	try {
 		parsed = raw ? JSON.parse(raw) : null
@@ -76,8 +77,7 @@ async function call<T>(method: string, body: unknown): Promise<T> {
  * клиента (2026-08-26 номер компании уехал «на проверку»).
  *
  * Поэтому канал выбирается иначе, чем у WAHA: отправляем в WhatsApp всегда, а «у номера
- * нет WhatsApp» выясняется ПОСЛЕ отправки — статусом `noAccount` в вебхуке, а если
- * статуса не будет вовсе, сработает досылка SMS по таймауту в /api/notify/sweep.
+ * нет WhatsApp» выясняется ПОСЛЕ отправки — статусом `noAccount` в вебхуке.
  *
  * ⚠️ Заодно: `chatId` в этот метод надо передавать с суффиксом (`номер@c.us`), на голые
  * цифры он отвечает 400 — хотя в документации пример именно с цифрами.

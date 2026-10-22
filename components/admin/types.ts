@@ -17,21 +17,6 @@ export interface Cargo {
 	folderId?: string | null
 	/** Название папки, в которой лежит груз (для списка и поиска). null — не в папке. */
 	folderName?: string | null
-	createdAt: any
-}
-
-export interface CargoCardHandlers {
-	onUpdateStatus: (docId: string, newStatus: string) => Promise<void>
-	onUpdateCurrentCity: (docId: string, newCity: string) => Promise<void>
-	onUpdateName: (docId: string, newName: string) => Promise<void>
-	onUpdateField: (docId: string, field: string, value: string) => Promise<void>
-	onUpdatePaymentStatus: (docId: string, newStatus: string) => Promise<void>
-	onUpdateCurrency: (docId: string, newCurrency: string) => void
-	onDelete: (docId: string) => Promise<void>
-	onCopy: (id: string) => void
-}
-
-export interface CargoCardProps extends CargoCardHandlers {
-	cargo: Cargo
-	isCopied: boolean
+	/** ISO-строка из JSON (на сервере — Date до сериализации). */
+	createdAt?: string | Date | null
 }

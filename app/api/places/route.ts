@@ -18,12 +18,15 @@ const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').trim()
 const normNames = data.items.map((it) => norm(it[0]))
 
 const LIMIT = 25
+const MAX_Q = 100
 
 // GET /api/places?q=... — поиск населённого пункта (публично).
 //   Возвращает [{ name, region, district, code }] — code = ближайший город-терминал
-//   (для тарифа), district = федеральный округ НП (для надбавки +30%).
+//   (для тарифа), district = федеральный округ НП, surcharge = доля надбавки по области НП
+//   (resolveSurcharge, lib/calculator/districts.ts; 0.2 = +20%).
+//   q обрезается до 100 символов: поиск линейный по 134k названий, длинная строка — лишняя работа.
 export async function GET(req: NextRequest) {
-	const q = norm(req.nextUrl.searchParams.get('q') || '')
+	const q = norm((req.nextUrl.searchParams.get('q') || '').slice(0, MAX_Q))
 	if (q.length < 2) return NextResponse.json([])
 
 	const prefix: number[] = []

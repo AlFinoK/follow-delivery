@@ -4,9 +4,9 @@
 import type { Cargo } from '@/components/admin/types'
 import type { Preset } from '@/lib/calculator/presets'
 import type { Waybill as WaybillModel, WaybillStatus } from '@/lib/waybill/model'
-import type { NotificationDTO, NotifyChannel, NotifyOutcome, NotifyStatus, NotifyTexts } from '@/lib/notify/types'
+import type { NotificationDTO, NotifyOutcome, NotifyStatus } from '@/lib/notify/types'
 
-export type { Cargo, Preset, WaybillModel, NotificationDTO, NotifyChannel, NotifyOutcome, NotifyStatus, NotifyTexts }
+export type { Cargo, Preset, WaybillModel, NotificationDTO, NotifyOutcome, NotifyStatus }
 
 // ── Грузы ───────────────────────────────────────────────────────────────────
 
@@ -47,11 +47,11 @@ export type CargoPatch = Partial<Omit<CargoCreateInput, 'id'>> & { folderId?: st
 
 export interface CargoRepo {
 	/** Публичный поиск по трек-номеру или номеру груза. null — не найдено (404). */
-	search(query: string): Promise<Cargo | null>
+	search(query: string, signal?: AbortSignal): Promise<Cargo | null>
 	/** Список для админки с фильтром/поиском/пагинацией. */
-	list(params: CargoListParams): Promise<CargosResponse>
+	list(params: CargoListParams, signal?: AbortSignal): Promise<CargosResponse>
 	/** Груз по docId. null — не найдено (404). */
-	get(docId: string): Promise<Cargo | null>
+	get(docId: string, signal?: AbortSignal): Promise<Cargo | null>
 	create(body: CargoCreateInput): Promise<Cargo>
 	update(docId: string, patch: CargoPatch): Promise<Cargo>
 	remove(docId: string): Promise<void>
@@ -62,7 +62,11 @@ export interface CargoRepo {
 export interface Folder {
 	id: string
 	name: string
+	/** Активные грузы (статус не «прибыл»). */
 	cargoCount: number
+	/** Прибывшие и всего — UI показывает, если API их отдаёт (сейчас GET /api/folders их не считает). */
+	deliveredCount?: number
+	totalCount?: number
 	createdAt: string
 	updatedAt: string
 }
@@ -85,9 +89,9 @@ export interface AddCargosResult {
 }
 
 export interface FolderRepo {
-	list(): Promise<Folder[]>
+	list(signal?: AbortSignal): Promise<Folder[]>
 	create(name: string): Promise<Folder>
-	get(id: string, params: { tab?: string; page?: number }): Promise<FolderDetail | null>
+	get(id: string, params?: { tab?: string; page?: number }, signal?: AbortSignal): Promise<FolderDetail | null>
 	rename(id: string, name: string): Promise<Folder>
 	remove(id: string): Promise<void>
 	addCargos(id: string, numbers: number[]): Promise<AddCargosResult>
@@ -116,7 +120,21 @@ export interface WaybillDTO extends WaybillModel {
 	 * накладная в этот момент стала активной. Нужен, чтобы оператор увидел тост
 	 * «клиент уведомлён», а не гадал, ушло что-то или нет.
 	 */
-	notified?: { channel: 'whatsapp' | 'sms' | null; status: 'sent' | 'failed' | 'manual' | 'skipped'; error?: string }
+	notified?: { status: 'sent' | 'failed' | 'manual' | 'skipped'; error?: string; code?: string }
+	/**
+	 * Последняя строка журнала уведомлений (канал не важен). Приходит в GET списка и
+	 * карточки; null — клиенту ещё ничего не отправляли; в ответах POST/PATCH поля нет.
+	 */
+	lastNotification?: LastNotification | null
+}
+
+/** Последнее уведомление клиенту по накладной (см. lib/mapWaybill.ts → lastNotifications). */
+export interface LastNotification {
+	/** pending | sent | delivered | read | failed — как в журнале Notification. */
+	status: string
+	createdAt: string
+	/** «КОД: описание» для failed; переводится через notifyErrors. */
+	error: string | null
 }
 
 export interface WaybillsResponse {
@@ -138,26 +156,26 @@ export interface WaybillListParams {
 export interface WaybillRepo {
 	/** Зарезервировать номер накладной (сервер, атомарно — см. ПРАВКИ 2 п.7). */
 	reserveNumber(): Promise<number>
-	list(params: WaybillListParams): Promise<WaybillsResponse>
+	list(params: WaybillListParams, signal?: AbortSignal): Promise<WaybillsResponse>
 	/** Накладная по id. null — не найдена (404). */
-	get(id: string): Promise<WaybillDTO | null>
+	get(id: string, signal?: AbortSignal): Promise<WaybillDTO | null>
 	/** Накладная, привязанная к грузу. null — у груза её нет. */
-	getByCargo(cargoId: string): Promise<WaybillDTO | null>
-	create(body: WaybillModel): Promise<WaybillDTO>
+	getByCargo(cargoId: string, signal?: AbortSignal): Promise<WaybillDTO | null>
+	/** cargoId — привязать накладную к существующему грузу (кнопка на карточке груза). */
+	create(body: WaybillModel & { cargoId?: string }): Promise<WaybillDTO>
 	update(id: string, body: WaybillModel): Promise<WaybillDTO>
 	remove(id: string): Promise<void>
 }
 
-// ── Уведомления клиенту (WhatsApp через Wazzup + SMS-фолбэк) ─────────────────
+// ── Уведомления клиенту (WhatsApp) ───────────────────────────────────────────
 
 export interface NotifyRepo {
 	/**
-	 * Отправить уведомление по накладной. `channel` задаётся только при ЯВНОМ выборе
-	 * оператора; по умолчанию — WhatsApp, а SMS досылает вебхук, если у номера
-	 * WhatsApp не оказалось (см. [lib/notify/send.ts]).
+	 * Отправить уведомление по накладной. `text` — правка оператора к шаблону; без неё
+	 * сервер соберёт шаблон сам (см. [lib/notify/send.ts]).
 	 */
-	send(waybillId: string, channel?: NotifyChannel, texts?: NotifyTexts): Promise<NotifyOutcome>
-	/** Журнал отправок по накладной + что из каналов настроено (см. NotifyStatus). */
+	send(waybillId: string, text?: string): Promise<NotifyOutcome>
+	/** Журнал отправок по накладной + настроен ли WhatsApp (см. NotifyStatus). */
 	status(waybillId: string): Promise<NotifyStatus>
 }
 

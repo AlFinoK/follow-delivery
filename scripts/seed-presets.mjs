@@ -1,6 +1,10 @@
 // Сидирование пресетов из ТЗ напрямую в БД (без сервера/авторизации).
 // Базовая цена оценивается так же, как /api/presets/seed: движком по Москве.
 // Запуск:  node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/seed-presets.mjs [--force]
+// ⚠️ СПИСОК PRESETS НИЖЕ — КОПИЯ DEFAULT_PRESETS из lib/calculator/presets.ts (скрипт на
+// чистом .mjs и не может импортировать .ts). ЛЮБАЯ правка стандартных шаблонов должна
+// вноситься В ОБА МЕСТА, иначе «Загрузить стандартные» в админке и этот скрипт зальют
+// разные наборы. Сверка: имена, размеры, вес и sortOrder должны совпадать построчно.
 import { PrismaClient } from '@prisma/client'
 import fs from 'node:fs'
 import path from 'node:path'

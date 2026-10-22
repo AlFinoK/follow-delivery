@@ -42,7 +42,6 @@ export interface CargoTotals {
 
 export interface CalcResult {
 	ok: boolean
-	excluded?: boolean
 	cityName?: string
 	region?: string
 	price?: number // ₸, склад-склад (итог: с надбавкой округа и мин. тарифом)
@@ -85,13 +84,64 @@ export function placeVolume(p: Place, unit: LengthUnit): number {
 	return l * w * h
 }
 
+/**
+ * Количество одинаковых мест, которое реально учитывается в расчёте и при
+ * копировании в накладную. Пустое поле «Кол-во» (в форме оно показывает серую
+ * подсказку «1») и 0 означают ОДНО место: на экране «1», и в цене тоже 1, а не 0
+ * (раньше место молча выпадало из стоимости). Для корректного ввода (≥ 1) — как есть.
+ */
+export function placeQuantity(p: { quantity?: number }): number {
+	const q = p.quantity
+	return typeof q === 'number' && Number.isFinite(q) && q > 0 ? q : 1
+}
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000
+
+/**
+ * Пересчёт габаритов места при переключении м ↔ см: уже введённые числа
+ * сохраняют физический смысл (1,2 м ↔ 120 см). Вес и количество не трогаем.
+ * Округление до 3 знаков — как отображает DecimalInput (в метрах это миллиметры).
+ */
+export function convertPlaceUnit<T extends Place>(p: T, from: LengthUnit, to: LengthUnit): T {
+	if (from === to) return p
+	const k = from === 'm' ? 100 : 0.01
+	return {
+		...p,
+		length: round3((p.length || 0) * k),
+		width: round3((p.width || 0) * k),
+		height: round3((p.height || 0) * k),
+	}
+}
+
+/** Порог правдоподобия габарита, м: больше — почти наверняка перепутаны единицы. */
+export const MAX_SANE_DIMENSION_M = 20
+
+export interface PlaceWarnings {
+	/** какой-то габарит больше MAX_SANE_DIMENSION_M (вероятно, см введены как метры) */
+	oversize: boolean
+	/** у места есть объём, но вес не указан */
+	noWeight: boolean
+}
+
+/** Мягкая проверка ввода «по габаритам»: только подсказки, расчёт не блокируем. */
+export function placeWarnings(places: Place[], unit: LengthUnit): PlaceWarnings {
+	let oversize = false
+	let noWeight = false
+	for (const p of places) {
+		const dims = [p.length, p.width, p.height].map((v) => toMeters(v || 0, unit))
+		if (dims.some((d) => d > MAX_SANE_DIMENSION_M)) oversize = true
+		if (placeVolume(p, unit) > 0 && !(p.weight > 0)) noWeight = true
+	}
+	return { oversize, noWeight }
+}
+
 /** Суммарные объём/вес/места по списку мест (режим «по габаритам»). */
 export function sumPlaces(places: Place[], unit: LengthUnit): CargoTotals {
 	let totalVolume = 0
 	let totalWeight = 0
 	let totalPlaces = 0
 	for (const p of places) {
-		const qty = Math.max(0, p.quantity || 0)
+		const qty = placeQuantity(p)
 		totalVolume += placeVolume(p, unit) * qty
 		totalWeight += (p.weight || 0) * qty
 		totalPlaces += qty
@@ -167,6 +217,17 @@ export function isExcluded(cityName: string): boolean {
 	const n = normalize(cityName)
 	if (!n) return false
 	return EXCLUDED_PATTERNS.some((pat) => n.includes(normalize(pat)))
+}
+
+/**
+ * Показывать ли предупреждение «направление недоступно» для введённого запроса.
+ * Блок-лист сопоставляется по подстроке, поэтому «снежн»/«донецк»/«шахтёрск»
+ * цепляют и настоящие НП РФ (Снежногорск, Донецк в Ростовской области, Шахтёрск
+ * на Сахалине). Предупреждаем, только если по запросу нет ни одного выбираемого
+ * города/НП: исключённые направления в справочник не попадают вовсе.
+ */
+export function shouldWarnExcluded(query: string, hasSelectableMatches: boolean): boolean {
+	return !hasSelectableMatches && isExcluded(query)
 }
 
 /** Поиск направления по коду терминала. */

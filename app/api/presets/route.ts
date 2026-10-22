@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { getSession, requireAuth } from '@/lib/auth'
+import { badRequest, readJson } from '@/lib/apiUtil'
 
 // Форма пресета в JSON (совпадает с lib/calculator/presets.ts → Preset).
 // goodsPrice (себестоимость товара) — только для авторизованных: калькулятор открыт
@@ -38,12 +39,6 @@ function mapPreset(
 	}
 }
 
-async function requireAuth() {
-	const session = await getServerSession()
-	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-	return null
-}
-
 // GET /api/presets — список пресетов для калькулятора.
 //   по умолчанию — только активные (публично, без себестоимости товара);
 //   ?all=1 — включая скрытые (для админки, требует auth).
@@ -56,7 +51,7 @@ export async function GET(req: NextRequest) {
 
 	// Для админского калькулятора (создание накладной) себестоимость нужна, поэтому
 	// отдаём её любому авторизованному, а не только при ?all=1.
-	const authed = all || !!(await getServerSession())
+	const authed = all || !!(await getSession())
 
 	const presets = await prisma.cargoPreset.findMany({
 		where: all ? {} : { active: true },
@@ -70,7 +65,8 @@ export async function POST(req: NextRequest) {
 	const denied = await requireAuth()
 	if (denied) return denied
 
-	const body = await req.json()
+	const body = await readJson(req)
+	if (!body) return badRequest('Некорректное тело запроса')
 	const name = typeof body.name === 'string' ? body.name.trim() : ''
 	if (!name) return NextResponse.json({ error: 'Название обязательно' }, { status: 400 })
 
@@ -84,7 +80,12 @@ export async function POST(req: NextRequest) {
 			}
 		}
 	}
-	if (body.sortOrder !== undefined && body.sortOrder !== '' && !Number.isFinite(Number(body.sortOrder))) {
+	// sortOrder — Int в БД: дробное или за пределами int32 Prisma отвергает ошибкой (→ 500)
+	if (
+		body.sortOrder !== undefined &&
+		body.sortOrder !== '' &&
+		(!Number.isInteger(Number(body.sortOrder)) || Math.abs(Number(body.sortOrder)) > 1e9)
+	) {
 		return NextResponse.json({ error: 'Некорректный порядок сортировки' }, { status: 400 })
 	}
 

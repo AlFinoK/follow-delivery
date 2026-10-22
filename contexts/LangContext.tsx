@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { Lang, TranslationKey, translations } from '@/lib/i18n'
+import { interpolate } from '@/lib/format'
 
 interface LangContextType {
 	lang: Lang
@@ -16,28 +17,40 @@ export function LangProvider({ children }: { children: ReactNode }) {
 	const [lang, setLangState] = useState<Lang>('ru')
 
 	useEffect(() => {
-		const saved = localStorage.getItem('lang')
-		if (saved === 'ru' || saved === 'kk') {
-			setLangState(saved)
-		}
+		try {
+			const saved = localStorage.getItem('lang')
+			if (saved === 'ru' || saved === 'kk') {
+				setLangState(saved)
+			}
+		} catch {}
 	}, [])
 
-	const setLang = (newLang: Lang) => {
+	// Атрибут lang у <html> следует за языком интерфейса (скринридеры, переносы, проверка орфографии).
+	// В разметке на сервере остаётся «ru» — язык известен только после чтения localStorage.
+	useEffect(() => {
+		document.documentElement.lang = lang
+	}, [lang])
+
+	const setLang = useCallback((newLang: Lang) => {
 		setLangState(newLang)
-		localStorage.setItem('lang', newLang)
-	}
+		try {
+			localStorage.setItem('lang', newLang)
+		} catch {}
+	}, [])
 
-	const t = (key: TranslationKey): string => translations[lang][key]
+	// t/tf и значение контекста стабильны, пока не сменился язык: иначе хуки с `t` в зависимостях
+	// перезапрашивали бы данные на каждый рендер провайдера (и сразу после гидратации сохранённого «kk»).
+	const t = useCallback((key: TranslationKey): string => translations[lang][key], [lang])
 
-	const tf = (key: TranslationKey, params: Record<string, string | number>): string => {
-		let result = translations[lang][key]
-		for (const [k, v] of Object.entries(params)) {
-			result = result.replace(`{${k}}`, String(v))
-		}
-		return result
-	}
+	const tf = useCallback(
+		(key: TranslationKey, params: Record<string, string | number>): string =>
+			interpolate(translations[lang][key], params),
+		[lang],
+	)
 
-	return <LangContext.Provider value={{ lang, setLang, t, tf }}>{children}</LangContext.Provider>
+	const value = useMemo(() => ({ lang, setLang, t, tf }), [lang, setLang, t, tf])
+
+	return <LangContext.Provider value={value}>{children}</LangContext.Provider>
 }
 
 export function useLang() {

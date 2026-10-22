@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { badRequest, prismaErrorResponse, readJson } from '@/lib/apiUtil'
 
 function mapPreset(p: {
 	id: string
@@ -32,12 +33,6 @@ function mapPreset(p: {
 	}
 }
 
-async function requireAuth() {
-	const session = await getServerSession()
-	if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-	return null
-}
-
 const numOrUndef = (v: unknown, min = 0): number | undefined => {
 	const n = Number(v)
 	return Number.isFinite(n) && n >= min ? n : undefined
@@ -49,7 +44,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	if (denied) return denied
 
 	const { id } = await params
-	const body = await req.json()
+	const body = await readJson(req)
+	if (!body) return badRequest('Некорректное тело запроса')
 
 	const data: Record<string, unknown> = {}
 	if (body.name !== undefined) {
@@ -67,8 +63,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 	}
 	if (body.imageUrl !== undefined) data.imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null
 	if (body.sortOrder !== undefined) {
+		// sortOrder — Int в БД: дробное и значения за пределами ±1e9 отклоняем (иначе Prisma → 500)
 		const n = numOrUndef(body.sortOrder, -1e9)
-		if (n === undefined) return NextResponse.json({ error: 'Некорректный порядок сортировки' }, { status: 400 })
+		if (n === undefined || !Number.isInteger(n) || n > 1e9) return NextResponse.json({ error: 'Некорректный порядок сортировки' }, { status: 400 })
 		data.sortOrder = n
 	}
 	if (body.active !== undefined) data.active = !!body.active
@@ -77,8 +74,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 		return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 })
 	}
 
-	const preset = await prisma.cargoPreset.update({ where: { id }, data })
-	return NextResponse.json(mapPreset(preset))
+	try {
+		const preset = await prisma.cargoPreset.update({ where: { id }, data })
+		return NextResponse.json(mapPreset(preset))
+	} catch (e) {
+		// P2025 — шаблона нет → 404 (раньше 500)
+		const mapped = prismaErrorResponse(e)
+		if (mapped) return mapped
+		throw e
+	}
 }
 
 // DELETE /api/presets/[id] — удалить пресет (auth)
@@ -87,6 +91,12 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 	if (denied) return denied
 
 	const { id } = await params
-	await prisma.cargoPreset.delete({ where: { id } })
+	try {
+		await prisma.cargoPreset.delete({ where: { id } })
+	} catch (e) {
+		const mapped = prismaErrorResponse(e)
+		if (mapped) return mapped
+		throw e
+	}
 	return NextResponse.json({ success: true })
 }

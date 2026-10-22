@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Bike, Truck, Package, Minus, Plus, Check, PencilRuler, Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Motorbike, Zap, Truck, Package, Minus, Plus, Check, PencilRuler, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import type { Preset } from '@/lib/calculator/presets'
 import { Spinner } from '@/components/Spinner'
@@ -19,9 +19,12 @@ const ru = (n: number) => n.toLocaleString('ru-RU')
 const norm = (s: string) => s.toLowerCase().replace(/ё/g, 'е').trim()
 const PAGE_SIZE = 4
 
+// Иконка категории в фирменном цвете вместо серой заглушки (P7): без фото карточки
+// раньше выглядели одинаково, теперь отличаются по категории.
 function CategoryIcon({ category }: { category: string | null }) {
-	const cls = 'w-7 h-7 text-slate-300 dark:text-zinc-600'
-	if (category === 'Мото' || category === 'Электро') return <Bike className={cls} />
+	const cls = 'w-6 h-6 text-orange-500 dark:text-orange-400'
+	if (category === 'Мото') return <Motorbike className={cls} />
+	if (category === 'Электро') return <Zap className={cls} />
 	if (category === 'Квадроцикл' || category === 'Трицикл') return <Truck className={cls} />
 	return <Package className={cls} />
 }
@@ -56,7 +59,7 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 	}
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="@container flex flex-col gap-3">
 			{presets.length === 0 ? (
 				<p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-6">{t('calcPresetsEmpty')}</p>
 			) : (
@@ -77,7 +80,9 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 						<p className="text-sm text-slate-400 dark:text-zinc-500 text-center py-6">{t('presetNothingFound')}</p>
 					) : (
 						<>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+							{/* Две колонки — по ширине самого блока (container query), а не экрана: на десктопе
+							    с панелью бренда форма узкая, и в двух колонках названия не помещались. */}
+							<div className="grid grid-cols-1 @md:grid-cols-2 gap-2">
 								{pageItems.map((p) => {
 									const qty = quantities[p.id] ?? 0
 									const selected = qty > 0
@@ -88,7 +93,12 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 												selected ? 'border-orange-400 bg-orange-50/50 dark:bg-orange-500/10 ring-1 ring-orange-200 dark:ring-orange-500/30' : 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
 											}`}>
 											<div className="flex gap-2.5">
-												<div className="w-14 h-14 shrink-0 rounded-lg bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 overflow-hidden flex items-center justify-center">
+												<div
+													className={`w-12 h-12 shrink-0 rounded-lg border overflow-hidden flex items-center justify-center ${
+														p.imageUrl
+															? 'bg-slate-50 dark:bg-zinc-800/40 border-slate-100 dark:border-zinc-800'
+															: 'bg-orange-50 dark:bg-orange-500/10 border-orange-100 dark:border-orange-500/20'
+													}`}>
 													{p.imageUrl ? (
 														// eslint-disable-next-line @next/next/no-img-element
 														<img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
@@ -97,7 +107,11 @@ export function PresetPicker({ presets, quantities, onChange, onCustomCargo, loa
 													)}
 												</div>
 												<div className="min-w-0 flex-1">
-													<p className="text-sm font-semibold text-slate-900 dark:text-zinc-100 leading-tight break-words">{p.name}</p>
+													{/* Названия шаблонов русские: lang="ru" + hyphens-auto дают перенос по слогам
+													    («Электро-велосипед»), а не по произвольной букве; break-words — последний рубеж. */}
+													<p lang="ru" className="text-sm font-semibold text-slate-900 dark:text-zinc-100 leading-tight break-words hyphens-auto">
+														{p.name}
+													</p>
 													<p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
 														{ru(p.length)}×{ru(p.width)}×{ru(p.height)} {t('calcUnitCm')} · {ru(p.weight)} {t('calcKg')}
 													</p>

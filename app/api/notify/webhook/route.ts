@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { fallbackToSms } from '@/lib/notify/send'
 
 // POST /api/notify/webhook — статусы доставки от провайдера WhatsApp.
 //
@@ -20,12 +19,12 @@ import { fallbackToSms } from '@/lib/notify/send'
 // ⚠️ Для Green-API вебхук — ОСНОВНОЙ источник статуса: их журнал сообщений отстаёт до
 // двух минут, поэтому синхронно доставку не подтвердить. Но и на вебхук одного надеяться
 // нельзя: у клиента с заблокированным WhatsApp сообщение остаётся в `sent` и события
-// «не доставлено» не будет вовсе — этот случай закрывает /api/notify/sweep по таймауту.
+// «не доставлено» не будет вовсе.
 //
 // Роут публичный (провайдер ходит без сессии), поэтому закрыт одним из трёх способов:
 // токен Green-API, HMAC-подпись WAHA или секрет в query (?secret=…). Не настроено
 // ничего → 404, как будто роута нет: открытый вебхук позволил бы кому угодно менять
-// статусы отправок и провоцировать досылку SMS.
+// статусы отправок.
 
 /** WAHA: ack -1 ERROR | 0 PENDING | 1 SERVER | 2 DEVICE | 3 READ | 4 PLAYED */
 const ACK_STATUS: Record<number, string> = { 1: 'sent', 2: 'delivered', 3: 'read', 4: 'read' }
@@ -102,7 +101,7 @@ function authorized(req: NextRequest, raw: string): boolean {
 	}
 
 	const secret = process.env.NOTIFY_WEBHOOK_SECRET?.trim()
-	return !!secret && req.nextUrl.searchParams.get('secret') === secret
+	return !!secret && equals(req.nextUrl.searchParams.get('secret') ?? '', secret)
 }
 
 /**
@@ -120,22 +119,21 @@ async function handleStatus(messageId: string, next: string | null) {
 	const log = await findByProviderId(messageId)
 	if (!log) return // не наше сообщение (например, входящее от клиента)
 
-	// Сообщение приняли, но доставить не смогли — единственный случай, когда из вебхука
-	// имеет смысл досылать SMS.
+	// Сообщение приняли, но доставить не смогли — фиксируем в журнале, оператор увидит
+	// это в окне уведомления. Уже доставленное/прочитанное назад не откатываем.
 	if (next === 'failed') {
-		if (log.status === 'failed') return // повторный вебхук, SMS уже досылали
+		if (log.status === 'failed' || (RANK[log.status] ?? 0) >= RANK.delivered) return
 		await prisma.notification.update({
 			where: { id: log.id },
 			data: { status: 'failed', error: 'DELIVERY_FAILED: WhatsApp не доставил сообщение' },
 		})
-		if (log.channel === 'whatsapp') await fallbackToSms(log.id)
 		return
 	}
 
 	if ((RANK[next] ?? 0) <= (RANK[log.status] ?? 0)) return
-	// Причину ошибки снимаем: статус мог подняться из `failed` — например, когда
-	// подтверждение доставки пришло уже после того, как сработал таймаут в sweep.
-	// Иначе в журнале осталась бы строка «доставлено» с текстом «не доставлено».
+	// Причину ошибки снимаем: статус мог подняться из `failed`, когда подтверждение
+	// пришло позже. Иначе в журнале осталась бы строка «доставлено» с текстом
+	// «не доставлено».
 	await prisma.notification.update({ where: { id: log.id }, data: { status: next, error: null } })
 }
 

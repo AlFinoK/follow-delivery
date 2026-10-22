@@ -1,10 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Федеральные округа РФ и региональная надбавка калькулятора.
 //
-// Бизнес-правило (ТЗ improves): после расчёта базовой стоимости система
-// добавляет +30% для всех населённых пунктов шести федеральных округов:
-//   Южный, Северо-Кавказский, Приволжский, Уральский, Центральный, Северо-Западный.
-// Сибирский и Дальневосточный округа надбавку НЕ получают.
+// Бизнес-правило (improves2.0, CLAUDE.md §10): надбавка зависит от ОБЛАСТИ, а не
+// плоская по округу. Базовая ставка округа (DISTRICT_DEFAULT_SURCHARGE: центральный,
+// южный, приволжский, уральский — 20%, Северо-Кавказский — 25%, СЗФО/Сибирский/
+// Дальневосточный — 0) плюс переопределения по областям (REGION_SURCHARGE: Крым и
+// Севастополь +30%, СЗФО по областям, исключения с базовой ставкой 0% в Центральном
+// и Уральском округах). Итог — resolveSurcharge(); доля прибавляется к базовой
+// стоимости в finalizePrice() (engine.ts).
 //
 // Принадлежность к округу определяется по справочнику регионов РФ (region →
 // округ). Для точечных случаев, где в данных вместо области стоит город или
@@ -33,8 +36,11 @@ export const DISTRICT_LABELS_RU: Record<FederalDistrict, string> = {
 	fareast: 'Дальневосточный ФО',
 }
 
-// Региональная надбавка теперь зависит от области (см. resolveSurcharge внизу файла),
+// Региональная надбавка зависит от области (см. resolveSurcharge внизу файла),
 // а не от плоских +30% по округу (правки improves2.0).
+
+// Собственное свойство, а не унаследованное: `'constructor' in {}` → true.
+const has = (obj: object, key: string) => Object.prototype.hasOwnProperty.call(obj, key)
 
 const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ')
 
@@ -205,10 +211,10 @@ const CITY_DISTRICT: Record<string, FederalDistrict> = {
  */
 export function resolveDistrict(name: string, region: string): FederalDistrict | null {
 	const r = normalize(region || '')
-	if (r && REGION_DISTRICT[r]) return REGION_DISTRICT[r]
+	if (r && has(REGION_DISTRICT, r)) return REGION_DISTRICT[r]
 	const n = normalize(name || '')
-	if (n && CITY_DISTRICT[n]) return CITY_DISTRICT[n]
-	if (n && REGION_DISTRICT[n]) return REGION_DISTRICT[n]
+	if (n && has(CITY_DISTRICT, n)) return CITY_DISTRICT[n]
+	if (n && has(REGION_DISTRICT, n)) return REGION_DISTRICT[n]
 	return null
 }
 
@@ -287,13 +293,20 @@ const REGION_SURCHARGE: Record<string, number> = {
 
 /**
  * Доля региональной надбавки (0.2 = +20%) по названию/региону НП.
- * Сначала точное переопределение области/города, иначе базовая ставка округа.
+ * Сначала точное переопределение области, иначе базовая ставка округа.
+ *
+ * Переопределение по НАЗВАНИЮ допустимо только когда сама область не определяет
+ * округ (терминалы, где вместо области стоит «Россия» или город). Иначе одноимённый
+ * НП в чужой области (Курган в Саратовской, Москва в Кировской, Орёл в Воронежской…)
+ * получал бы ставку города-тёзки вместо ставки своей области.
  */
 export function resolveSurcharge(name: string, region: string): number {
 	const r = normalize(region || '')
-	if (r && r in REGION_SURCHARGE) return REGION_SURCHARGE[r]
-	const n = normalize(name || '')
-	if (n && n in REGION_SURCHARGE) return REGION_SURCHARGE[n]
+	if (r && has(REGION_SURCHARGE, r)) return REGION_SURCHARGE[r]
+	if (resolveDistrict('', region) === null) {
+		const n = normalize(name || '')
+		if (n && has(REGION_SURCHARGE, n)) return REGION_SURCHARGE[n]
+	}
 	const district = resolveDistrict(name, region)
 	return district ? DISTRICT_DEFAULT_SURCHARGE[district] : 0
 }

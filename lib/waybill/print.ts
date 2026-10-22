@@ -8,40 +8,66 @@
 // Реквизиты берутся из [lib/waybill/company.ts], логотип — /logo-ltt-ntk.svg.
 
 import { COMPANY, trackUrl } from './company'
-import { STATUS_LABELS, effectiveVolume, fmtDecimal, fmtMoney, totalWeight, type Waybill } from './model'
+import { STATUS_LABELS, type Waybill } from './model'
+import { effectiveVolume, fmtDecimal, fmtMoney, totalWeight } from './totals'
 
-export function openWaybillPrint(w: Waybill) {
+/**
+ * Открывает печатную форму в новом окне. Возвращает false, если браузер заблокировал окно
+ * (pop-up blocker): вызывающий показывает оператору подсказку «разрешите всплывающие окна».
+ * window/document трогаются только здесь, поэтому модуль безопасно импортировать в Node (тесты).
+ */
+export function openWaybillPrint(w: Waybill): boolean {
 	const win = window.open('', '_blank', 'width=880,height=1000')
-	if (!win) return
+	if (!win) return false
 	// Окно открыто как about:blank — относительный путь к логотипу в нём не
 	// разрешится, поэтому подставляем абсолютный. Печать вызывает сам документ
 	// по событию load: иначе диалог мог открыться до загрузки логотипа.
 	win.document.write(buildHtml(w, window.location.origin))
 	win.document.close()
 	win.focus()
+	return true
 }
 
-function esc(s: string): string {
-	return (s || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string)
+const ESC_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }
+
+/**
+ * Экранирование ВСЕГО, что попадает в HTML документа. Окно печати того же origin, что и
+ * админка, поэтому неэкранированное значение (имя, адрес, срок) выполнило бы скрипт с
+ * сессией администратора. Кавычки экранируются тоже — значения могут оказаться в атрибутах.
+ */
+export function esc(s: unknown): string {
+	if (s === null || s === undefined) return ''
+	return String(s).replace(/[&<>"'`]/g, (c) => ESC_MAP[c])
 }
 
-/** 'YYYY-MM-DD' → 'ДД.ММ.ГГГГ'; пустое → «—». */
-function ru(date: string): string {
+/** 'YYYY-MM-DD' → 'ДД.ММ.ГГГГ'; пустое → «—». Нестандартная строка возвращается экранированной. */
+export function ru(date: string): string {
 	if (!date) return '—'
 	const [y, m, d] = date.split('-')
-	return y && m && d ? `${d}.${m}.${y}` : date
+	return y && m && d ? esc(`${d}.${m}.${y}`) : esc(date)
 }
 
 const UNITS: Record<string, string> = { days: 'дн.', weeks: 'нед.', months: 'мес.' }
 
-/** «10|days» → «10 дн.» */
-function timeframe(value: string): string {
+/** «10|days» → «10 дн.». Результат уже экранирован. */
+export function timeframe(value: string): string {
 	if (!value) return '—'
 	const [n, unit] = value.split('|')
-	return n ? `${n} ${UNITS[unit] ?? unit ?? ''}`.trim() : '—'
+	if (!n) return '—'
+	const u = unit !== undefined && Object.prototype.hasOwnProperty.call(UNITS, unit) ? UNITS[unit] : (unit ?? '')
+	return esc(`${n} ${u}`.trim())
 }
 
-function buildHtml(w: Waybill, origin: string): string {
+/**
+ * Количество мест для печати — целое. Сервер округляет количество при сохранении, но старые
+ * строки БД могут хранить дробь.
+ */
+export function placesCount(quantities: number[]): number {
+	return quantities.reduce((s, q) => s + Math.max(0, Math.round(Number(q) || 0)), 0)
+}
+
+/** Готовый HTML документа (чистая функция — без window/document, проверяется тестами). */
+export function buildHtml(w: Waybill, origin: string): string {
 	const row = (label: string, value: string) =>
 		value && value !== '—' ? `<tr><td class="lbl">${label}</td><td>${value}</td></tr>` : ''
 
@@ -56,7 +82,7 @@ function buildHtml(w: Waybill, origin: string): string {
 	// Конкретные наименования («Электровелосипед», «Трицикл») и себестоимость товара
 	// в документ не попадают — это внутренние данные, они остаются в сводке логистам.
 	const positions = w.positions.filter((p) => p.name.trim() || p.quantity || p.weight || p.length)
-	const places = positions.reduce((s, p) => s + (p.quantity || 0), 0)
+	const places = placesCount(positions.map((p) => p.quantity))
 
 	// п.2 — блок реквизитов и контактов перевозчика. Пустые поля не печатаются,
 	// поэтому достаточно дописать их в COMPANY.
@@ -76,7 +102,7 @@ function buildHtml(w: Waybill, origin: string): string {
 		: 'Упаковка НЕ соответствует требованиям перевозки'
 
 	return `<!doctype html><html lang="ru"><head><meta charset="utf-8">
-<title>Накладная №${w.number ?? '—'}</title>
+<title>Накладная №${esc(w.number ?? '—')}</title>
 <style>
 	* { box-sizing: border-box; }
 	/* Поля страницы делаем padding'ом на body, а @page margin оставляем нулевым:
@@ -116,12 +142,12 @@ function buildHtml(w: Waybill, origin: string): string {
 <div id="page"><div id="sheet">
 <div class="head">
 	<div>
-		<img src="${origin}/logo-ltt-ntk.svg" alt="Leader Trans Team — НТК">
+		<img src="${esc(origin)}/logo-ltt-ntk.svg" alt="Leader Trans Team — НТК">
 		<h1>Транспортная накладная</h1>
 		<div class="sub">${esc(COMPANY.brand)}</div>
 	</div>
-	<div class="num">№ <b>${w.number ?? '—'}</b>
-		<div class="sub">Статус: ${STATUS_LABELS[w.status]}<br>Дата приёма: ${ru(w.acceptanceDate)}</div>
+	<div class="num">№ <b>${esc(w.number ?? '—')}</b>
+		<div class="sub">Статус: ${esc(STATUS_LABELS[w.status])}<br>Дата приёма: ${ru(w.acceptanceDate)}</div>
 	</div>
 </div>
 
@@ -150,25 +176,25 @@ function buildHtml(w: Waybill, origin: string): string {
 <table>
 	${row('Характер груза', esc(w.nature))}
 	${row('Мест', places ? String(places) : '')}
-	${row('Общий вес', `${fmtDecimal(totalWeight(w.positions), 1)} кг`)}
-	${row('Объём', `${fmtDecimal(effectiveVolume(w))} м³`)}
+	${row('Общий вес', esc(`${fmtDecimal(totalWeight(w.positions), 1)} кг`))}
+	${row('Объём', esc(`${fmtDecimal(effectiveVolume(w))} м³`))}
 	${row('Спец-инструкция', esc(w.specialInstructions))}
 </table>
 
-<div class="pack">${packaging}</div>
+<div class="pack">${esc(packaging)}</div>
 
 <h2>Оплата и сроки</h2>
 <table>
 	${row('Кто оплачивает', w.payer === 'sender' ? 'Отправитель' : 'Получатель')}
 	${row('Способ оплаты', w.payMethod === 'cash' ? 'Наличный расчёт' : 'Безналичный расчёт')}
-	${row('Сумма к оплате', `${fmtMoney(w.amount)} ₸`)}
+	${row('Сумма к оплате', esc(`${fmtMoney(w.amount)} ₸`))}
 	${row('Дата отправки груза', ru(w.shipmentDate))}
 	${row('Сроки доставки', timeframe(w.deliveryTimeframe))}
 </table>
 
 <p class="note">Отследить груз: ${esc(trackUrl(w.number))}</p>
 
-<div class="stamp"><img src="${origin}${COMPANY.stampImage}" alt="Печать организации"></div>
+<div class="stamp"><img src="${esc(origin)}${esc(COMPANY.stampImage)}" alt="Печать организации"></div>
 </div></div>
 <script>
 	// Гарантия одной страницы (жалоба заказчика: документ печатался на двух листах).

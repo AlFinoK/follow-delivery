@@ -1,22 +1,23 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Bell, Check, MessageSquare, RotateCcw, Send, X } from 'lucide-react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { AlertTriangle, Bell, Check, RotateCcw, Send, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { Spinner } from '@/components/Spinner'
 import { repos } from '@/lib/data/repos'
-import { buildClientMessages } from '@/lib/notify/message'
-import { smsLink, smsParts, whatsappLink } from '@/lib/notify/links'
-import { BAD_CONTACT, type NotificationDTO, type NotifyChannel, type NotifyOutcome } from '@/lib/notify/types'
+import { RepoError } from '@/lib/data/types'
+import { notifyErrorText, splitJournalError } from '@/components/waybill/notifyErrors'
+import { buildClientMessage } from '@/lib/notify/message'
+import { whatsappLink } from '@/lib/notify/links'
+import type { NotificationDTO, NotifyOutcome } from '@/lib/notify/types'
 import type { Waybill } from '@/lib/waybill/model'
 
-// Модалка кнопки «Уведомить клиента».
+// Модалка кнопки «Уведомить клиента». Канал один — WhatsApp.
 //
 // Работает в двух режимах, и оператор видит, в каком именно:
-//   авто   — настроен Wazzup (и, для фолбэка, SMS-шлюз): сообщение уходит с сервера,
-//            SMS досылается сама, если у номера нет WhatsApp;
-//   ручной — провайдер не настроен: те же тексты открываются ссылкой в WhatsApp или
-//            в приложении сообщений, отправку подтверждает оператор.
+//   авто   — WhatsApp-провайдер настроен: сообщение уходит с сервера;
+//   ручной — провайдер не настроен: текст открывается ссылкой wa.me, отправку
+//            подтверждает оператор.
 //
 // Ручной режим доступен ВСЕГДА, в том числе для несохранённой накладной: ссылка не
 // требует сервера. Автоотправке нужен docId — по нему пишется журнал уведомлений.
@@ -24,9 +25,24 @@ import type { Waybill } from '@/lib/waybill/model'
 interface NotifyModalProps {
 	isOpen: boolean
 	waybill: Waybill
+	/**
+	 * Форма отличается от сохранённой копии. Сервер строит и телефон, и текст из строки БД,
+	 * а не из формы — поэтому при несохранённых правках автоотправка отключается (клиент
+	 * получил бы старые данные по старому номеру). Ручной режим (wa.me) берёт значения
+	 * из формы и работает как обычно.
+	 */
+	dirty?: boolean
 	onClose: () => void
 	onToast: (message: string, type?: 'success' | 'error') => void
+	/**
+	 * Свежий журнал отправок (новые сверху) — при открытии окна и после каждой отправки.
+	 * Карточка накладной берёт из него метку «уведомлён ли клиент», не перечитывая накладную.
+	 */
+	onHistory?: (items: NotificationDTO[]) => void
 }
+
+/** Элементы, между которыми ходит Tab внутри окна. */
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 /** «21.08, 14:05» — за день бывает несколько отправок, поэтому со временем. */
 function sentAt(iso: string): string {
@@ -36,16 +52,15 @@ function sentAt(iso: string): string {
 /**
  * Индикатор отправки.
  *
- * Отправка не мгновенная: сервер шлёт сообщение, а затем подтверждает доставку у
- * провайдера (у SMS это две проверки статуса с паузами, до ~6 с; при фолбэке
- * WhatsApp → SMS дольше). Без движения на экране окно выглядит зависшим — оператор
- * жал кнопку повторно и упирался в защиту от дублей.
+ * Отправка не мгновенная: сервер проверяет номер, шлёт сообщение, а затем подтверждает
+ * доставку у провайдера (до ~10 с). Без движения на экране окно выглядит зависшим —
+ * оператор жал кнопку повторно и упирался в защиту от дублей.
  *
  * Прогресс неопределённый: сервер не сообщает долю выполнения. Что реально помогает
  * — счётчик секунд (видно, что процесс живой) и смена подписи на порогах, включая
  * отдельную строку для затянувшейся отправки, чтобы не закрывали окно раньше времени.
  */
-function SendingProgress({ channel }: { channel: 'cascade' | NotifyChannel }) {
+function SendingProgress() {
 	const { t } = useLang()
 	const [sec, setSec] = useState(0)
 
@@ -54,7 +69,7 @@ function SendingProgress({ channel }: { channel: 'cascade' | NotifyChannel }) {
 		return () => clearInterval(id)
 	}, [])
 
-	const stepKey = sec >= 12 ? 'nmStepSlow' : sec >= 3 ? 'nmStepConfirm' : channel === 'sms' ? 'nmStepSendSms' : 'nmStepSend'
+	const stepKey = sec >= 12 ? 'nmStepSlow' : sec >= 3 ? 'nmStepConfirm' : 'nmStepSend'
 
 	return (
 		<div className="ltt-fade-up rounded-lg border border-orange-100 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-500/10 px-3 py-2.5">
@@ -80,85 +95,154 @@ const STATUS_KEYS = {
 	failed: 'nmStFailed',
 } as const
 
-export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalProps) {
-	const { t, tf } = useLang()
-	// 'cascade' — основная кнопка (канал выбирает сервер), остальное — принудительный канал.
-	const [sending, setSending] = useState<'cascade' | NotifyChannel | null>(null)
+export function NotifyModal({ isOpen, waybill, dirty = false, onClose, onToast, onHistory }: NotifyModalProps) {
+	const { t } = useLang()
+	const titleId = useId()
+	const dialogRef = useRef<HTMLDivElement>(null)
+	// Номер «сеанса» открытия окна: растёт при каждом открытии и закрытии. Запрос отправки
+	// помнит свой сеанс и по завершении НЕ закрывает окно, если оно уже закрыто/открыто заново
+	// (иначе ответ на прошлую отправку захлопнул бы новое окно у оператора под руками).
+	const sessionRef = useRef(0)
+	const [sending, setSending] = useState(false)
 	const [outcome, setOutcome] = useState<NotifyOutcome | null>(null)
 	const [history, setHistory] = useState<NotificationDTO[]>([])
-	// null — ещё не спросили у сервера; до ответа кнопки в ручном режиме, чтобы
+	// null — ещё не спросили у сервера; до ответа кнопка в ручном режиме, чтобы
 	// первый клик заведомо сработал, а не наткнулся на ненастроенный провайдер.
-	const [auto, setAuto] = useState<{ whatsapp: boolean; sms: boolean } | null>(null)
+	const [auto, setAuto] = useState<boolean | null>(null)
 
 	const phone = waybill.receiver.phone
 	const docId = waybill.docId
 	// Шаблон — значение по умолчанию, оператор может править текст перед отправкой.
 	// Правки живут только в этом окне: закрыли — при следующем открытии снова шаблон,
 	// иначе вчерашняя правка незаметно уехала бы новому клиенту.
-	const template = buildClientMessages(waybill)
-	const [texts, setTexts] = useState(template)
-	const edited = texts.whatsapp !== template.whatsapp || texts.sms !== template.sms
+	const template = buildClientMessage(waybill)
+	const [text, setText] = useState(template)
+	const edited = text !== template
+
+	// Колбэк — через ref: в зависимостях loadStatus он перезапускал бы эффект открытия
+	// (и сбрасывал правку текста) при каждой новой функции от родителя.
+	const onHistoryRef = useRef(onHistory)
+	useEffect(() => {
+		onHistoryRef.current = onHistory
+	}, [onHistory])
 
 	const loadStatus = useCallback(async () => {
 		if (!docId) return
 		try {
 			const st = await repos.notify.status(docId)
 			setHistory(st.items)
-			setAuto({ whatsapp: st.whatsappAvailable, sms: st.smsAvailable })
+			setAuto(st.whatsappAvailable)
+			onHistoryRef.current?.(st.items)
 		} catch {
-			// журнал и флаги — справочные: из-за них модалку не ломаем, останется ручной режим
+			// журнал и флаг — справочные: из-за них модалку не ломаем, останется ручной режим
 		}
 	}, [docId])
+
+	// Сеанс — до остальных эффектов: они читают актуальный номер.
+	useEffect(() => {
+		sessionRef.current += 1
+	}, [isOpen])
 
 	useEffect(() => {
 		if (!isOpen) return
 		setOutcome(null)
-		setTexts(buildClientMessages(waybill))
+		setText(buildClientMessage(waybill))
 		void loadStatus()
 	}, [isOpen, loadStatus, waybill])
 
+	// Фокус: при открытии — на само окно (не на «Отправить»: случайный Enter не должен
+	// отправлять клиенту сообщение); при закрытии — обратно на кнопку, открывшую окно.
+	useEffect(() => {
+		if (!isOpen) return
+		const prev = document.activeElement as HTMLElement | null
+		const raf = requestAnimationFrame(() => dialogRef.current?.focus())
+		return () => {
+			cancelAnimationFrame(raf)
+			prev?.focus?.()
+		}
+	}, [isOpen])
+
+	// Escape закрывает (кроме времени отправки — как и клик по фону); Tab ходит по кругу
+	// внутри окна, не уходя на страницу под ним.
+	useEffect(() => {
+		if (!isOpen) return
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				if (!sending) {
+					e.preventDefault()
+					onClose()
+				}
+				return
+			}
+			if (e.key !== 'Tab') return
+			const box = dialogRef.current
+			if (!box) return
+			const items = Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE))
+			if (items.length === 0) {
+				e.preventDefault()
+				box.focus()
+				return
+			}
+			const first = items[0]
+			const last = items[items.length - 1]
+			const active = document.activeElement
+			if (!box.contains(active)) {
+				e.preventDefault()
+				;(e.shiftKey ? last : first).focus()
+			} else if (e.shiftKey && (active === first || active === box)) {
+				e.preventDefault()
+				last.focus()
+			} else if (!e.shiftKey && active === last) {
+				e.preventDefault()
+				first.focus()
+			}
+		}
+		document.addEventListener('keydown', onKey)
+		return () => document.removeEventListener('keydown', onKey)
+	}, [isOpen, sending, onClose])
+
 	if (!isOpen) return null
 
-	// Автоотправка. Канал не указываем — сервер сам решает: WhatsApp, а SMS уйдёт
-	// фолбэком по вебхуку. 'sms' передаём, только когда оператор выбрал его явно.
-	const send = async (channel?: NotifyChannel) => {
-		if (!docId) return
-		setSending(channel ?? 'cascade')
+	// Авто-режим возможен, только если провайдер настроен, накладная сохранена (журнал
+	// уведомлений пишется по её docId) И форма не расходится с сохранённой копией.
+	const waAuto = !!auto && !!docId && !dirty
+	const busy = sending
+
+	const send = async () => {
+		if (!docId || dirty) return
+		const session = sessionRef.current
+		setSending(true)
 		try {
-			// Правки передаём только если они есть: иначе шаблон соберёт сервер сам.
-			const res = await repos.notify.send(docId, channel, edited ? texts : undefined)
-			setOutcome(res)
-			setAuto({ whatsapp: res.whatsappAvailable, sms: res.smsAvailable })
+			// Правку передаём только если она есть: иначе шаблон соберёт сервер сам.
+			const res = await repos.notify.send(docId, edited ? text : undefined)
+			const stale = session !== sessionRef.current
+			if (!stale) {
+				setOutcome(res)
+				setAuto(res.whatsappAvailable)
+			}
 			void loadStatus()
 
 			if (res.status === 'sent') {
 				// Успех — закрываем окно: результат оператор увидит в тосте, а держать
-				// открытой форму, которая уже сделала своё дело, незачем.
-				onToast(res.channel === 'sms' ? t('nmSentSms') : t('nmSentWa'))
-				onClose()
+				// открытой форму, которая уже сделала своё дело, незачем. Окно, открытое
+				// заново за время отправки, не трогаем.
+				onToast(t('nmSentWa'))
+				if (!stale) onClose()
 				return
 			}
-			// Неудача — окно оставляем открытым: в нём видно причину, и оператор может
-			// сразу отправить другим каналом, не открывая всё заново.
-			if (res.status === 'failed') onToast(res.error || t('nmFailed'), 'error')
+			// Неудача — окно оставляем открытым: в нём видна причина.
+			if (res.status === 'failed') onToast(notifyErrorText(t, res.code, res.error, t('nmFailed')), 'error')
 		} catch (e) {
-			onToast(e instanceof Error && e.message ? e.message : t('nmFailed'), 'error')
+			// Тело ошибки сервера русское — оператору показываем перевод и код ответа.
+			onToast(e instanceof RepoError ? `${t('nmFailed')} (${e.status})` : t('nmFailed'), 'error')
+			// Сервер мог успеть записать строку журнала до сбоя — подтягиваем её.
+			void loadStatus()
 		} finally {
-			setSending(null)
+			setSending(false)
 		}
 	}
 
-	const openManual = (channel: NotifyChannel) => {
-		const url = channel === 'sms' ? smsLink(phone, texts.sms) : whatsappLink(phone, texts.whatsapp)
-		window.open(url, '_blank', 'noopener,noreferrer')
-	}
-
-	// Авто-режим возможен, только если провайдер настроен И накладная сохранена
-	// (журнал уведомлений пишется по её docId).
-	const waAuto = !!auto?.whatsapp && !!docId
-	const smsAuto = !!auto?.sms && !!docId
-	const anyAuto = waAuto || smsAuto
-	const busy = sending !== null
+	const openManual = () => window.open(whatsappLink(phone, text), '_blank', 'noopener,noreferrer')
 
 	return (
 		<div
@@ -168,7 +252,12 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 			onClick={() => !busy && onClose()}>
 			<div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
 			<div
-				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-zinc-700 max-h-[90vh] overflow-y-auto"
+				ref={dialogRef}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				tabIndex={-1}
+				className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-zinc-700 max-h-[90vh] overflow-y-auto focus:outline-none"
 				onClick={(e) => e.stopPropagation()}>
 				<div className="flex items-start justify-between gap-3 p-5 pb-3">
 					<div className="flex items-center gap-3 min-w-0">
@@ -176,7 +265,11 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 							<Bell className="w-[18px] h-[18px]" />
 						</span>
 						<div className="min-w-0">
-							<h3 className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 leading-tight">{t('nmTitle')}</h3>
+							<h3
+								id={titleId}
+								className="text-[15px] font-semibold text-slate-900 dark:text-zinc-100 leading-tight">
+								{t('nmTitle')}
+							</h3>
 							<p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 truncate">
 								{waybill.receiver.fullName || t('nmRecipient')} · {phone || t('nmNoPhone')}
 							</p>
@@ -185,8 +278,9 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 					<button
 						type="button"
 						onClick={onClose}
+						disabled={busy}
 						aria-label={t('nmClose')}
-						className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 shrink-0">
+						className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
 						<X className="w-4 h-4" />
 					</button>
 				</div>
@@ -210,51 +304,44 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						</p>
 					)}
 
-					{/* Текст для WhatsApp — основной канал. Поле редактируемое: шаблон
-					    подставлен по умолчанию, оператор может поправить перед отправкой.
-					    На время отправки поля блокируются: правка, внесённая после клика,
-					    в уже ушедшее сообщение не попадёт, а на экране выглядела бы так,
-					    будто клиент получил именно её. */}
+					{/* Форма изменена, но не сохранена: сервер отправит данные из БД, то есть
+						    СТАРЫЕ — поэтому автоотправка выключена, а оператору сказано почему. */}
+						{docId && dirty && (
+							<p
+								role="alert"
+								className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-lg px-3 py-2">
+								{t('nmUnsaved')}
+							</p>
+						)}
+
+						{/* Текст редактируемый: шаблон подставлен по умолчанию, оператор может
+					    поправить перед отправкой. На время отправки поле блокируется:
+					    правка, внесённая после клика, в уже ушедшее сообщение не попадёт,
+					    а на экране выглядела бы так, будто клиент получил именно её. */}
 					<div>
 						<div className="flex items-center justify-between gap-2 mb-1.5">
 							<p className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{t('nmPreviewWa')}</p>
 							{edited && (
 								<button
 									type="button"
-									onClick={() => setTexts(template)}
+									onClick={() => setText(template)}
 									className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
 									<RotateCcw className="w-3.5 h-3.5" /> {t('nmReset')}
 								</button>
 							)}
 						</div>
 						<textarea
-							value={texts.whatsapp}
-							onChange={(e) => setTexts((v) => ({ ...v, whatsapp: e.target.value }))}
+							value={text}
+							onChange={(e) => setText(e.target.value)}
 							disabled={busy}
 							rows={10}
 							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-800 dark:text-zinc-100 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y disabled:opacity-60"
 						/>
 					</div>
 
-					{/* Текст для SMS — короткий, потому что кириллица режется по 67 символов.
-					    Счётчик частей пересчитывается на ходу, чтобы правка не превратила
-					    одну SMS в пять незаметно для оператора. */}
-					<div>
-						<p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1.5">
-							{t('nmPreviewSms')} · {tf('nmSmsParts', { n: smsParts(texts.sms) })}
-						</p>
-						<textarea
-							value={texts.sms}
-							onChange={(e) => setTexts((v) => ({ ...v, sms: e.target.value }))}
-							disabled={busy}
-							rows={3}
-							className="w-full bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 focus:border-orange-400 dark:focus:border-orange-500 focus:outline-none text-slate-600 dark:text-zinc-300 rounded-lg p-3 text-[13px] leading-relaxed font-sans resize-y disabled:opacity-60"
-						/>
-					</div>
-
 					{/* Пока идёт отправка — индикатор вместо итога: они взаимоисключающи,
 					    итог появится, когда сервер ответит. */}
-					{sending && <SendingProgress channel={sending} />}
+					{sending && <SendingProgress />}
 
 					{/* Итог отправки */}
 					{!busy && outcome && (
@@ -269,61 +356,32 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 							<p className="font-semibold flex items-center gap-1.5">
 								{outcome.status === 'sent' ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
 								{outcome.status === 'sent'
-									? outcome.channel === 'sms'
-										? t('nmSentSms')
-										: t('nmSentWa')
+									? t('nmSentWa')
 									: outcome.status === 'manual'
 										? t('nmManualMode')
 										: t('nmFailed')}
 							</p>
-							{/* Ушло SMS вместо WhatsApp — оператор должен видеть, почему. */}
-							{outcome.status === 'sent' && outcome.channel === 'sms' && outcome.code === BAD_CONTACT && (
-								<p className="mt-1 opacity-80">{t('nmNoWhatsapp')}</p>
-							)}
 							{outcome.status === 'sent' && outcome.pendingDelivery && <p className="mt-1 opacity-80">{t('nmPending')}</p>}
-							{outcome.status !== 'sent' && outcome.error && <p className="mt-1 opacity-80">{outcome.error}</p>}
+							{/* В ручном режиме причина («не настроено») уже сказана заголовком. */}
+							{outcome.status === 'failed' && (outcome.code || outcome.error) && (
+								<p className="mt-1 opacity-80">{notifyErrorText(t, outcome.code, outcome.error, t('nmFailed'))}</p>
+							)}
 						</div>
 					)}
 
-					{/* Сверху основная кнопка — «Отправить»: WhatsApp, а если не вышло, SMS.
-					    Снизу два принудительных канала, когда оператор точно знает, чем слать.
-					    Если автоотправка не настроена вовсе, основную не показываем: слать ей
-					    нечем, остаются только ссылки для ручной отправки. */}
-					<div className="flex flex-col gap-2">
-						{anyAuto && (
-							<button
-								type="button"
-								disabled={!phone || busy}
-								onClick={() => send()}
-								className="inline-flex w-full items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors">
-								{sending === 'cascade' ? <Spinner /> : <Send className="w-4 h-4" />}
-								{sending === 'cascade' ? t('nmSending') : t('nmSend')}
-							</button>
-						)}
-						<div className="grid grid-cols-2 gap-2">
-							<button
-								type="button"
-								disabled={!phone || busy}
-								onClick={() => (waAuto ? send('whatsapp') : openManual('whatsapp'))}
-								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
-								{sending === 'whatsapp' ? <Spinner className="w-4 h-4 shrink-0" /> : <Send className="w-4 h-4 shrink-0" />}
-								<span className="truncate">{sending === 'whatsapp' ? t('nmSending') : waAuto ? t('nmSendWa') : t('nmOpenWa')}</span>
-							</button>
-							<button
-								type="button"
-								disabled={!phone || busy}
-								onClick={() => (smsAuto ? send('sms') : openManual('sms'))}
-								className="inline-flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 hover:border-orange-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-zinc-200 font-semibold px-3 py-2.5 rounded-lg text-sm transition-colors">
-								{sending === 'sms' ? <Spinner className="w-4 h-4 shrink-0" /> : <MessageSquare className="w-4 h-4 shrink-0" />}
-								<span className="truncate">{sending === 'sms' ? t('nmSending') : smsAuto ? t('nmSendSms') : t('nmOpenSms')}</span>
-							</button>
-						</div>
-					</div>
-					{/* Подсказка под кнопками зависит от режима. Обещать «SMS уходит само»
-					    в ручном режиме нельзя: там не уходит ничего, пока оператор не
-					    нажмёт кнопку и не подтвердит отправку в самом мессенджере. */}
+					{/* Одна кнопка: «Отправить» в авто-режиме, «Открыть WhatsApp» — в ручном. */}
+					<button
+						type="button"
+						disabled={!phone || busy}
+						onClick={() => (waAuto ? send() : openManual())}
+						className="inline-flex w-full items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-lg text-sm transition-colors">
+						{busy ? <Spinner /> : <Send className="w-4 h-4" />}
+						{busy ? t('nmSending') : waAuto ? t('nmSend') : t('nmOpenWa')}
+					</button>
+					{/* Обещать «уйдёт само» в ручном режиме нельзя: там не уходит ничего, пока
+					    оператор не нажмёт кнопку и не подтвердит отправку в самом мессенджере. */}
 					<p className="text-[11px] text-slate-400 dark:text-zinc-500 -mt-2">
-						{auto === null ? '' : waAuto ? t('nmSmsHint') : t('nmManualHint')}
+						{auto === null || waAuto || dirty ? '' : t('nmManualHint')}
 					</p>
 
 					{/* Журнал: было ли уже отправлено и чем закончилось */}
@@ -331,11 +389,16 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 						<div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
 							<p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2">{t('nmHistory')}</p>
 							<ul className="flex flex-col gap-1.5">
-								{history.map((h) => (
+								{history.map((h) => {
+									// Журнал хранит «КОД: сообщение» — переводим по коду.
+									const je = splitJournalError(h.error)
+									const errText = h.error ? notifyErrorText(t, je.code, je.message ?? h.error, t('nmFailed')) : undefined
+									return (
 									<li
 										key={h.id}
 										className="text-xs text-slate-600 dark:text-zinc-300 flex items-center justify-between gap-2">
 										<span className="truncate">
+											{/* Старые строки журнала могут быть с каналом sms — до его отключения. */}
 											{h.channel === 'sms' ? t('nmChSms') : t('nmChWhatsapp')} · {sentAt(h.createdAt)}
 										</span>
 										<span
@@ -346,11 +409,12 @@ export function NotifyModal({ isOpen, waybill, onClose, onToast }: NotifyModalPr
 														? 'text-emerald-600 dark:text-emerald-400'
 														: 'text-slate-400 dark:text-zinc-500'
 											}`}
-											title={h.error ?? undefined}>
+											title={errText}>
 											{t(STATUS_KEYS[h.status as keyof typeof STATUS_KEYS] ?? 'nmStPending')}
 										</span>
 									</li>
-								))}
+									)
+									})}
 							</ul>
 						</div>
 					)}

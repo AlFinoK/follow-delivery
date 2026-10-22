@@ -1,8 +1,8 @@
 'use client'
 
-import { Plus, Trash2, LayoutGrid } from 'lucide-react'
+import { Plus, Trash2, LayoutGrid, AlertTriangle } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { placeVolume, type LengthUnit, type Place } from '@/lib/calculator/engine'
+import { placeQuantity, placeVolume, placeWarnings, type LengthUnit, type Place } from '@/lib/calculator/engine'
 import type { Preset } from '@/lib/calculator/presets'
 import { DecimalInput } from './DecimalInput'
 
@@ -34,12 +34,14 @@ export function PlacesEditor({
 	onAddFromPreset,
 }: PlacesEditorProps) {
 	const { t, tf } = useLang()
+	// мягкие подсказки о правдоподобии ввода (расчёт не блокируют)
+	const warnings = placeWarnings(places, unit)
 
 	const numField = (
 		label: string,
 		value: number,
 		onChange: (v: number) => void,
-		opts: { placeholder?: string; integer?: boolean } = {}
+		opts: { placeholder?: string; integer?: boolean; onBlur?: () => void } = {}
 	) => (
 		<div className="flex-1 min-w-0">
 			<label className="block text-[10px] font-medium text-slate-400 dark:text-zinc-500 mb-1">{label}</label>
@@ -47,6 +49,7 @@ export function PlacesEditor({
 				value={value}
 				onChange={onChange}
 				integer={opts.integer}
+				onBlur={opts.onBlur}
 				placeholder={opts.placeholder ?? '0'}
 				ariaLabel={label}
 				className="w-full px-2.5 py-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-300 dark:placeholder-zinc-600 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
@@ -99,7 +102,8 @@ export function PlacesEditor({
 
 			{places.map((p, i) => {
 				const vol = placeVolume(p, unit)
-				const total = vol * Math.max(0, p.quantity || 0)
+				const qty = placeQuantity(p) // пустое поле = 1: на экране и в цене одно и то же
+				const total = vol * qty
 				return (
 					<div key={p.id ?? i} className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/40 p-3">
 						<div className="flex items-center justify-between mb-2">
@@ -134,17 +138,43 @@ export function PlacesEditor({
 						</div>
 						<div className="flex gap-2">
 							{numField(t('calcDimWeight'), p.weight, (v) => onUpdate(i, { weight: v }))}
-							{numField(t('calcDimQty'), p.quantity, (v) => onUpdate(i, { quantity: v }), { placeholder: '1', integer: true })}
+							{numField(t('calcDimQty'), p.quantity, (v) => onUpdate(i, { quantity: v }), {
+								placeholder: '1',
+								integer: true,
+								// очищенное поле на выходе становится настоящей «1» (движок и так считает его за 1)
+								onBlur: () => {
+									if (!(p.quantity >= 1)) onUpdate(i, { quantity: 1 })
+								},
+							})}
 							{captureCargo && numField(t('calcCargoUnitCost'), p.unitCost ?? 0, (v) => onUpdate(i, { unitCost: v }))}
 						</div>
 						{total > 0 && (
 							<p className="mt-2 text-[11px] text-slate-500 dark:text-zinc-400">
-								{tf('calcPlaceVolume', { v: fmt(vol), q: Math.max(0, p.quantity || 0), total: fmt(total) })}
+								{tf('calcPlaceVolume', { v: fmt(vol), q: qty, total: fmt(total) })}
 							</p>
 						)}
 					</div>
 				)
 			})}
+
+			{(warnings.oversize || warnings.noWeight) && (
+				<div
+					role="status"
+					className="flex flex-col gap-1.5 rounded-lg border border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+					{warnings.oversize && (
+						<p className="flex items-start gap-2">
+							<AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
+							<span>{t('calcWarnOversize')}</span>
+						</p>
+					)}
+					{warnings.noWeight && (
+						<p className="flex items-start gap-2">
+							<AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" />
+							<span>{t('calcWarnNoWeight')}</span>
+						</p>
+					)}
+				</div>
+			)}
 
 			<button
 				type="button"

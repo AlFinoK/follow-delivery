@@ -1,23 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { badRequest, readJson, safeInt } from '@/lib/apiUtil'
+import { CARGO_STATUSES, isCargoStatus } from '@/lib/cargoInput'
+
+const MAX_NUMBERS = 1000
+
+/** Номер груза из ввода оператора: число или строка, допускается «№3001», «№ 3001», « 3001 ». */
+function parseNumber(v: unknown): number | null {
+	if (typeof v === 'string') return safeInt(v.replace(/^[\s№#]+/, '').trim())
+	return safeInt(v)
+}
 
 // POST /api/folders/[id]/cargos — добавить грузы в папку по cargoNumbers
-// body: { numbers: number[] }
+// body: { numbers: (number | string)[] }
 // Возвращает: { added, notFound, alreadyDelivered, alreadyInFolder, movedFromOtherFolder }
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const denied = await requireAuth()
+	if (denied) return denied
+
 	const { id: folderId } = await params
-	const body = await req.json()
+	const body = await readJson(req)
+	if (!body) return badRequest('Некорректное тело запроса')
 	const rawNumbers: unknown[] = Array.isArray(body.numbers) ? body.numbers : []
-	const numbers = Array.from(
-		new Set(
-			rawNumbers
-				.map((n) => Number(n))
-				.filter((n) => Number.isInteger(n) && n > 0),
-		),
-	)
+	if (rawNumbers.length > MAX_NUMBERS) return badRequest('Слишком много номеров за один раз')
+
+	// В `where` попадают только числа, прошедшие safeInt (положительные, ≤ int32): раньше
+	// Number('99999999999') уходил в Int-колонку и ронял запрос в 500.
+	const numbers = Array.from(new Set(rawNumbers.map(parseNumber).filter((n): n is number => n !== null)))
 
 	if (numbers.length === 0) {
-		return NextResponse.json({ error: 'Список номеров пуст' }, { status: 400 })
+		return badRequest('Список номеров пуст')
 	}
 
 	const folder = await prisma.folder.findUnique({ where: { id: folderId } })
@@ -76,15 +89,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 // папки не открепляются: они уходят из вкладки «Активные» и из счётчика папки, а видны
 // во вкладке «Доставлена» (см. GET /api/folders/[id]?tab=delivered).
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const denied = await requireAuth()
+	if (denied) return denied
+
 	const { id: folderId } = await params
-	const body = await req.json()
+	const body = await readJson(req)
+	if (!body) return badRequest('Некорректное тело запроса')
 
 	const data: Record<string, unknown> = {}
-	if (typeof body.currentCity === 'string' && body.currentCity.trim()) data.currentCity = body.currentCity.trim()
-	if (typeof body.status === 'string' && body.status) data.status = body.status
+	if (typeof body.currentCity === 'string' && body.currentCity.trim()) {
+		const city = body.currentCity.trim()
+		if (city.length > 300 || city.includes('\u0000')) return badRequest('Некорректный город')
+		data.currentCity = city
+	}
+	// Статус — только из трёх допустимых: произвольная строка ломала фильтры и счётчики списка.
+	if (body.status !== undefined && body.status !== null && body.status !== '') {
+		if (!isCargoStatus(body.status)) return badRequest(`Недопустимый статус. Допустимо: ${CARGO_STATUSES.join(', ')}`)
+		data.status = body.status
+	}
 
 	if (Object.keys(data).length === 0) {
-		return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 })
+		return badRequest('Нет данных для обновления')
 	}
 
 	const folder = await prisma.folder.findUnique({ where: { id: folderId } })

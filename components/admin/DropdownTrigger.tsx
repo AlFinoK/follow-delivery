@@ -15,6 +15,7 @@ export function DropdownTrigger({
 		<button
 			type="button"
 			onClick={onClick}
+			aria-expanded={open}
 			className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer text-left ${
 				open
 					? 'bg-white dark:bg-zinc-900 border-orange-500 ring-2 ring-orange-500/15'

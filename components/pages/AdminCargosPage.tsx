@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useLang } from '@/contexts/LangContext'
-import { ToastItem } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, newToastId } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { CargoList } from '@/components/admin/CargoList'
 import type { Toast } from '@/components/Toast'
@@ -13,13 +13,15 @@ export function AdminCargosPage() {
 	const [toasts, setToasts] = useState<Toast[]>([])
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const id = Date.now().toString()
+		const id = newToastId()
 		setToasts((prev) => [...prev, { id, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)))
 			setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 350)
 		}, 5000)
 	}, [])
+
+	const handleListError = useCallback((msg: string) => addToast(msg, 'error'), [addToast])
 
 	useEffect(() => {
 		setMounted(true)
@@ -43,7 +45,7 @@ export function AdminCargosPage() {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -51,7 +53,7 @@ export function AdminCargosPage() {
 
 				<main className="flex-1 p-4 sm:p-6 pb-12">
 					<div className="max-w-4xl mx-auto">
-						<CargoList onError={(msg) => addToast(msg, 'error')} />
+						<CargoList onError={handleListError} />
 					</div>
 				</main>
 				<footer className="text-center text-slate-400 dark:text-zinc-500 text-xs py-4 px-4">{t('adminFooter')}</footer>

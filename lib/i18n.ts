@@ -8,17 +8,12 @@ export type Translations = {
 	themeLight: string
 	logout: string
 	// Main hero
-	realtimeBadge: string
-	heroTitle: string
-	heroSubtitle: string
 	// Main search
 	trackInputPlaceholder: string
 	trackButton: string
 	searching: string
 	// Main features
 	featureInstant: string
-	featureRealtime: string
-	featureSecure: string
 	// Main cargo card
 	cargoStatusLabel: string
 	trackNumberLabel: string
@@ -46,7 +41,6 @@ export type Translations = {
 	loggingIn: string
 	loginButton: string
 	// Admin nav
-	adminNavTitle: string
 	adminNavSubtitle: string
 	// Admin form
 	newCargoTitle: string
@@ -69,7 +63,6 @@ export type Translations = {
 	cargoNameCardLabel: string
 	enterName: string
 	saveButton: string
-	trackCardLabel: string
 	copied: string
 	fromCardLabel: string
 	currentLocationLabel: string
@@ -96,21 +89,12 @@ export type Translations = {
 	statusOptionInTransit: string
 	statusOptionArrived: string
 	// Admin country names
-	countryKZ: string
-	countryRU: string
-	countryBY: string
 	// Admin toasts
 	loadError: string
 	fillAllFields: string
 	cargoCreated: string
 	createError: string
-	statusUpdated: string
-	statusUpdateError: string
 	cityEmpty: string
-	cityUpdated: string
-	cityUpdateError: string
-	nameUpdated: string
-	nameUpdateError: string
 	cargoDeleted: string
 	deleteError: string
 	confirmDelete: string
@@ -124,7 +108,6 @@ export type Translations = {
 	deliveryAmountLabel: string
 	paymentStatusLabel: string
 	partialPaymentDetailLabel: string
-	currencyLabel: string
 	paymentNone: string
 	paymentPartial: string
 	paymentFull: string
@@ -134,9 +117,7 @@ export type Translations = {
 	unitWeeks: string
 	unitMonths: string
 	detailsLabel: string
-	enterTimeframe: string
 	enterAmount: string
-	enterPaymentDetail: string
 	notSpecified: string
 	detailsUpdated: string
 	detailsUpdateError: string
@@ -166,7 +147,6 @@ export type Translations = {
 	folderRenameError: string
 	folderDeleted: string
 	folderDeleteError: string
-	confirmDeleteFolder: string
 	noFolders: string
 	createFirstFolder: string
 	folderEmptyCargos: string
@@ -199,7 +179,6 @@ export type Translations = {
 	folderTabAll: string
 	renameFolderButton: string
 	saveFolderName: string
-	openFolderButton: string
 	// Calculator
 	calcNavLink: string
 	calcTitle: string
@@ -208,13 +187,9 @@ export type Translations = {
 	calcOriginLabel: string
 	calcOriginValue: string
 	calcDestLabel: string
-	calcDestPlaceholder: string
 	calcDestSearch: string
-	calcOtherCityOption: string
-	calcCustomCityHint: string
 	calcNoResults: string
 	calcModeTotals: string
-	calcModeDimensions: string
 	calcVolumeLabel: string
 	calcWeightLabel: string
 	calcVolumePh: string
@@ -236,18 +211,13 @@ export type Translations = {
 	calcResPlaces: string
 	calcResVolume: string
 	calcResWeight: string
-	calcResPaidWeight: string
 	calcResPrice: string
 	calcResDays: string
 	calcBilledWeight: string
 	calcBilledVolume: string
 	calcTariffBasis: string
-	calcApproxNote: string
-	calcExcludedTitle: string
 	calcExcludedDesc: string
 	calcEmptyHint: string
-	calcSelectCityHint: string
-	calcFillCargoHint: string
 	calcDisclaimer: string
 	calcBackToTracking: string
 	calcPlacesUnit: string
@@ -266,16 +236,10 @@ export type Translations = {
 	calcFromPreset: string
 	calcPresetSelectedCount: string
 	calcApproxBadge: string
-	calcCustomCityNamePh: string
-	calcNearestCityLabel: string
-	calcBackToCityList: string
-	calcNearestCityHint: string
-	calcOtherSettlement: string
 	calcSectionCities: string
 	calcSectionSettlements: string
 	calcSearchingPlaces: string
 	calcApproxHint: string
-	calcBilledPreset: string
 	calcResBasePrice: string
 	calcSurchargeLabel: string
 	calcMinTariffNote: string
@@ -306,7 +270,6 @@ export type Translations = {
 	presetWidthLabel: string
 	presetHeightLabel: string
 	presetWeightLabel: string
-	presetBasePriceLabel: string
 	presetGoodsPriceLabel: string
 	presetGoodsPriceHint: string
 	presetImageUrlLabel: string
@@ -315,9 +278,7 @@ export type Translations = {
 	presetSearchPlaceholder: string
 	presetNothingFound: string
 	// Home hero + tabs
-	homeHeroBadge: string
 	homeHeroTitle: string
-	homeHeroSubtitle: string
 	tabTrack: string
 	tabCalc: string
 	tabTrackShort: string
@@ -424,7 +385,6 @@ export type Translations = {
 	wpCalcFilled: string
 	wpCalcCopied: string
 	wpSaved: string
-	wpSaveError: string
 	wpCleared: string
 	wpDeleted: string
 	wpDeleteError: string
@@ -433,7 +393,6 @@ export type Translations = {
 	wpDownloadPdf: string
 	wpNotifyClient: string
 	wpAutoWa: string
-	wpAutoSms: string
 	wpAutoFailed: string
 	wpClear: string
 	wpBack: string
@@ -444,35 +403,26 @@ export type Translations = {
 	wpLogistTitle: string
 	wpLogistHint: string
 	wpLogistLocked: string
-	// Уведомление клиенту (WhatsApp через Wazzup + SMS-фолбэк)
+	// Уведомление клиенту (WhatsApp)
 	nmTitle: string
 	nmConfirmHint: string
 	nmRecipient: string
 	nmNoPhone: string
 	nmNeedSave: string
 	nmPreviewWa: string
-	nmPreviewSms: string
 	nmReset: string
-	nmSmsParts: string
 	nmSend: string
-	nmSendWa: string
 	nmOpenWa: string
-	nmSendSms: string
-	nmOpenSms: string
 	nmSending: string
 	nmStepSend: string
-	nmStepSendSms: string
 	nmStepConfirm: string
 	nmStepSlow: string
 	nmStepSec: string
 	nmSentWa: string
-	nmSentSms: string
 	nmPending: string
-	nmNoWhatsapp: string
 	nmFailed: string
 	nmManualMode: string
 	nmManualHint: string
-	nmSmsHint: string
 	nmHistory: string
 	nmClose: string
 	nmChWhatsapp: string
@@ -501,7 +451,6 @@ export type Translations = {
 	wlAccepted: string
 	// Блок накладной в грузе
 	wbChecking: string
-	wbNone: string
 	wbReceiverPhone: string
 	wbPlacesWeight: string
 	wbPackaging: string
@@ -519,6 +468,68 @@ export type Translations = {
 	phCountrySearch: string
 	phNumber: string
 	phInvalid: string
+	calcClearDest: string
+	calcWarnOversize: string
+	calcWarnNoWeight: string
+	calcUnitM3: string
+	calcDistrictCentral: string
+	calcDistrictNorthwest: string
+	calcDistrictSouth: string
+	calcDistrictCaucasus: string
+	calcDistrictVolga: string
+	calcDistrictUral: string
+	calcDistrictSiberia: string
+	calcDistrictFareast: string
+	searchRateLimited: string
+	cargoNumberTaken: string
+	copyError: string
+	clearDate: string
+	showPasswordLabel: string
+	hidePasswordLabel: string
+	loginNetworkError: string
+	nmUnsaved: string
+	neNotConfigured: string
+	neBadContact: string
+	neRecentlySent: string
+	neDeliveryFailed: string
+	neCheckFailed: string
+	neSessionNotReady: string
+	neUnauthorized: string
+	neNetwork: string
+	neTimeout: string
+	neProvider: string
+	neBadPhone: string
+	wpPopupBlocked: string
+	wpSaveFailedStatus: string
+	wpSaveFailedNet: string
+	unitM3: string
+	bulkStatusKeep: string
+	wvSenderCountry: string
+	wvReceiverCountry: string
+	wvPositions: string
+	wvPositionNegative: string
+	wvAmountNegative: string
+	wvAcceptanceDate: string
+	neNoCargo: string
+	payShortNone: string
+	payShortPartial: string
+	payShortFull: string
+	featureLogistStatus: string
+	homeHeroSubtitleStatus: string
+	calcStickyDetails: string
+	calcStickyMinTariff: string
+	wbNotifyTip: string
+	lsShowAll: string
+	lsCollapse: string
+	fdDeliveredCount: string
+	fdTotalCount: string
+	fdCreatedOn: string
+	cnKZ: string
+	cnRU: string
+	cnBY: string
+	loginLocked: string
+	wbNoneLinked: string
+	statusWaitingShort: string
 }
 
 export const translations: Record<Lang, Translations> = {
@@ -528,15 +539,10 @@ export const translations: Record<Lang, Translations> = {
 		themeDark: 'Тёмная тема',
 		themeLight: 'Светлая тема',
 		logout: 'Выйти',
-		realtimeBadge: 'Отслеживание в реальном времени',
-		heroTitle: 'Где ваш груз',
-		heroSubtitle: 'Введите трек-номер и получите актуальный статус доставки',
 		trackInputPlaceholder: 'Трек-номер или номер отправления...',
 		trackButton: 'Отследить груз',
 		searching: 'Поиск...',
 		featureInstant: 'Мгновенный поиск',
-		featureRealtime: 'Реальное время',
-		featureSecure: 'Безопасно',
 		cargoStatusLabel: 'Статус груза',
 		trackNumberLabel: 'Трек-номер',
 		routeLabel: 'Маршрут',
@@ -560,7 +566,6 @@ export const translations: Record<Lang, Translations> = {
 		wrongCredentials: 'Неверный логин или пароль',
 		loggingIn: 'Входим...',
 		loginButton: 'Войти в панель',
-		adminNavTitle: 'Админ панель',
 		adminNavSubtitle: 'Админ панель',
 		newCargoTitle: 'Новый груз',
 		fromFormLabel: 'ОТКУДА',
@@ -580,7 +585,6 @@ export const translations: Record<Lang, Translations> = {
 		cargoNameCardLabel: 'Название груза',
 		enterName: 'Введите название...',
 		saveButton: 'Сохранить',
-		trackCardLabel: 'Трек-номер',
 		copied: 'Скопировано',
 		fromCardLabel: 'Откуда',
 		currentLocationLabel: 'Текущее местоположение',
@@ -603,20 +607,11 @@ export const translations: Record<Lang, Translations> = {
 		statusOptionWaiting: 'Ожидает отправления',
 		statusOptionInTransit: 'В пути',
 		statusOptionArrived: 'Прибыл',
-		countryKZ: '🇰🇿 Казахстан',
-		countryRU: '🇷🇺 Россия',
-		countryBY: '🇧🇾 Беларусь',
 		loadError: 'Ошибка при загрузке грузов',
 		fillAllFields: 'Заполните все поля',
 		cargoCreated: 'Груз создан! ID: {id}',
 		createError: 'Ошибка при создании груза',
-		statusUpdated: 'Статус обновлён',
-		statusUpdateError: 'Ошибка при обновлении статуса',
 		cityEmpty: 'Город не может быть пустым',
-		cityUpdated: 'Город обновлен',
-		cityUpdateError: 'Ошибка при обновлении города',
-		nameUpdated: 'Название обновлено',
-		nameUpdateError: 'Ошибка при обновлении названия',
 		cargoDeleted: 'Груз удален',
 		deleteError: 'Ошибка при удалении груза',
 		confirmDelete: 'Вы уверены? Это действие нельзя отменить.',
@@ -628,7 +623,6 @@ export const translations: Record<Lang, Translations> = {
 		deliveryAmountLabel: 'Сумма доставки',
 		paymentStatusLabel: 'Статус оплаты',
 		partialPaymentDetailLabel: 'Детали оплаты',
-		currencyLabel: 'Валюта',
 		paymentNone: 'Нет оплаты',
 		paymentPartial: 'Частичная оплата',
 		paymentFull: 'Полная оплата',
@@ -638,9 +632,7 @@ export const translations: Record<Lang, Translations> = {
 		unitWeeks: 'недель',
 		unitMonths: 'месяцев',
 		detailsLabel: 'Детали',
-		enterTimeframe: 'Напр.: 10–14 дней',
 		enterAmount: 'Введите сумму',
-		enterPaymentDetail: '15 000',
 		notSpecified: 'Не указано',
 		detailsUpdated: 'Данные обновлены',
 		detailsUpdateError: 'Ошибка при обновлении',
@@ -669,7 +661,6 @@ export const translations: Record<Lang, Translations> = {
 		folderRenameError: 'Ошибка при переименовании',
 		folderDeleted: 'Папка удалена',
 		folderDeleteError: 'Ошибка при удалении папки',
-		confirmDeleteFolder: 'Удалить папку? Грузы внутри останутся и просто отвяжутся.',
 		noFolders: 'Папок ещё нет',
 		createFirstFolder: 'Создайте первую папку — например, под рейс или машину',
 		folderEmptyCargos: 'В этой папке пока нет грузов',
@@ -702,7 +693,6 @@ export const translations: Record<Lang, Translations> = {
 		folderTabAll: 'Все',
 		renameFolderButton: 'Переименовать',
 		saveFolderName: 'Сохранить',
-		openFolderButton: 'Открыть',
 		calcNavLink: 'Калькулятор',
 		calcTitle: 'Калькулятор доставки',
 		calcSubtitle: 'Рассчитайте ориентировочную стоимость и срок доставки груза из Алматы по России',
@@ -710,13 +700,9 @@ export const translations: Record<Lang, Translations> = {
 		calcOriginLabel: 'Откуда',
 		calcOriginValue: 'Алматы, Казахстан',
 		calcDestLabel: 'Куда',
-		calcDestPlaceholder: 'Выберите город назначения',
 		calcDestSearch: 'Начните вводить город…',
-		calcOtherCityOption: 'Другой город (оценка)',
-		calcCustomCityHint: 'Рассчитать как «{city}» (приблизительно)',
 		calcNoResults: 'Город не найден',
 		calcModeTotals: 'Знаю объём и вес',
-		calcModeDimensions: 'По габаритам мест',
 		calcVolumeLabel: 'Общий объём, м³',
 		calcWeightLabel: 'Общий вес, кг',
 		calcVolumePh: 'напр. 5',
@@ -738,18 +724,13 @@ export const translations: Record<Lang, Translations> = {
 		calcResPlaces: 'Количество мест',
 		calcResVolume: 'Общий объём',
 		calcResWeight: 'Общий вес',
-		calcResPaidWeight: 'Расчётный вес',
 		calcResPrice: 'Ориентировочная стоимость',
 		calcResDays: 'Срок доставки',
 		calcBilledWeight: 'по весу',
 		calcBilledVolume: 'по объёму',
 		calcTariffBasis: 'Тарификация',
-		calcApproxNote: 'Приблизительно: города нет в справочнике тарифов',
-		calcExcludedTitle: 'Доставка недоступна',
 		calcExcludedDesc: 'На это направление перевозка не осуществляется',
 		calcEmptyHint: 'Заполните данные о грузе, чтобы увидеть расчёт',
-		calcSelectCityHint: 'Выберите город назначения',
-		calcFillCargoHint: 'Укажите объём и вес груза',
 		calcDisclaimer: 'Расчёт ориентировочный. Точную стоимость уточняйте у менеджера.',
 		calcBackToTracking: 'К отслеживанию',
 		calcPlacesUnit: 'шт',
@@ -767,16 +748,10 @@ export const translations: Record<Lang, Translations> = {
 		calcFromPreset: 'Добавить из шаблона',
 		calcPresetSelectedCount: 'Выбрано единиц: {count}',
 		calcApproxBadge: 'примерно',
-		calcCustomCityNamePh: 'Ваш населённый пункт (село, посёлок…)',
-		calcNearestCityLabel: 'Ближайший город (для тарифа)',
-		calcBackToCityList: 'Назад к списку городов',
-		calcNearestCityHint: 'Выберите ближайший город — по нему рассчитаем тариф',
-		calcOtherSettlement: 'Другой населённый пункт',
 		calcSectionCities: 'Города',
 		calcSectionSettlements: 'Населённые пункты',
 		calcSearchingPlaces: 'Ищем населённый пункт…',
 		calcApproxHint: 'Тариф рассчитан по ближайшему городу; надбавка — по округу населённого пункта',
-		calcBilledPreset: 'по прейскуранту',
 		calcResBasePrice: 'Базовая стоимость',
 		calcSurchargeLabel: 'Региональная надбавка',
 		calcMinTariffNote: 'Применён минимальный тариф {min} ₸',
@@ -806,7 +781,6 @@ export const translations: Record<Lang, Translations> = {
 		presetWidthLabel: 'Ширина, см',
 		presetHeightLabel: 'Высота, см',
 		presetWeightLabel: 'Вес, кг',
-		presetBasePriceLabel: 'Базовая цена, ₸',
 		presetGoodsPriceLabel: 'Стоимость товара, ₸',
 		presetGoodsPriceHint: 'За единицу. Не влияет на цену доставки, клиентам не видна.',
 		presetImageUrlLabel: 'Ссылка на фото',
@@ -814,9 +788,7 @@ export const translations: Record<Lang, Translations> = {
 		presetSaveButton: 'Сохранить',
 		presetSearchPlaceholder: 'Поиск по названию…',
 		presetNothingFound: 'Шаблоны не найдены',
-		homeHeroBadge: 'Грузоперевозки онлайн',
 		homeHeroTitle: 'Доставка и отслеживание грузов',
-		homeHeroSubtitle: 'Отслеживайте отправления в реальном времени и рассчитывайте ориентировочную стоимость доставки',
 		tabTrack: 'Отслеживание груза',
 		tabCalc: 'Калькулятор доставки',
 		openMenu: 'Открыть меню',
@@ -916,7 +888,6 @@ export const translations: Record<Lang, Translations> = {
 		wpCalcFilled: 'Вес и объём переданы в калькулятор',
 		wpCalcCopied: 'Данные калькулятора скопированы в накладную',
 		wpSaved: 'Накладная №{number} сохранена',
-		wpSaveError: 'Не удалось сохранить накладную',
 		wpCleared: 'Форма очищена',
 		wpDeleted: 'Накладная №{number} удалена',
 		wpDeleteError: 'Не удалось удалить накладную',
@@ -925,7 +896,6 @@ export const translations: Record<Lang, Translations> = {
 		wpDownloadPdf: 'Скачать PDF',
 		wpNotifyClient: 'Уведомить клиента',
 		wpAutoWa: 'Клиент уведомлён в WhatsApp.',
-		wpAutoSms: 'Клиент уведомлён по SMS.',
 		wpAutoFailed: 'Уведомить клиента не удалось',
 		wpClear: 'Очистить',
 		wpBack: 'Назад',
@@ -942,28 +912,19 @@ export const translations: Record<Lang, Translations> = {
 		nmNoPhone: 'У получателя не указан телефон',
 		nmNeedSave: 'Накладная не сохранена: автоотправка недоступна. Сохраните её или отправьте вручную по ссылке.',
 		nmPreviewWa: 'Текст для WhatsApp',
-		nmPreviewSms: 'Текст для SMS',
 		nmReset: 'Вернуть шаблон',
-		nmSmsParts: '{n} SMS',
 		nmSend: 'Отправить',
-		nmSendWa: 'WhatsApp',
 		nmOpenWa: 'Открыть WhatsApp',
-		nmSendSms: 'SMS',
-		nmOpenSms: 'Открыть SMS',
 		nmSending: 'Отправка…',
 		nmStepSend: 'Отправляем сообщение…',
-		nmStepSendSms: 'Отправляем SMS…',
 		nmStepConfirm: 'Ждём подтверждения от сервиса…',
 		nmStepSlow: 'Дольше обычного — отправка идёт, не закрывайте окно',
 		nmStepSec: 'с',
 		nmSentWa: 'Отправлено в WhatsApp',
-		nmSentSms: 'SMS отправлено',
-		nmPending: 'Доставка пока не подтверждена. Если WhatsApp не дойдёт, клиенту автоматически уйдёт SMS.',
-		nmNoWhatsapp: 'У номера нет WhatsApp — отправили SMS.',
+		nmPending: 'Доставка пока не подтверждена. Если клиент не получит сообщение, свяжитесь с ним другим способом.',
 		nmFailed: 'Не удалось отправить',
 		nmManualMode: 'Автоотправка не настроена — отправьте вручную',
-		nmManualHint: 'Автоотправка не подключена: кнопки откроют WhatsApp или SMS с готовым текстом — отправку подтвердите сами.',
-		nmSmsHint: '«Отправить» шлёт в WhatsApp, а если не вышло — SMS. Кнопки ниже отправляют выбранным каналом, без запасного.',
+		nmManualHint: 'Автоотправка не подключена: кнопка откроет WhatsApp с готовым текстом — отправку подтвердите сами.',
 		nmHistory: 'Прошлые отправки',
 		nmClose: 'Закрыть',
 		nmChWhatsapp: 'WhatsApp',
@@ -989,7 +950,6 @@ export const translations: Record<Lang, Translations> = {
 		wlEmptyHint: 'Создайте первую — она сохранится в базе и появится здесь',
 		wlAccepted: 'приём {date}',
 		wbChecking: 'Проверяем накладную…',
-		wbNone: 'К этому грузу накладная не привязана. Накладная создаётся в разделе «Накладные» — груз в трекере появляется автоматически.',
 		wbReceiverPhone: 'Телефон получателя',
 		wbPlacesWeight: 'Мест / вес',
 		wbPackaging: 'Упаковка',
@@ -1007,6 +967,68 @@ export const translations: Record<Lang, Translations> = {
 		phInvalid: 'Введите корректный номер телефона',
 		tabTrackShort: 'Отслеживание',
 		tabCalcShort: 'Калькулятор',
+		calcClearDest: 'Очистить город назначения',
+		calcWarnOversize: 'Проверьте габариты: один из размеров больше 20 м. Возможно, выбраны не те единицы (м/см).',
+		calcWarnNoWeight: 'У места не указан вес — укажите его, иначе стоимость может оказаться заниженной.',
+		calcUnitM3: 'м³',
+		calcDistrictCentral: 'Центральный ФО',
+		calcDistrictNorthwest: 'Северо-Западный ФО',
+		calcDistrictSouth: 'Южный ФО',
+		calcDistrictCaucasus: 'Северо-Кавказский ФО',
+		calcDistrictVolga: 'Приволжский ФО',
+		calcDistrictUral: 'Уральский ФО',
+		calcDistrictSiberia: 'Сибирский ФО',
+		calcDistrictFareast: 'Дальневосточный ФО',
+		searchRateLimited: 'Слишком много запросов, повторите через минуту',
+		cargoNumberTaken: 'Этот номер груза уже занят',
+		copyError: 'Не удалось скопировать',
+		clearDate: 'Очистить дату',
+		showPasswordLabel: 'Показать пароль',
+		hidePasswordLabel: 'Скрыть пароль',
+		loginNetworkError: 'Не удалось войти. Проверьте соединение и попробуйте ещё раз',
+		nmUnsaved: 'Есть несохранённые изменения. Сохраните накладную — иначе уйдут старые данные. Автоотправка отключена; отправка вручную использует текущие значения.',
+		neNotConfigured: 'WhatsApp-канал не настроен',
+		neBadContact: 'У номера нет WhatsApp',
+		neRecentlySent: 'Уведомление по этой накладной уже отправлялось недавно. Повторите позже, если это нужно.',
+		neDeliveryFailed: 'WhatsApp принял сообщение, но не доставил его',
+		neCheckFailed: 'Не удалось проверить номер в WhatsApp',
+		neSessionNotReady: 'Сессия WhatsApp не готова к отправке',
+		neUnauthorized: 'Сервис WhatsApp отклонил ключ доступа',
+		neNetwork: 'Нет связи с сервисом WhatsApp',
+		neTimeout: 'Сервис WhatsApp не ответил вовремя',
+		neProvider: 'Сервис WhatsApp вернул ошибку',
+		neBadPhone: 'У получателя не указан корректный телефон',
+		wpPopupBlocked: 'Браузер заблокировал окно печати. Разрешите всплывающие окна для этого сайта и повторите.',
+		wpSaveFailedStatus: 'Не удалось сохранить накладную (ошибка {status}). Повторите попытку.',
+		wpSaveFailedNet: 'Не удалось сохранить накладную: нет связи с сервером. Повторите попытку.',
+		unitM3: 'м³',
+		bulkStatusKeep: 'Не менять',
+		wvSenderCountry: 'Укажите страну отправителя',
+		wvReceiverCountry: 'Укажите страну получателя',
+		wvPositions: 'Добавьте хотя бы одно место с весом или габаритами (или задайте объём вручную)',
+		wvPositionNegative: 'Вес, габариты, количество и цена не могут быть отрицательными',
+		wvAmountNegative: 'Сумма не может быть отрицательной',
+		wvAcceptanceDate: 'Укажите дату приёма груза',
+		neNoCargo: 'Накладная сохранена, но груз в трекере не создан — клиенту не написали. Сохраните накладную ещё раз.',
+		payShortNone: 'Не оплачен',
+		payShortPartial: 'Частично',
+		payShortFull: 'Оплачен',
+		featureLogistStatus: 'Статус груза от логиста',
+		homeHeroSubtitleStatus: 'Отслеживайте статус отправления и рассчитывайте ориентировочную стоимость доставки',
+		calcStickyDetails: 'Показать расчёт',
+		calcStickyMinTariff: 'мин. тариф',
+		wbNotifyTip: 'Уведомление клиенту в WhatsApp · {date}',
+		lsShowAll: 'Показать полностью',
+		lsCollapse: 'Свернуть',
+		fdDeliveredCount: '{count} прибыло',
+		fdTotalCount: 'всего {count}',
+		fdCreatedOn: 'создана {date}',
+		cnKZ: 'Казахстан',
+		cnRU: 'Россия',
+		cnBY: 'Беларусь',
+		loginLocked: 'Слишком много неудачных попыток входа. Попробуйте снова через 15 минут.',
+		wbNoneLinked: 'К этому грузу накладная не привязана. Создайте её здесь — она сразу привяжется к этому грузу.',
+		statusWaitingShort: 'Ожидает',
 	},
 	kk: {
 		headerSubtitle: 'Логистика және жеткізу',
@@ -1014,15 +1036,10 @@ export const translations: Record<Lang, Translations> = {
 		themeDark: 'Қараңғы тақырып',
 		themeLight: 'Ашық тақырып',
 		logout: 'Шығу',
-		realtimeBadge: 'Нақты уақытта бақылау',
-		heroTitle: 'Жүгіңіз қайда',
-		heroSubtitle: 'Трек-нөмірді енгізіп, жеткізу мәртебесін алыңыз',
 		trackInputPlaceholder: 'Трек-нөмір немесе жөнелтім нөмірі...',
 		trackButton: 'Жүкті бақылау',
 		searching: 'Іздеу...',
 		featureInstant: 'Жылдам іздеу',
-		featureRealtime: 'Нақты уақыт',
-		featureSecure: 'Қауіпсіз',
 		cargoStatusLabel: 'Жүк мәртебесі',
 		trackNumberLabel: 'Трек-нөмір',
 		routeLabel: 'Маршрут',
@@ -1046,7 +1063,6 @@ export const translations: Record<Lang, Translations> = {
 		wrongCredentials: 'Логин немесе құпия сөз қате',
 		loggingIn: 'Кіруде...',
 		loginButton: 'Панельге кіру',
-		adminNavTitle: 'Әкімші панелі',
 		adminNavSubtitle: 'Әкімші панелі',
 		newCargoTitle: 'Жаңа жүк',
 		fromFormLabel: 'ҚАЙДАН',
@@ -1066,7 +1082,6 @@ export const translations: Record<Lang, Translations> = {
 		cargoNameCardLabel: 'Жүк атауы',
 		enterName: 'Атауды енгізіңіз...',
 		saveButton: 'Сақтау',
-		trackCardLabel: 'Трек-нөмір',
 		copied: 'Көшірілді',
 		fromCardLabel: 'Қайдан',
 		currentLocationLabel: 'Ағымдағы орын',
@@ -1089,20 +1104,11 @@ export const translations: Record<Lang, Translations> = {
 		statusOptionWaiting: 'Жөнелтілуін күтуде',
 		statusOptionInTransit: 'Жолда',
 		statusOptionArrived: 'Жетті',
-		countryKZ: '🇰🇿 Қазақстан',
-		countryRU: '🇷🇺 Ресей',
-		countryBY: '🇧🇾 Беларусь',
 		loadError: 'Жүктерді жүктеу кезінде қате',
 		fillAllFields: 'Барлық өрістерді толтырыңыз',
 		cargoCreated: 'Жүк жасалды! ID: {id}',
 		createError: 'Жүк жасау кезінде қате',
-		statusUpdated: 'Мәртебе жаңартылды',
-		statusUpdateError: 'Мәртебені жаңарту кезінде қате',
 		cityEmpty: 'Қала бос болмауы керек',
-		cityUpdated: 'Қала жаңартылды',
-		cityUpdateError: 'Қаланы жаңарту кезінде қате',
-		nameUpdated: 'Атау жаңартылды',
-		nameUpdateError: 'Атауды жаңарту кезінде қате',
 		cargoDeleted: 'Жүк жойылды',
 		deleteError: 'Жүкті жою кезінде қате',
 		confirmDelete: 'Сіз сенімдісіз бе? Бұл әрекетті кері қайтару мүмкін емес.',
@@ -1114,7 +1120,6 @@ export const translations: Record<Lang, Translations> = {
 		deliveryAmountLabel: 'Жеткізу сомасы',
 		paymentStatusLabel: 'Төлем мәртебесі',
 		partialPaymentDetailLabel: 'Төлем егжей-тегжейі',
-		currencyLabel: 'Валюта',
 		paymentNone: 'Төлем жоқ',
 		paymentPartial: 'Ішінара төлем',
 		paymentFull: 'Толық төлем',
@@ -1124,9 +1129,7 @@ export const translations: Record<Lang, Translations> = {
 		unitWeeks: 'апта',
 		unitMonths: 'ай',
 		detailsLabel: 'Мәліметтер',
-		enterTimeframe: 'Мыс.: 10–14 күн',
 		enterAmount: 'Соманы енгізіңіз',
-		enterPaymentDetail: '15 000',
 		notSpecified: 'Көрсетілмеген',
 		detailsUpdated: 'Деректер жаңартылды',
 		detailsUpdateError: 'Жаңарту кезінде қате',
@@ -1155,7 +1158,6 @@ export const translations: Record<Lang, Translations> = {
 		folderRenameError: 'Атауды өзгерту кезінде қате',
 		folderDeleted: 'Папка жойылды',
 		folderDeleteError: 'Папканы жою кезінде қате',
-		confirmDeleteFolder: 'Папканы жою керек пе? Ішіндегі жүктер сақталады, тек ажыратылады.',
 		noFolders: 'Папкалар әлі жоқ',
 		createFirstFolder: 'Бірінші папканы жасаңыз — мысалы, рейс немесе көлік үшін',
 		folderEmptyCargos: 'Бұл папкада жүктер әзірге жоқ',
@@ -1188,7 +1190,6 @@ export const translations: Record<Lang, Translations> = {
 		folderTabAll: 'Барлығы',
 		renameFolderButton: 'Атауын өзгерту',
 		saveFolderName: 'Сақтау',
-		openFolderButton: 'Ашу',
 		calcNavLink: 'Калькулятор',
 		calcTitle: 'Жеткізу калькуляторы',
 		calcSubtitle: 'Алматыдан Ресей бойынша жүкті жеткізудің болжамды құны мен мерзімін есептеңіз',
@@ -1196,13 +1197,9 @@ export const translations: Record<Lang, Translations> = {
 		calcOriginLabel: 'Қайдан',
 		calcOriginValue: 'Алматы, Қазақстан',
 		calcDestLabel: 'Қайда',
-		calcDestPlaceholder: 'Жеткізу қаласын таңдаңыз',
 		calcDestSearch: 'Қаланы енгізе бастаңыз…',
-		calcOtherCityOption: 'Басқа қала (болжам)',
-		calcCustomCityHint: '«{city}» ретінде есептеу (шамамен)',
 		calcNoResults: 'Қала табылмады',
 		calcModeTotals: 'Көлем мен салмақ',
-		calcModeDimensions: 'Габариттер бойынша',
 		calcVolumeLabel: 'Жалпы көлемі, м³',
 		calcWeightLabel: 'Жалпы салмағы, кг',
 		calcVolumePh: 'мыс. 5',
@@ -1224,18 +1221,13 @@ export const translations: Record<Lang, Translations> = {
 		calcResPlaces: 'Орын саны',
 		calcResVolume: 'Жалпы көлемі',
 		calcResWeight: 'Жалпы салмағы',
-		calcResPaidWeight: 'Есептік салмақ',
 		calcResPrice: 'Болжамды құны',
 		calcResDays: 'Жеткізу мерзімі',
 		calcBilledWeight: 'салмақ бойынша',
 		calcBilledVolume: 'көлем бойынша',
 		calcTariffBasis: 'Тарификация',
-		calcApproxNote: 'Шамамен: қала тариф анықтамалығында жоқ',
-		calcExcludedTitle: 'Жеткізу қолжетімсіз',
 		calcExcludedDesc: 'Бұл бағытқа тасымалдау жүзеге асырылмайды',
 		calcEmptyHint: 'Есептеуді көру үшін жүк деректерін толтырыңыз',
-		calcSelectCityHint: 'Жеткізу қаласын таңдаңыз',
-		calcFillCargoHint: 'Жүктің көлемі мен салмағын көрсетіңіз',
 		calcDisclaimer: 'Есеп болжамды. Нақты құнды менеджерден нақтылаңыз.',
 		calcBackToTracking: 'Бақылауға',
 		calcPlacesUnit: 'дана',
@@ -1253,16 +1245,10 @@ export const translations: Record<Lang, Translations> = {
 		calcFromPreset: 'Үлгіден қосу',
 		calcPresetSelectedCount: 'Таңдалған бірлік: {count}',
 		calcApproxBadge: 'шамамен',
-		calcCustomCityNamePh: 'Сіздің елді мекеніңіз (ауыл, кент…)',
-		calcNearestCityLabel: 'Жақын қала (тариф үшін)',
-		calcBackToCityList: 'Қалалар тізіміне қайту',
-		calcNearestCityHint: 'Жақын қаланы таңдаңыз — тариф сол бойынша есептеледі',
-		calcOtherSettlement: 'Басқа елді мекен',
 		calcSectionCities: 'Қалалар',
 		calcSectionSettlements: 'Елді мекендер',
 		calcSearchingPlaces: 'Елді мекенді іздеудеміз…',
 		calcApproxHint: 'Тариф ең жақын қала бойынша; үстеме — елді мекеннің округі бойынша',
-		calcBilledPreset: 'прейскурант бойынша',
 		calcResBasePrice: 'Базалық құны',
 		calcSurchargeLabel: 'Аймақтық үстеме',
 		calcMinTariffNote: 'Ең төмен тариф қолданылды: {min} ₸',
@@ -1292,7 +1278,6 @@ export const translations: Record<Lang, Translations> = {
 		presetWidthLabel: 'Ені, см',
 		presetHeightLabel: 'Биіктігі, см',
 		presetWeightLabel: 'Салмағы, кг',
-		presetBasePriceLabel: 'Базалық баға, ₸',
 		presetGoodsPriceLabel: 'Тауар құны, ₸',
 		presetGoodsPriceHint: 'Бір бірлікке. Жеткізу бағасына әсер етпейді, клиенттерге көрінбейді.',
 		presetImageUrlLabel: 'Фото сілтемесі',
@@ -1300,9 +1285,7 @@ export const translations: Record<Lang, Translations> = {
 		presetSaveButton: 'Сақтау',
 		presetSearchPlaceholder: 'Атауы бойынша іздеу…',
 		presetNothingFound: 'Үлгілер табылмады',
-		homeHeroBadge: 'Жүк тасымалы онлайн',
 		homeHeroTitle: 'Жүкті жеткізу және бақылау',
-		homeHeroSubtitle: 'Жөнелтілімдерді нақты уақытта бақылаңыз және жеткізудің болжамды құнын есептеңіз',
 		tabTrack: 'Жүкті бақылау',
 		tabCalc: 'Жеткізу калькуляторы',
 		openMenu: 'Мәзірді ашу',
@@ -1402,7 +1385,6 @@ export const translations: Record<Lang, Translations> = {
 		wpCalcFilled: 'Салмақ пен көлем калькуляторға берілді',
 		wpCalcCopied: 'Калькулятор деректері жүкқұжатқа көшірілді',
 		wpSaved: '№{number} жүкқұжат сақталды',
-		wpSaveError: 'Жүкқұжатты сақтау мүмкін болмады',
 		wpCleared: 'Форма тазартылды',
 		wpDeleted: '№{number} жүкқұжат жойылды',
 		wpDeleteError: 'Жүкқұжатты жою мүмкін болмады',
@@ -1411,7 +1393,6 @@ export const translations: Record<Lang, Translations> = {
 		wpDownloadPdf: 'PDF жүктеу',
 		wpNotifyClient: 'Клиентке хабарлау',
 		wpAutoWa: 'Клиент WhatsApp арқылы хабарландырылды.',
-		wpAutoSms: 'Клиент SMS арқылы хабарландырылды.',
 		wpAutoFailed: 'Клиентке хабарлау сәтсіз аяқталды',
 		wpClear: 'Тазарту',
 		wpBack: 'Артқа',
@@ -1428,28 +1409,19 @@ export const translations: Record<Lang, Translations> = {
 		nmNoPhone: 'Алушының телефоны көрсетілмеген',
 		nmNeedSave: 'Жүкқұжат сақталмаған: авто-жіберу қолжетімсіз. Оны сақтаңыз немесе сілтеме арқылы қолмен жіберіңіз.',
 		nmPreviewWa: 'WhatsApp үшін мәтін',
-		nmPreviewSms: 'SMS үшін мәтін',
 		nmReset: 'Үлгіні қайтару',
-		nmSmsParts: '{n} SMS',
 		nmSend: 'Жіберу',
-		nmSendWa: 'WhatsApp',
 		nmOpenWa: 'WhatsApp-ты ашу',
-		nmSendSms: 'SMS',
-		nmOpenSms: 'SMS ашу',
 		nmSending: 'Жіберілуде…',
 		nmStepSend: 'Хабарлама жіберілуде…',
-		nmStepSendSms: 'SMS жіберілуде…',
 		nmStepConfirm: 'Қызметтің растауын күтудеміз…',
 		nmStepSlow: 'Әдеттегіден ұзақ — жіберу жүріп жатыр, терезені жаппаңыз',
 		nmStepSec: 'с',
 		nmSentWa: 'WhatsApp-қа жіберілді',
-		nmSentSms: 'SMS жіберілді',
-		nmPending: 'Жеткізу әзірге расталған жоқ. WhatsApp жетпесе, клиентке SMS автоматты түрде жіберіледі.',
-		nmNoWhatsapp: 'Нөмірде WhatsApp жоқ — SMS жібердік.',
+		nmPending: 'Жеткізу әзірге расталған жоқ. Клиент хабарламаны алмаса, онымен басқа жолмен байланысыңыз.',
 		nmFailed: 'Жіберу мүмкін болмады',
 		nmManualMode: 'Авто-жіберу бапталмаған — қолмен жіберіңіз',
-		nmManualHint: 'Авто-жіберу қосылмаған: түймелер WhatsApp немесе SMS-ті дайын мәтінмен ашады — жіберуді өзіңіз растайсыз.',
-		nmSmsHint: '«Жіберу» WhatsApp-қа жібереді, болмаса — SMS. Төмендегі түймелер таңдалған арнамен, қосалқысыз жібереді.',
+		nmManualHint: 'Авто-жіберу қосылмаған: түйме WhatsApp-ты дайын мәтінмен ашады — жіберуді өзіңіз растайсыз.',
 		nmHistory: 'Бұрынғы жіберулер',
 		nmClose: 'Жабу',
 		nmChWhatsapp: 'WhatsApp',
@@ -1475,7 +1447,6 @@ export const translations: Record<Lang, Translations> = {
 		wlEmptyHint: 'Біріншісін жасаңыз — ол дерекқорда сақталып, осында көрінеді',
 		wlAccepted: 'қабылдау {date}',
 		wbChecking: 'Жүкқұжат тексерілуде…',
-		wbNone: 'Бұл жүкке жүкқұжат тіркелмеген. Жүкқұжат «Жүкқұжаттар» бөлімінде жасалады — жүк трекерде автоматты пайда болады.',
 		wbReceiverPhone: 'Алушының телефоны',
 		wbPlacesWeight: 'Орын / салмақ',
 		wbPackaging: 'Қаптама',
@@ -1493,6 +1464,68 @@ export const translations: Record<Lang, Translations> = {
 		phInvalid: 'Дұрыс телефон нөмірін енгізіңіз',
 		tabTrackShort: 'Бақылау',
 		tabCalcShort: 'Калькулятор',
+		calcClearDest: 'Жеткізу қаласын тазалау',
+		calcWarnOversize: 'Габариттерді тексеріңіз: өлшемдердің бірі 20 м-ден асады. Өлшем бірлігі (м/см) дұрыс таңдалмаған болуы мүмкін.',
+		calcWarnNoWeight: 'Орынның салмағы көрсетілмеген — оны көрсетіңіз, әйтпесе құн төмен есептелуі мүмкін.',
+		calcUnitM3: 'м³',
+		calcDistrictCentral: 'Орталық ФО',
+		calcDistrictNorthwest: 'Солтүстік-Батыс ФО',
+		calcDistrictSouth: 'Оңтүстік ФО',
+		calcDistrictCaucasus: 'Солтүстік Кавказ ФО',
+		calcDistrictVolga: 'Еділ бойы ФО',
+		calcDistrictUral: 'Орал ФО',
+		calcDistrictSiberia: 'Сібір ФО',
+		calcDistrictFareast: 'Қиыр Шығыс ФО',
+		searchRateLimited: 'Сұраулар тым көп, бір минуттан кейін қайталаңыз',
+		cargoNumberTaken: 'Бұл жүк нөмірі бұрын қолданылған',
+		copyError: 'Көшіру мүмкін болмады',
+		clearDate: 'Күнді тазарту',
+		showPasswordLabel: 'Құпия сөзді көрсету',
+		hidePasswordLabel: 'Құпия сөзді жасыру',
+		loginNetworkError: 'Кіру мүмкін болмады. Байланысты тексеріп, қайталап көріңіз',
+		nmUnsaved: 'Сақталмаған өзгерістер бар. Жүкқұжатты сақтаңыз — әйтпесе ескі деректер жіберіледі. Авто-жіберу өшірілген; қолмен жіберу ағымдағы мәндерді пайдаланады.',
+		neNotConfigured: 'WhatsApp арнасы бапталмаған',
+		neBadContact: 'Бұл нөмірде WhatsApp жоқ',
+		neRecentlySent: 'Бұл жүкқұжат бойынша хабарлама жуырда жіберілген. Қажет болса, кейінірек қайталаңыз.',
+		neDeliveryFailed: 'WhatsApp хабарламаны қабылдады, бірақ жеткізбеді',
+		neCheckFailed: 'Нөмірді WhatsApp-та тексеру мүмкін болмады',
+		neSessionNotReady: 'WhatsApp сессиясы жіберуге дайын емес',
+		neUnauthorized: 'WhatsApp қызметі қол жеткізу кілтін қабылдамады',
+		neNetwork: 'WhatsApp қызметімен байланыс жоқ',
+		neTimeout: 'WhatsApp қызметі уақытында жауап бермеді',
+		neProvider: 'WhatsApp қызметі қате қайтарды',
+		neBadPhone: 'Алушының дұрыс телефон нөмірі көрсетілмеген',
+		wpPopupBlocked: 'Браузер басып шығару терезесін бөгеді. Осы сайт үшін қалқымалы терезелерге рұқсат беріп, қайталаңыз.',
+		wpSaveFailedStatus: 'Жүкқұжатты сақтау мүмкін болмады (қате {status}). Қайталап көріңіз.',
+		wpSaveFailedNet: 'Жүкқұжатты сақтау мүмкін болмады: серверпен байланыс жоқ. Қайталап көріңіз.',
+		unitM3: 'м³',
+		bulkStatusKeep: 'Өзгертпеу',
+		wvSenderCountry: 'Жіберушінің елін көрсетіңіз',
+		wvReceiverCountry: 'Алушының елін көрсетіңіз',
+		wvPositions: 'Салмағы немесе габариттері бар кемінде бір орынды қосыңыз (немесе көлемді қолмен енгізіңіз)',
+		wvPositionNegative: 'Салмақ, габарит, саны және баға теріс болмауы керек',
+		wvAmountNegative: 'Сома теріс болмауы керек',
+		wvAcceptanceDate: 'Жүкті қабылдау күнін көрсетіңіз',
+		neNoCargo: 'Жүкқұжат сақталды, бірақ трекерде жүк жасалмады — клиентке хабарлама жіберілмеді. Жүкқұжатты қайта сақтаңыз.',
+		payShortNone: 'Төленбеген',
+		payShortPartial: 'Ішінара',
+		payShortFull: 'Төленген',
+		featureLogistStatus: 'Жүк мәртебесін логист жаңартады',
+		homeHeroSubtitleStatus: 'Жөнелтілім мәртебесін бақылаңыз және жеткізудің болжамды құнын есептеңіз',
+		calcStickyDetails: 'Есептеуді көрсету',
+		calcStickyMinTariff: 'ең төмен тариф',
+		wbNotifyTip: 'Клиентке WhatsApp хабарламасы · {date}',
+		lsShowAll: 'Толық көрсету',
+		lsCollapse: 'Жасыру',
+		fdDeliveredCount: '{count} жетті',
+		fdTotalCount: 'барлығы {count}',
+		fdCreatedOn: 'құрылған күні {date}',
+		cnKZ: 'Қазақстан',
+		cnRU: 'Ресей',
+		cnBY: 'Беларусь',
+		loginLocked: 'Кіру әрекеттері тым көп сәтсіз болды. 15 минуттан кейін қайталап көріңіз.',
+		wbNoneLinked: 'Бұл жүкке жүкқұжат тіркелмеген. Оны осы жерден жасаңыз — ол бірден осы жүкке тіркеледі.',
+		statusWaitingShort: 'Күтуде',
 	},
 }
 

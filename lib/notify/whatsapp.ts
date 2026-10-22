@@ -53,10 +53,9 @@ export async function sendWhatsApp(phone: string, text: string, chatId?: string)
  * `-1` — WhatsApp принял сообщение, но доставить не смог; `>= 1` — доставлено.
  * `undefined` — подтвердить нечем ЗДЕСЬ И СЕЙЧАС: либо статус ещё не проставился, либо
  * провайдер его синхронно не отдаёт (Green-API). Это не ошибка отправки: дальше статус
- * уточнит вебхук, а если он не придёт вовсе — сработает досылка по таймауту в
- * /api/notify/sweep.
+ * уточнит вебхук (а если он не придёт вовсе, строка так и останется `sent`).
  */
-export async function confirmDelivery(chatId: string, messageId?: string): Promise<number | undefined> {
+export async function confirmDelivery(chatId: string, messageId?: string, deadlineAt?: number): Promise<number | undefined> {
 	if (whatsappProvider() !== 'waha') return undefined
-	return waha.messageAck(chatId, messageId)
+	return waha.messageAck(chatId, messageId, deadlineAt)
 }

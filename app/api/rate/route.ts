@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server'
 import { RUB_TO_KZT } from '@/lib/calculator/config'
 
 const CACHE_SECONDS = 3600 // обновляем не чаще раза в час
+// Зависший внешний источник не должен держать функцию до таймаута платформы:
+// по истечении fetch бросает исключение → источник считается недоступным → следующий/константа.
+const FETCH_TIMEOUT_MS = 5000
 
 // Нацбанк РК: XML со всеми курсами (<title>RUB</title> + <description>значение</description>)
 async function fromNBK(): Promise<number | null> {
@@ -11,6 +14,7 @@ async function fromNBK(): Promise<number | null> {
 		const res = await fetch('https://nationalbank.kz/rss/rates_all.xml', {
 			headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/xml,text/xml' },
 			next: { revalidate: CACHE_SECONDS },
+			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 		})
 		if (!res.ok) return null
 		const xml = await res.text()
@@ -31,7 +35,10 @@ async function fromNBK(): Promise<number | null> {
 // Запасной источник: открытый FX API
 async function fromErApi(): Promise<number | null> {
 	try {
-		const res = await fetch('https://open.er-api.com/v6/latest/RUB', { next: { revalidate: CACHE_SECONDS } })
+		const res = await fetch('https://open.er-api.com/v6/latest/RUB', {
+			next: { revalidate: CACHE_SECONDS },
+			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+		})
 		if (!res.ok) return null
 		const data = await res.json()
 		const rate = data?.rates?.KZT

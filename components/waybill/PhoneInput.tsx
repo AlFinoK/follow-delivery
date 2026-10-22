@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import PhoneInputLib, { getCountryCallingCode } from 'react-phone-number-input'
 import flags from 'react-phone-number-input/flags'
-import ru from 'react-phone-number-input/locale/ru.json'
+import ruLabels from 'react-phone-number-input/locale/ru.json'
 import 'react-phone-number-input/style.css'
 import { ChevronDown, Globe, Search } from 'lucide-react'
 import { isPhoneValid } from '@/lib/waybill/model'
@@ -11,6 +11,31 @@ import { useLang } from '@/contexts/LangContext'
 
 type CountryOption = { value?: string; label?: string; divider?: boolean }
 const flagMap = flags as Record<string, ComponentType<{ title?: string }>>
+
+// Подписи стран и служебные слова. Готовых казахских подписей в react-phone-number-input нет
+// (поставляются ru, en и др., но не kk), поэтому для казахского названия стран берём у
+// браузера: Intl.DisplayNames с локалью kk. Если он недоступен — остаются русские.
+// Результат кэшируется: словарь — ~250 записей, строить его на каждый рендер незачем.
+type Labels = Record<string, string>
+let kkLabels: Labels | null = null
+function labelsFor(lang: 'ru' | 'kk'): Labels {
+	const base = ruLabels as Labels
+	if (lang !== 'kk') return base
+	if (kkLabels) return kkLabels
+	const out: Labels = { ...base, ZZ: 'Халықаралық', ext: 'қос.', country: 'Телефон нөмірінің елі', phone: 'Телефон' }
+	try {
+		const names = new Intl.DisplayNames(['kk'], { type: 'region' })
+		for (const key of Object.keys(base)) {
+			if (!/^[A-Z]{2}$/.test(key) || key === 'ZZ') continue
+			const n = names.of(key)
+			if (n && n !== key) out[key] = n
+		}
+	} catch {
+		/* нет Intl.DisplayNames или локали kk — останутся русские названия стран */
+	}
+	kkLabels = out
+	return out
+}
 
 const callingCode = (c?: string) => {
 	if (!c) return ''
@@ -45,7 +70,8 @@ function CountrySelect({
 	options: CountryOption[]
 	disabled?: boolean
 }) {
-	const { t } = useLang()
+	const { t, lang } = useLang()
+	const labels = useMemo(() => labelsFor(lang), [lang])
 	const [open, setOpen] = useState(false)
 	const [query, setQuery] = useState('')
 	const rootRef = useRef<HTMLDivElement>(null)
@@ -77,7 +103,7 @@ function CountrySelect({
 				onClick={() => setOpen((v) => !v)}
 				className="flex items-center gap-1 pr-1 outline-none disabled:cursor-not-allowed"
 				aria-label={t('phCountry')}>
-				<Flag country={value} label={value ? ru[value as keyof typeof ru] : 'International'} />
+				<Flag country={value} label={value ? labels[value] : labels.ZZ} />
 				<ChevronDown className={`w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
 
@@ -137,7 +163,8 @@ export function PhoneInput({
 	showError?: boolean
 	onChange: (phone: string) => void
 }) {
-	const { t } = useLang()
+	const { t, lang } = useLang()
+	const labels = useMemo(() => labelsFor(lang), [lang])
 	const [touched, setTouched] = useState(false)
 	const invalid = (touched || showError) && !isPhoneValid(value)
 
@@ -156,7 +183,7 @@ export function PhoneInput({
 				<PhoneInputLib
 					international
 					countryCallingCodeEditable={false}
-					labels={ru}
+					labels={labels as never}
 					countrySelectComponent={CountrySelect as never}
 					defaultCountry="RU"
 					countryOptionsOrder={['RU', 'KZ', '|', '...']}

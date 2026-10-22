@@ -1,28 +1,28 @@
 'use client'
 
-import { Package, MapPin, Boxes, Weight, Truck, Clock, AlertTriangle, Calculator, Tag, Percent, ShieldAlert } from 'lucide-react'
+import { Package, MapPin, Boxes, Weight, Truck, Clock, Calculator, Tag, Percent, ShieldAlert } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { CURRENCY_SYMBOL, MIN_PRICE_KZT } from '@/lib/calculator/config'
-import { DISTRICT_LABELS_RU } from '@/lib/calculator/districts'
+import type { FederalDistrict } from '@/lib/calculator/districts'
 import type { CalcResult } from '@/lib/calculator/engine'
+
+// Подписи округов — через словарь (RU/KZ); ru-значения совпадают с DISTRICT_LABELS_RU.
+const DISTRICT_KEYS = {
+	central: 'calcDistrictCentral',
+	northwest: 'calcDistrictNorthwest',
+	south: 'calcDistrictSouth',
+	caucasus: 'calcDistrictCaucasus',
+	volga: 'calcDistrictVolga',
+	ural: 'calcDistrictUral',
+	siberia: 'calcDistrictSiberia',
+	fareast: 'calcDistrictFareast',
+} as const satisfies Record<FederalDistrict, string>
 
 const ru = (n: number, digits = 0) =>
 	n.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits })
 
 export function ResultPanel({ result, showDisclaimer = true }: { result: CalcResult; showDisclaimer?: boolean }) {
 	const { t, tf } = useLang()
-
-	if (result.excluded) {
-		return (
-			<div className="rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/15 p-5 flex items-start gap-3">
-				<AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-				<div>
-					<p className="text-sm font-semibold text-red-700 dark:text-red-300">{t('calcExcludedTitle')}</p>
-					<p className="text-sm text-red-600/90 dark:text-red-300 mt-0.5">{t('calcExcludedDesc')}</p>
-				</div>
-			</div>
-		)
-	}
 
 	if (!result.ok) {
 		const ghostRows = [
@@ -58,8 +58,8 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 	const rows: { Icon: typeof Package; label: string; value: string }[] = [
 		{ Icon: MapPin, label: t('calcResCity'), value: result.cityName || '' },
 		{ Icon: Package, label: t('calcResPlaces'), value: `${result.totals?.totalPlaces ?? 0} ${t('calcPlacesUnit')}` },
-		{ Icon: Boxes, label: t('calcResVolume'), value: `${ru(result.totals?.totalVolume ?? 0, 3)} м³` },
-		{ Icon: Weight, label: t('calcResWeight'), value: `${ru(result.totals?.totalWeight ?? 0, 1)} кг` },
+		{ Icon: Boxes, label: t('calcResVolume'), value: `${ru(result.totals?.totalVolume ?? 0, 3)} ${t('calcUnitM3')}` },
+		{ Icon: Weight, label: t('calcResWeight'), value: `${ru(result.totals?.totalWeight ?? 0, 1)} ${t('calcKg')}` },
 	]
 
 	const priceText = `${ru(result.price ?? 0)} ${CURRENCY_SYMBOL}`
@@ -113,7 +113,7 @@ export function ResultPanel({ result, showDisclaimer = true }: { result: CalcRes
 								<Percent className="w-4 h-4 text-slate-400 dark:text-zinc-500" />
 								{t('calcSurchargeLabel')}
 								{result.district && (
-									<span className="text-[11px] text-slate-400 dark:text-zinc-500">({DISTRICT_LABELS_RU[result.district]})</span>
+									<span className="text-[11px] text-slate-400 dark:text-zinc-500">({t(DISTRICT_KEYS[result.district])})</span>
 								)}
 							</span>
 							<span className="text-sm font-semibold text-orange-600 dark:text-orange-400 text-right">+{result.surchargePct ?? 0}%</span>

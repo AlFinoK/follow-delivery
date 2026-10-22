@@ -45,7 +45,9 @@ function Section({
 	children: React.ReactNode
 }) {
 	return (
-		<section className="pt-7 first:pt-0 border-t border-slate-100 dark:border-zinc-800 first:border-t-0">
+		// mt-7 — отступ НАД разделителем: секции идут без gap, и без него линия ложилась
+		// вплотную под последние поля предыдущего блока (в тёмной теме — как лишняя рамка).
+		<section className="mt-7 pt-7 first:mt-0 first:pt-0 border-t border-slate-100 dark:border-zinc-800 first:border-t-0">
 			<div className="flex items-center gap-3 mb-4">
 				<span className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
 					<Icon className="w-[18px] h-[18px]" />
@@ -417,6 +419,8 @@ export function WaybillForm({
 									<DecimalInput
 										value={p.quantity}
 										onChange={(v) => updatePos(p.id, { quantity: v })}
+										integer
+										min={1}
 										className={dim}
 									/>
 								</div>
@@ -461,8 +465,8 @@ export function WaybillForm({
 							</div>
 							{(posWeight(p) > 0 || posVolume(p) > 0) && (
 								<div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-zinc-700 text-xs text-slate-500 dark:text-zinc-400 flex flex-wrap gap-x-4 gap-y-1">
-									<span>{t('wfPositionVolume')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posVolume(p))} м³</b></span>
-									<span>{t('wfPositionWeight')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posWeight(p), 1)} кг</b></span>
+									<span>{t('wfPositionVolume')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posVolume(p))} {t('unitM3')}</b></span>
+									<span>{t('wfPositionWeight')} <b className="text-slate-700 dark:text-zinc-200">{fmtDecimal(posWeight(p), 1)} {t('calcKg')}</b></span>
 								</div>
 							)}
 						</div>
@@ -481,7 +485,7 @@ export function WaybillForm({
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
 					<div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3">
 						<p className="text-xs text-slate-500 dark:text-zinc-400">{t('wfTotalWeight')}</p>
-						<p className="text-lg font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{fmtDecimal(totalWeight(w.positions), 1)} кг</p>
+						<p className="text-lg font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{fmtDecimal(totalWeight(w.positions), 1)} {t('calcKg')}</p>
 					</div>
 					<div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3">
 						<div className="flex items-center justify-between">
@@ -502,10 +506,10 @@ export function WaybillForm({
 								value={w.volume}
 								onChange={(v) => set({ volume: v })}
 								className={`${fld} mt-1.5`}
-								placeholder="м³"
+								placeholder={t('unitM3')}
 							/>
 						) : (
-							<p className="text-lg font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{fmtDecimal(autoVolume(w.positions))} м³</p>
+							<p className="text-lg font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{fmtDecimal(autoVolume(w.positions))} {t('unitM3')}</p>
 						)}
 					</div>
 				</div>

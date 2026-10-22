@@ -4,18 +4,18 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
-import { ToastItem } from '@/components/Toast'
+import { TOAST_VIEWPORT, ToastItem, newToastId } from '@/components/Toast'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { NewCargoForm } from '@/components/admin/NewCargoForm'
 import type { Toast } from '@/components/Toast'
 
 export function NewCargoPage() {
 	const router = useRouter()
-	const { t } = useLang()
+	const { t, tf } = useLang()
 	const [toasts, setToasts] = useState<Toast[]>([])
 
 	const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-		const id = Date.now().toString()
+		const id = newToastId()
 		setToasts((prev) => [...prev, { id, message, type }])
 		setTimeout(() => {
 			setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)))
@@ -23,7 +23,12 @@ export function NewCargoPage() {
 		}, 5000)
 	}, [])
 
-	const handleCreated = async () => {
+	const handleCreated = async (createdId: string) => {
+		// Тост «груз создан» показывается уже на списке: локальный state этой страницы
+		// при переходе теряется (CLAUDE.md §6) — переносим через sessionStorage.
+		try {
+			sessionStorage.setItem('pendingToast', JSON.stringify({ message: tf('cargoCreated', { id: createdId }), type: 'success' }))
+		} catch {}
 		router.push(`/admin`)
 	}
 
@@ -32,7 +37,7 @@ export function NewCargoPage() {
 			<AdminSidebar />
 
 			<div className="lg:ml-64 min-h-screen flex flex-col">
-				<div className="fixed top-20 lg:top-4 right-4 z-50 flex flex-col gap-2 max-w-xs">
+				<div className={TOAST_VIEWPORT}>
 					{toasts.map((toast) => (
 						<ToastItem key={toast.id} toast={toast} />
 					))}
@@ -40,14 +45,15 @@ export function NewCargoPage() {
 
 				<main className="flex-1 overflow-y-auto">
 					<div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-						<div className="flex items-center justify-between gap-3 mb-5">
+						{/* Назад + заголовок: оба слева, заголовок под ссылкой (как на карточке груза) */}
+						<div className="mb-5">
 							<button
 								onClick={() => router.back()}
-								className="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
+								className="inline-flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium text-sm transition-colors">
 								<ArrowLeft className="w-4 h-4" />
 								{t('backToList')}
 							</button>
-							<h1 className="text-lg font-semibold text-slate-900 dark:text-zinc-100">{t('newCargoTitle')}</h1>
+							<h1 className="mt-1.5 text-xl font-semibold text-slate-900 dark:text-zinc-100">{t('newCargoTitle')}</h1>
 						</div>
 
 						<NewCargoForm onCreated={handleCreated} addToast={addToast} wide />

@@ -54,8 +54,13 @@ export const TimeframeInput = memo(function TimeframeInput({
 				setOpen(false)
 			}
 		}
+		const closeOnEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
 		document.addEventListener('mousedown', handler)
-		return () => document.removeEventListener('mousedown', handler)
+		document.addEventListener('keydown', closeOnEsc)
+		return () => {
+			document.removeEventListener('mousedown', handler)
+			document.removeEventListener('keydown', closeOnEsc)
+		}
 	}, [open])
 
 	const dropdownWidth = rect ? rect.width : 120

@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapPin, ChevronDown, Search, X, AlertTriangle, Building2, Home } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { DIRECTIONS, type Direction } from '@/lib/calculator/config'
-import { isExcluded } from '@/lib/calculator/engine'
+import { shouldWarnExcluded } from '@/lib/calculator/engine'
 import { Spinner } from '@/components/Spinner'
+import { dedupeSettlements, normalizeCityName as normalize } from './citySearch'
 
 export interface CitySelection {
 	code: string // код города-терминала (база тарифа)
@@ -26,15 +27,16 @@ interface CitySelectProps {
 	onChange: (sel: CitySelection | null) => void
 }
 
-const normalize = (s: string) => s.trim().toLowerCase().replace(/ё/g, 'е')
-
 export function CitySelect({ value, onChange }: CitySelectProps) {
 	const { t } = useLang()
 	const [open, setOpen] = useState(false)
 	const [query, setQuery] = useState('')
-	const [places, setPlaces] = useState<Place[]>([])
-	const [loading, setLoading] = useState(false)
+	// Результат серверного поиска вместе с запросом, для которого он получен: так не нужен
+	// setState внутри эффекта, а устаревший ответ никогда не показывается под новым запросом.
+	const [found, setFound] = useState<{ q: string; items: Place[]; failed: boolean }>({ q: '', items: [], failed: false })
 	const boxRef = useRef<HTMLDivElement>(null)
+	// после очистки выбора фокус возвращаем в поле поиска (кнопка очистки исчезает из DOM)
+	const wantFocus = useRef(false)
 
 	useEffect(() => {
 		const onDoc = (e: MouseEvent) => {
@@ -54,38 +56,40 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 	}, [query])
 
 	// населённые пункты (серверный поиск, с дебаунсом)
+	const searchable = trimmed.length >= 2
+	const settled = searchable && found.q === trimmed
+	const loading = searchable && !settled
+	const places = useMemo(() => (settled ? found.items : []), [settled, found])
+
 	useEffect(() => {
-		if (trimmed.length < 2) {
-			setPlaces([])
-			setLoading(false)
-			return
-		}
+		if (!searchable) return
 		let active = true
-		setLoading(true)
 		const id = setTimeout(() => {
 			fetch(`/api/places?q=${encodeURIComponent(trimmed)}`)
-				.then((r) => (r.ok ? r.json() : []))
+				.then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
 				.then((d: Place[]) => {
-					if (active) setPlaces(Array.isArray(d) ? d : [])
+					if (active) setFound({ q: trimmed, items: Array.isArray(d) ? d : [], failed: false })
 				})
 				.catch(() => {
-					if (active) setPlaces([])
-				})
-				.finally(() => {
-					if (active) setLoading(false)
+					if (active) setFound({ q: trimmed, items: [], failed: true })
 				})
 		}, 250)
 		return () => {
 			active = false
 			clearTimeout(id)
 		}
-	}, [trimmed])
+	}, [searchable, trimmed])
 
-	const customExcluded = trimmed.length >= 2 && isExcluded(trimmed)
+	// Блок-лист работает по подстроке и цепляет настоящие НП РФ (Снежногорск, Донецк
+	// в Ростовской области…), поэтому предупреждаем, только когда выбрать нечего.
+	// Пока поиск идёт или упал, не предупреждаем: ответа ещё нет.
+	const customExcluded =
+		searchable && settled && !found.failed && shouldWarnExcluded(trimmed, terminals.length > 0 || places.length > 0)
 
-	// исключаем из списка НП те, что точно совпадают с городом-терминалом (чтобы не дублировать)
-	const terminalNames = useMemo(() => new Set(DIRECTIONS.map((d) => normalize(d.name))), [])
-	const settlements = useMemo(() => places.filter((p) => !terminalNames.has(normalize(p.name))), [places, terminalNames])
+	// Терминалы всегда идут первыми; из НП убираем только дубли самих городов-терминалов
+	// (то же название И тот же ближайший терминал/область), одноимённые НП в других областях
+	// остаются — см. dedupeSettlements.
+	const settlements = useMemo(() => dedupeSettlements(places, DIRECTIONS), [places])
 
 	const selectTerminal = (d: Direction) => {
 		onChange({ code: d.code, name: d.name })
@@ -98,6 +102,7 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 		setOpen(false)
 	}
 	const clear = () => {
+		wantFocus.current = true
 		onChange(null)
 		setQuery('')
 		setOpen(true)
@@ -112,10 +117,9 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 			</label>
 
 			{value ? (
-				<button
-					type="button"
-					onClick={() => setOpen((o) => !o)}
-					className="w-full flex items-center gap-2.5 pl-3 pr-2 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-left hover:border-slate-300 dark:hover:border-zinc-600 transition-colors">
+				// Выбранный пункт — не кнопка: вложенный интерактив внутри <button> некорректен и
+				// недоступен с клавиатуры. Кнопка очистки — отдельный элемент рядом (Enter/Space).
+				<div className="w-full flex items-center gap-2.5 pl-3 pr-2 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg">
 					<MapPin className="w-4 h-4 text-orange-500 shrink-0" />
 					<span className="flex-1 min-w-0 flex items-center gap-2">
 						<span className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">{value.name}</span>
@@ -125,28 +129,35 @@ export function CitySelect({ value, onChange }: CitySelectProps) {
 							</span>
 						)}
 					</span>
-					<span
-						role="button"
-						tabIndex={0}
-						onClick={(e) => {
-							e.stopPropagation()
-							clear()
-						}}
-						className="p-1 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 rounded">
+					<button
+						type="button"
+						onClick={clear}
+						aria-label={t('calcClearDest')}
+						title={t('calcClearDest')}
+						className="shrink-0 p-1 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40">
 						<X className="w-4 h-4" />
-					</span>
-				</button>
+					</button>
+				</div>
 			) : (
 				<div className="relative">
 					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500 pointer-events-none" />
 					<input
 						type="text"
+						ref={(el) => {
+							if (el && wantFocus.current) {
+								wantFocus.current = false
+								el.focus()
+							}
+						}}
 						value={query}
 						onChange={(e) => {
 							setQuery(e.target.value)
 							setOpen(true)
 						}}
 						onFocus={() => setOpen(true)}
+						onKeyDown={(e) => {
+							if (e.key === 'Escape') setOpen(false)
+						}}
 						placeholder={t('calcDestSearch')}
 						className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-900 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all text-sm"
 					/>

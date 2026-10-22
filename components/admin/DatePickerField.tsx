@@ -4,7 +4,7 @@ import { memo, useState, useEffect, useRef } from 'react'
 import { DayPicker } from 'react-day-picker'
 import type { DropdownProps } from 'react-day-picker'
 import { ru, kk as kkLocale } from 'date-fns/locale'
-import { Calendar, ChevronDown, Check } from 'lucide-react'
+import { Calendar, ChevronDown, Check, X } from 'lucide-react'
 import { useLang } from '@/contexts/LangContext'
 import { formatDate } from '@/lib/format'
 
@@ -132,8 +132,13 @@ export const DatePickerField = memo(function DatePickerField({
 		const handler = (e: MouseEvent) => {
 			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
 		}
+		const closeOnEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
 		document.addEventListener('mousedown', handler)
-		return () => document.removeEventListener('mousedown', handler)
+		document.addEventListener('keydown', closeOnEsc)
+		return () => {
+			document.removeEventListener('mousedown', handler)
+			document.removeEventListener('keydown', closeOnEsc)
+		}
 	}, [open])
 
 	return (
@@ -141,7 +146,8 @@ export const DatePickerField = memo(function DatePickerField({
 			<button
 				type="button"
 				onClick={handleToggle}
-				className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+				aria-expanded={open}
+				className={`w-full flex items-center justify-between py-2 pl-3 rounded-lg border text-sm font-medium transition-all cursor-pointer ${selected ? 'pr-16' : 'pr-3'} ${
 					open
 						? 'bg-white dark:bg-zinc-900 border-orange-500 ring-2 ring-orange-500/15'
 						: 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600'
@@ -151,6 +157,17 @@ export const DatePickerField = memo(function DatePickerField({
 				</span>
 				<Calendar className="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" />
 			</button>
+			{/* Очистка даты: DayPicker не снимает выбор повторным кликом по дню (onSelect(undefined) игнорируется) */}
+			{selected && (
+				<button
+					type="button"
+					onClick={() => { onChange(''); setOpen(false) }}
+					aria-label={t('clearDate')}
+					title={t('clearDate')}
+					className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+					<X className="w-3.5 h-3.5" />
+				</button>
+			)}
 			{open && (
 				<div
 					className={`absolute ${upward ? 'bottom-full mb-2' : 'top-full mt-2'} left-0 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 p-2`}>

@@ -11,12 +11,36 @@ const WAITING = 'ожидает отправления'
 const ARRIVED = 'прибыл'
 
 /**
+ * Синхронизировать груз и привязать его к накладной. Не бросает: груз — производная
+ * сущность, и сбой не должен ронять сохранение накладной (связь восстановится при
+ * следующем сохранении). `ok: false` — груза в трекере нет, и звать клиента по ссылке
+ * отслеживания рано (см. notifyAfterSave).
+ */
+export async function syncAndLink(
+	w: { id: string; number: number; cargoId: string | null },
+	data: Data
+): Promise<{ ok: true; cargoId: string } | { ok: false }> {
+	try {
+		const cargoId = await syncCargo(w.number, data, w.cargoId)
+		if (cargoId !== w.cargoId) await prisma.waybill.update({ where: { id: w.id }, data: { cargoId } })
+		return { ok: true, cargoId }
+	} catch (e) {
+		console.error('[waybill] не удалось синхронизировать груз накладной', w.number, e)
+		return { ok: false }
+	}
+}
+
+/**
  * Синхронизирует Cargo с накладной и возвращает его id.
  *
  * Статусы двух сущностей — разные оси (документ vs физическое перемещение),
  * поэтому переносим только однозначное: «Доставлена» → «прибыл». Остальные
  * статусы груза (в пути / текущий город) ведёт логист в /admin, и накладная их
  * НЕ перезатирает — иначе каждое сохранение откатывало бы позицию груза назад.
+ *
+ * `existingCargoId` — уже привязанный груз; при создании накладной сюда же приходит
+ * `cargoId` из тела POST (накладная оформляется под существующий груз). Если такого
+ * груза нет — создаётся/находится `CARGO-<номер>`.
  */
 export async function syncCargo(number: number, data: Data, existingCargoId: string | null): Promise<string> {
 	const name = data.nature || null
@@ -52,7 +76,9 @@ export async function syncCargo(number: number, data: Data, existingCargoId: str
 		create: {
 			trackingId,
 			...shared,
-			currentCity: data.senderCity,
+			// Накладная, сохранённая сразу «Доставлена», описывает груз, который уже на
+			// месте: «текущий город» у него — город получателя, а не отправителя.
+			currentCity: data.status === 'delivered' ? data.receiverCity : data.senderCity,
 			status: data.status === 'delivered' ? ARRIVED : WAITING,
 		},
 	})

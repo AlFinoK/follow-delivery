@@ -31,6 +31,8 @@ model Cargo {
 
   @@index([folderId])
   @@index([cargoNumber])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model Folder {
@@ -141,11 +143,14 @@ model WaybillItem {
   @@index([waybillId, sortOrder])
 }
 
-// Журнал уведомлений клиенту (WhatsApp через Wazzup + SMS-фолбэк).
+// Журнал уведомлений клиенту (WhatsApp).
 //
-// Нужен не для отчётности, а для РАБОТЫ автофолбэка: Wazzup на отправку отвечает 201
-// сразу, а «у номера нет WhatsApp» приходит потом вебхуком (status=error,
-// error=BAD_CONTACT). Чтобы вебхук знал, кому досылать SMS, отправка пишется сюда.
+// Нужен не только для отчётности: вебхук провайдера находит здесь строку по providerId
+// и обновляет статус доставки, а модалка показывает оператору прошлые отправки и
+// защищает от повторной отправки.
+//
+// SMS из проекта убран, но колонки `smsText`, `fallbackOf` и строки с channel='sms'
+// остаются — это история; удалять их отдельной миграцией ради красоты не стали.
 //
 // FK на Waybill нет намеренно: журнал должен переживать удаление накладной.
 model Notification {
@@ -154,15 +159,13 @@ model Notification {
   waybillNumber Int? // человеческий номер, чтобы журнал читался без join
   phone         String // E.164, напр. +77021234567
   text          String // отправленный текст (шаблон уже развёрнут)
-  // Короткий SMS-вариант того же уведомления. Хранится у строки whatsapp, чтобы
-  // вебхук при ack=-1 дослал SMS текстом, который видел оператор (в т.ч. правленым),
-  // а не пересобранным шаблоном.
+  // Устарело: короткий SMS-вариант текста. Больше не пишется, старые строки сохранены.
   smsText       String?
-  channel       String // whatsapp | sms
+  channel       String // whatsapp (раньше бывал и sms)
   status        String   @default("pending") // pending | sent | delivered | read | failed
-  providerId    String? // messageId Wazzup / id SMS-шлюза
+  providerId    String? // id сообщения у провайдера WhatsApp
   error         String? // код + описание от провайдера
-  fallbackOf    String? // id уведомления, вместо которого ушло это (WhatsApp → SMS)
+  fallbackOf    String? // устарело: id строки, вместо которой ушло SMS (больше не пишется)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
