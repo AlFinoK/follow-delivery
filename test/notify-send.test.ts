@@ -9,14 +9,11 @@ import { initialWaybill, type Waybill } from '@/lib/waybill/model'
 const wa = vi.hoisted(() => ({
 	send: vi.fn(),
 	check: vi.fn(),
-	confirm: vi.fn(),
 }))
 vi.mock('@/lib/notify/whatsapp', () => ({
-	whatsappProvider: () => 'waha',
 	whatsappConfigured: () => true,
 	checkNumberExists: (...a: unknown[]) => wa.check(...a),
 	sendWhatsApp: (...a: unknown[]) => wa.send(...a),
-	confirmDelivery: (...a: unknown[]) => wa.confirm(...a),
 }))
 
 describe.skipIf(!TEST_DB_URL)('notifyClient: защита от повтора (БД)', () => {
@@ -48,13 +45,12 @@ describe.skipIf(!TEST_DB_URL)('notifyClient: защита от повтора (�
 	})
 
 	beforeEach(() => {
-		wa.check.mockReset().mockResolvedValue({ exists: true, chatId: '79990000001@c.us' })
+		wa.check.mockReset().mockResolvedValue({ exists: true })
 		// Отправка занимает время — как у настоящего провайдера, чтобы запросы перекрывались.
 		wa.send.mockReset().mockImplementation(async () => {
 			await new Promise((r) => setTimeout(r, 300))
 			return { ok: true, providerId: `msg-${Math.random()}` }
 		})
-		wa.confirm.mockReset().mockResolvedValue(undefined)
 	})
 
 	it('два одновременных запроса по одной накладной → ровно одна отправка', async () => {
@@ -123,23 +119,21 @@ describe.skipIf(!TEST_DB_URL)('notifyClient: защита от повтора (�
 		expect((await notifyClient(w)).status).toBe('sent')
 	})
 
-	it('синхронно подтверждённая доставка пишется в журнал (ack 2 → delivered, 3 → read)', async () => {
-		const w1 = waybill()
-		wa.confirm.mockResolvedValueOnce(2)
-		const r1 = await notifyClient(w1)
-		expect(r1).toMatchObject({ status: 'sent', pendingDelivery: false })
-		expect((await prisma.notification.findUnique({ where: { id: r1.notificationId! } }))?.status).toBe('delivered')
+	it('успешная отправка → sent, доставка ждёт вебхука (pendingDelivery), id сообщения в журнале', async () => {
+		const w = waybill()
+		wa.send.mockResolvedValueOnce({ ok: true, providerId: 'BAE5TEST' })
+		const res = await notifyClient(w)
+		expect(res).toMatchObject({ status: 'sent', pendingDelivery: true })
+		const row = await prisma.notification.findUnique({ where: { id: res.notificationId! } })
+		expect(row).toMatchObject({ status: 'sent', providerId: 'BAE5TEST', error: null })
+		expect(wa.send).toHaveBeenCalledWith('+79990000001', expect.any(String))
+	})
 
-		const w2 = waybill()
-		wa.confirm.mockResolvedValueOnce(3)
-		const r2 = await notifyClient(w2)
-		expect((await prisma.notification.findUnique({ where: { id: r2.notificationId! } }))?.status).toBe('read')
-
-		// ack 1 (только сервер) и «не знаем» — остаётся sent
-		const w3 = waybill()
-		wa.confirm.mockResolvedValueOnce(1)
-		const r3 = await notifyClient(w3)
-		expect((await prisma.notification.findUnique({ where: { id: r3.notificationId! } }))?.status).toBe('sent')
+	it('номер без WhatsApp → failed/BAD_CONTACT, отправки нет', async () => {
+		const w = waybill()
+		wa.check.mockResolvedValueOnce({ exists: false })
+		expect(await notifyClient(w)).toMatchObject({ status: 'failed', code: 'BAD_CONTACT' })
+		expect(wa.send).not.toHaveBeenCalled()
 	})
 
 	it('разные накладные друг друга не блокируют', async () => {

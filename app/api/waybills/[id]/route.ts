@@ -6,9 +6,9 @@ import { lastNotifications, mapWaybill, parseStatus, waybillData, waybillErrors,
 import { syncAndLink } from '@/lib/waybill/cargoSync'
 import { notifyAfterSave } from '@/lib/notify/auto'
 
-// Перевод накладной в «Активна» запускает автоуведомление, а оно ждёт подтверждения
-// доставки от WhatsApp (см. maxDuration в /api/notify). Само уведомление ограничено
-// дедлайном 20 с, так что ответ придёт раньше 30 с.
+// Перевод накладной в «Активна» запускает автоуведомление, а оно ждёт ответа провайдера
+// WhatsApp (см. maxDuration в /api/notify). Само уведомление ограничено дедлайном 20 с,
+// так что ответ придёт раньше 30 с.
 export const maxDuration = 30
 
 // GET /api/waybills/[id] — накладная по id, с позициями и последним уведомлением клиенту (auth)

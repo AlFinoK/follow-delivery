@@ -5,7 +5,8 @@ import type { TranslationKey } from '@/lib/i18n'
 // Сервер отдаёт и `code`, и русский `error`. Казахскому оператору русскую строку
 // показывать нельзя, поэтому интерфейс переводит по коду, а сырой текст остаётся
 // только для кодов, которых здесь нет (новые провайдеры, нестандартные сбои).
-// Коды — см. lib/notify/types.ts, send.ts, waha.ts, greenapi.ts.
+// Коды — см. lib/notify/types.ts, send.ts, greenapi.ts, http.ts. BAD_CONTACT и
+// CHECK_FAILED у Green-API сейчас не возникают, но остаются в старых строках журнала.
 
 const CODE_KEYS: Record<string, TranslationKey> = {
 	NOT_CONFIGURED: 'neNotConfigured',
@@ -13,7 +14,6 @@ const CODE_KEYS: Record<string, TranslationKey> = {
 	RECENTLY_SENT: 'neRecentlySent',
 	DELIVERY_FAILED: 'neDeliveryFailed',
 	CHECK_FAILED: 'neCheckFailed',
-	SESSION_NOT_READY: 'neSessionNotReady',
 	UNAUTHORIZED: 'neUnauthorized',
 	NETWORK: 'neNetwork',
 	TIMEOUT: 'neTimeout',

@@ -1,33 +1,27 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { DELIVERY_FAILED } from '@/lib/notify/types'
 
-// POST /api/notify/webhook — статусы доставки от провайдера WhatsApp.
+// POST /api/notify/webhook — статусы доставки от Green-API.
 //
-// Принимает два формата, потому что провайдера два (см. whatsapp.ts):
+// Формат: {"typeWebhook":"outgoingMessageStatus","idMessage":…,"status":"delivered"}.
+// Настраивается методом SetSettings у инстанса: webhookUrl, webhookUrlToken,
+// ⚠️ outgoingWebhook=yes — ИМЕННО он включает статусы (в кабинете «Receive webhooks on
+// sent messages statuses»); без него статусов нет вообще — так и было с 19.09 по
+// 22.10.2026, все уведомления считались недоставленными. outgoingAPIMessageWebhook —
+// другое: уведомление о самом факте отправки через API, статусов не даёт.
+// keepOnlineStatus=yes — иначе не приходит `delivered`. Токен приезжает в заголовке
+// Authorization как `Bearer <токен>`.
 //
-//   Green-API — {"typeWebhook":"outgoingMessageStatus","idMessage":…,"status":"delivered"}
-//     Настраивается методом SetSettings у инстанса: webhookUrl, webhookUrlToken,
-//     outgoingAPIMessageWebhook=yes (иначе статусы НАШИХ отправок не придут) и
-//     keepOnlineStatus=yes (иначе не приходит `delivered`). Токен приезжает в заголовке
-//     Authorization как `Bearer <токен>`.
+// ⚠️ Вебхук — ЕДИНСТВЕННЫЙ источник статуса доставки: журнал сообщений Green-API отстаёт
+// до двух минут, поэтому синхронно доставку не подтвердить. Но и на вебхук одного
+// надеяться нельзя: у клиента с заблокированным WhatsApp сообщение остаётся в `sent` и
+// события «не доставлено» не будет вовсе.
 //
-//   WAHA — {"event":"message.ack","payload":{"id":…,"ack":-1}}
-//     Настраивается переменными контейнера WHATSAPP_HOOK_URL / WHATSAPP_HOOK_EVENTS /
-//     WHATSAPP_HOOK_HMAC_KEY. Подпись тела приезжает в X-Webhook-Hmac.
-//
-// ⚠️ Для Green-API вебхук — ОСНОВНОЙ источник статуса: их журнал сообщений отстаёт до
-// двух минут, поэтому синхронно доставку не подтвердить. Но и на вебхук одного надеяться
-// нельзя: у клиента с заблокированным WhatsApp сообщение остаётся в `sent` и события
-// «не доставлено» не будет вовсе.
-//
-// Роут публичный (провайдер ходит без сессии), поэтому закрыт одним из трёх способов:
-// токен Green-API, HMAC-подпись WAHA или секрет в query (?secret=…). Не настроено
-// ничего → 404, как будто роута нет: открытый вебхук позволил бы кому угодно менять
-// статусы отправок.
-
-/** WAHA: ack -1 ERROR | 0 PENDING | 1 SERVER | 2 DEVICE | 3 READ | 4 PLAYED */
-const ACK_STATUS: Record<number, string> = { 1: 'sent', 2: 'delivered', 3: 'read', 4: 'read' }
+// Роут публичный (провайдер ходит без сессии), поэтому закрыт токеном
+// GREENAPI_WEBHOOK_TOKEN. Токен не задан или не совпал → 404, как будто роута нет:
+// открытый вебхук позволил бы кому угодно менять статусы отправок.
 
 /** Green-API: статусы исходящего сообщения. */
 const GREENAPI_STATUS: Record<string, string> = { sent: 'sent', delivered: 'delivered', read: 'read' }
@@ -44,64 +38,42 @@ const GREENAPI_FAILED = new Set(['failed', 'noaccount', 'notingroup', 'suspended
 const RANK: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 }
 
 export async function POST(req: NextRequest) {
-	const raw = await req.text()
-	if (!authorized(req, raw)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+	if (!authorized(req)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+	const raw = await req.text()
 	const body = (() => {
 		try {
-			return JSON.parse(raw) as {
-				typeWebhook?: string
-				idMessage?: string
-				status?: string
-				event?: string
-				payload?: { id?: string; ack?: number }
-			}
+			return JSON.parse(raw) as { typeWebhook?: string; idMessage?: string; status?: string }
 		} catch {
 			return null
 		}
 	})()
 
-	// На любое событие отвечаем 200: иначе провайдер будет переотправлять пакет (у
-	// Green-API — раз в минуту в течение суток), а нам интересны только статусы.
+	// На любое событие отвечаем 200: иначе Green-API будет переотправлять пакет (раз в
+	// минуту в течение суток), а нам интересны только статусы.
 	if (!body) return NextResponse.json({ ok: true })
 
 	try {
 		if (body.typeWebhook === 'outgoingMessageStatus' && body.idMessage && body.status) {
-			await handleStatus(body.idMessage, mapGreenApi(body.status))
-		} else if (body.event === 'message.ack' && body.payload?.id) {
-			await handleStatus(body.payload.id, mapAck(body.payload.ack ?? Number.NaN))
+			await handleStatus(body.idMessage, mapStatus(body.status))
 		}
 	} catch (e) {
-		console.error('[notify] вебхук: не удалось обработать статус', body.idMessage ?? body.payload?.id, e)
+		console.error('[notify] вебхук: не удалось обработать статус', body.idMessage, e)
 	}
 	return NextResponse.json({ ok: true })
 }
 
 /** null — статус нам ничего не говорит (промежуточный или неизвестный). */
-function mapGreenApi(status: string): string | null {
+function mapStatus(status: string): string | null {
 	const s = status.trim().toLowerCase()
 	if (GREENAPI_FAILED.has(s)) return 'failed'
 	return GREENAPI_STATUS[s] ?? null
 }
 
-function mapAck(ack: number): string | null {
-	if (ack === -1) return 'failed'
-	return ACK_STATUS[ack] ?? null
-}
-
-function authorized(req: NextRequest, raw: string): boolean {
-	// Green-API: Authorization: Bearer <webhookUrlToken>.
-	const bearer = process.env.GREENAPI_WEBHOOK_TOKEN?.trim()
-	if (bearer && equals(req.headers.get('authorization') ?? '', `Bearer ${bearer}`)) return true
-
-	// WAHA: подпись тела.
-	const hmacKey = process.env.WAHA_HOOK_HMAC_KEY?.trim()
-	if (hmacKey && equals(req.headers.get('x-webhook-hmac') ?? '', createHmac('sha512', hmacKey).update(raw).digest('hex'))) {
-		return true
-	}
-
-	const secret = process.env.NOTIFY_WEBHOOK_SECRET?.trim()
-	return !!secret && equals(req.nextUrl.searchParams.get('secret') ?? '', secret)
+/** Authorization: Bearer <webhookUrlToken>. */
+function authorized(req: NextRequest): boolean {
+	const token = process.env.GREENAPI_WEBHOOK_TOKEN?.trim()
+	return !!token && equals(req.headers.get('authorization') ?? '', `Bearer ${token}`)
 }
 
 /**
@@ -116,8 +88,9 @@ function equals(got: string, want: string): boolean {
 
 async function handleStatus(messageId: string, next: string | null) {
 	if (!next) return
-	const log = await findByProviderId(messageId)
-	if (!log) return // не наше сообщение (например, входящее от клиента)
+	// idMessage вебхука совпадает с тем, что вернул sendMessage (см. greenapi.ts).
+	const log = await prisma.notification.findFirst({ where: { providerId: messageId } })
+	if (!log) return // не наше сообщение (например, отправленное с телефона вручную)
 
 	// Сообщение приняли, но доставить не смогли — фиксируем в журнале, оператор увидит
 	// это в окне уведомления. Уже доставленное/прочитанное назад не откатываем.
@@ -125,7 +98,7 @@ async function handleStatus(messageId: string, next: string | null) {
 		if (log.status === 'failed' || (RANK[log.status] ?? 0) >= RANK.delivered) return
 		await prisma.notification.update({
 			where: { id: log.id },
-			data: { status: 'failed', error: 'DELIVERY_FAILED: WhatsApp не доставил сообщение' },
+			data: { status: 'failed', error: `${DELIVERY_FAILED}: WhatsApp не доставил сообщение` },
 		})
 		return
 	}
@@ -135,18 +108,4 @@ async function handleStatus(messageId: string, next: string | null) {
 	// пришло позже. Иначе в журнале осталась бы строка «доставлено» с текстом
 	// «не доставлено».
 	await prisma.notification.update({ where: { id: log.id }, data: { status: next, error: null } })
-}
-
-/**
- * Поиск строки журнала по id сообщения. Точное совпадение — обычный путь; запасной
- * вариант нужен потому, что движки WAHA отдают id в разной форме (`true_чат_ХЭШ` у
- * WEBJS, короткий id у NOWEB), и ответ на отправку может отличаться от того, что
- * приходит в ack. Хвост после последнего «_» — сам хэш сообщения, он совпадает.
- */
-async function findByProviderId(messageId: string) {
-	const exact = await prisma.notification.findFirst({ where: { providerId: messageId } })
-	if (exact) return exact
-	const hash = messageId.split('_').pop()
-	if (!hash || hash === messageId) return null
-	return prisma.notification.findFirst({ where: { providerId: { endsWith: hash } }, orderBy: { createdAt: 'desc' } })
 }

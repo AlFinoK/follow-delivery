@@ -1,20 +1,19 @@
-// Отправка уведомления клиенту в WhatsApp. Только сервер (пишет в БД и знает ключи
-// провайдеров). SMS в проекте нет: если WhatsApp не сработал, оператор видит причину и
-// связывается с клиентом сам.
+// Отправка уведомления клиенту в WhatsApp (Green-API). Только сервер (пишет в БД и знает
+// ключи провайдера). SMS в проекте нет: если WhatsApp не сработал, оператор видит причину
+// и связывается с клиентом сам.
 //
 // Схема:
 //   1. кнопка «Уведомить клиента» → POST /api/notify → notifyClient()
-//   2. СНАЧАЛА спрашиваем WhatsApp, есть ли номер у получателя (там, где провайдер умеет)
+//   2. проверка номера (у Green-API недостоверна и всегда отвечает «есть», см. greenapi.ts)
 //   3. нет → строка журнала `failed` с кодом BAD_CONTACT, оператор видит причину
-//   4. есть → отправляем текст
-//   5. пытаемся подтвердить доставку — см. оговорку ниже
+//   4. есть → отправляем текст, строка журнала → `sent`
 //
 // ⚠️ Успешный ответ на отправку означает «провайдер принял», а не «клиент получил»:
 // WhatsApp отклоняет сообщение уже после него, например при ограничении аккаунта.
-// Подтверждать доставку синхронно умеет только WAHA; у Green-API журнал сообщений
-// отстаёт до двух минут, и статус приходит вебхуком /api/notify/webhook. Если у клиента
-// WhatsApp заблокирован (РФ), сообщение навсегда останется в статусе «отправлено» —
-// события «не доставлено» не будет, и узнать об этом можно только от самого клиента.
+// Синхронно доставку не подтвердить: журнал сообщений Green-API отстаёт до двух минут, и
+// статус приходит только вебхуком /api/notify/webhook. Если у клиента WhatsApp
+// заблокирован (РФ), сообщение навсегда останется в статусе «отправлено» — события
+// «не доставлено» не будет, и узнать об этом можно только от самого клиента.
 //
 // Если WhatsApp-канал не настроен, отправки не происходит и наружу отдаётся ссылка
 // wa.me — оператор отправляет вручную, кнопка не становится мёртвой.
@@ -22,11 +21,10 @@
 import { prisma } from '@/lib/prisma'
 import type { Waybill } from '@/lib/waybill/model'
 import { buildClientMessage } from './message'
-import { digits, whatsappLink } from './links'
-import { checkNumberExists, confirmDelivery, sendWhatsApp, whatsappConfigured } from './whatsapp'
+import { whatsappLink } from './links'
+import { checkNumberExists, sendWhatsApp, whatsappConfigured } from './whatsapp'
 import {
 	BAD_CONTACT,
-	DELIVERY_FAILED,
 	NOT_CONFIGURED,
 	RECENTLY_SENT,
 	TIMEOUT,
@@ -39,9 +37,6 @@ const RESEND_GUARD_MS = 10 * 60 * 1000
 
 /** Строка `pending` старше этого срока считается мёртвой: отправка заведомо не идёт. */
 export const PENDING_STALE_MS = 2 * 60 * 1000
-
-/** Сколько всего готовы ждать подтверждения доставки (см. confirmDelivery). */
-const ACK_BUDGET_MS = 24 * 1000
 
 export function mapNotification(n: {
 	id: string
@@ -80,9 +75,6 @@ async function finish(id: string, res: { ok: boolean; providerId?: string; code?
  * пустая правка игнорируется, поэтому отправить пустое сообщение нельзя.
  */
 export async function notifyClient(w: Waybill, custom?: string): Promise<NotifyOutcome> {
-	// Бюджет времени на подтверждение доставки: роут живёт maxDuration = 30 с, а до ack
-	// уходят секунды на проверку номера и саму отправку (у каждого запроса свой таймаут).
-	const deadlineAt = Date.now() + ACK_BUDGET_MS
 	const phone = w.receiver.phone
 	const text = custom?.trim() || buildClientMessage(w)
 	const base: Pick<NotifyOutcome, 'text' | 'link' | 'whatsappAvailable'> = {
@@ -95,7 +87,7 @@ export async function notifyClient(w: Waybill, custom?: string): Promise<NotifyO
 		return { ...base, status: 'manual', code: NOT_CONFIGURED, error: 'WhatsApp-канал не настроен' }
 	}
 
-	// Защита от повторной отправки. Ключа идемпотентности нет ни у WAHA, ни у Green-API,
+	// Защита от повторной отправки. Ключа идемпотентности у Green-API нет,
 	// поэтому два клика = два сообщения. Плюс каждая отправка тянет за собой обращение к
 	// WhatsApp, а лишние обращения — прямой путь к тому, что аккаунт уедет «на проверку».
 	//
@@ -165,20 +157,16 @@ export async function notifyClient(w: Waybill, custom?: string): Promise<NotifyO
 	const log = claim.log
 
 	// Шаг 1 — есть ли у номера WhatsApp.
-	let chatId: string | undefined
 	try {
-		const check = await checkNumberExists(phone)
+		const check = await checkNumberExists()
 		if (!check.exists) {
-			// Тот же код BAD_CONTACT, что и в вебхуке: причина в журнале выглядит одинаково
-			// независимо от того, где она выяснилась.
 			const error = 'У номера нет WhatsApp'
 			await finish(log.id, { ok: false, code: BAD_CONTACT, error })
 			return { ...base, status: 'failed', notificationId: log.id, code: BAD_CONTACT, error }
 		}
-		chatId = check.chatId
 	} catch (e) {
-		// Проверка не удалась (провайдер недоступен, сессия отвалилась) — это НЕ повод
-		// считать, что WhatsApp у клиента нет.
+		// Проверка не удалась (провайдер недоступен) — это НЕ повод считать, что WhatsApp
+		// у клиента нет.
 		const code = e instanceof Error && 'code' in e ? String((e as { code: unknown }).code) : 'CHECK_FAILED'
 		const error = e instanceof Error ? e.message : 'Не удалось проверить номер в WhatsApp'
 		await finish(log.id, { ok: false, code, error })
@@ -186,37 +174,11 @@ export async function notifyClient(w: Waybill, custom?: string): Promise<NotifyO
 	}
 
 	// Шаг 2 — отправка.
-	const res = await sendWhatsApp(phone, text, chatId)
+	const res = await sendWhatsApp(phone, text)
 	await finish(log.id, res)
 	if (!res.ok) return { ...base, status: 'failed', notificationId: log.id, code: res.code, error: res.error }
 
-	// Шаг 3 — подтверждение доставки, если провайдер умеет его синхронно.
-	// chatId тот же, каким отправляли: у части номеров он приходит как @lid, а не @c.us,
-	// и по неверному идентификатору история чата просто не найдётся.
-	const ack = await confirmDelivery(chatId || `${digits(phone)}@c.us`, res.providerId, deadlineAt)
-	if (ack === -1) {
-		await finish(log.id, { ok: false, providerId: res.providerId, code: DELIVERY_FAILED, error: 'WhatsApp не доставил сообщение' })
-		return {
-			...base,
-			status: 'failed',
-			notificationId: log.id,
-			code: DELIVERY_FAILED,
-			error: 'WhatsApp принял сообщение, но не доставил его',
-		}
-	}
-
-	// Доставку подтвердили синхронно (ack 2 = на устройстве, 3/4 = прочитано) — фиксируем в
-	// журнале, иначе индикатор в списке и на карточке показывал бы «отправлено», пока не
-	// придёт вебхук (а он необязателен). Условие по статусу — чтобы не откатить назад
-	// статус, который вебхук успел поднять раньше.
-	if (typeof ack === 'number' && ack >= 2) {
-		await prisma.notification.updateMany({
-			where: { id: log.id, status: { in: ['pending', 'sent'] } },
-			data: { status: ack >= 3 ? 'read' : 'delivered', error: null },
-		})
-	}
-
-	// Доставка не подтверждена (undefined) — это норма для Green-API и для сообщения,
-	// которое ещё в очереди. Помечаем pendingDelivery: статус уточнит вебхук.
-	return { ...base, status: 'sent', notificationId: log.id, pendingDelivery: ack === undefined }
+	// Провайдер принял сообщение, но доставка не подтверждена — синхронно её не узнать
+	// (см. шапку). Помечаем pendingDelivery: статус уточнит вебхук.
+	return { ...base, status: 'sent', notificationId: log.id, pendingDelivery: true }
 }

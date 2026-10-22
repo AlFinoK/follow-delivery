@@ -13,11 +13,9 @@ vi.mock('next-auth', async (orig) => ({
 
 // Роуты тянут автоуведомление; в сеть тест не ходит.
 vi.mock('@/lib/notify/whatsapp', () => ({
-	whatsappProvider: () => 'waha',
 	whatsappConfigured: () => true,
 	checkNumberExists: vi.fn(),
 	sendWhatsApp: vi.fn(),
-	confirmDelivery: vi.fn(),
 }))
 
 describe.skipIf(!TEST_DB_URL)('lastNotification в API накладных (БД)', () => {

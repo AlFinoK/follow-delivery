@@ -8,7 +8,6 @@ describe('notifyErrorKey', () => {
 		expect(notifyErrorKey('DELIVERY_FAILED')).toBe('neDeliveryFailed')
 		expect(notifyErrorKey('NOT_CONFIGURED')).toBe('neNotConfigured')
 		expect(notifyErrorKey('CHECK_FAILED')).toBe('neCheckFailed')
-		expect(notifyErrorKey('SESSION_NOT_READY')).toBe('neSessionNotReady')
 		expect(notifyErrorKey('TIMEOUT')).toBe('neTimeout')
 	})
 

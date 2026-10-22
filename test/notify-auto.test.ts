@@ -15,7 +15,7 @@ import { autoNotify, autoNotifyWithDeadline, isFirstActivation, notifyAfterSave 
 import { fetchText } from '@/lib/notify/http'
 import { looksLikePhone } from '@/lib/notify/links'
 import { NotifyError } from '@/lib/notify/types'
-import * as waha from '@/lib/notify/waha'
+import * as greenapi from '@/lib/notify/greenapi'
 
 const dto = (status: WaybillDTO['status'], phone = '+79614466655'): WaybillDTO => {
 	const w = initialWaybill()
@@ -128,14 +128,16 @@ describe('T3: таймауты запросов к провайдеру', () => 
 		expect(Date.now() - started).toBeLessThan(3000)
 	})
 
-	describe('WAHA: зависший контейнер даёт обычный отказ, а не вечное ожидание', () => {
+	describe('Green-API: зависший сервис даёт обычный отказ, а не вечное ожидание', () => {
 		const realTimeout = AbortSignal.timeout.bind(AbortSignal)
 		const env = { ...process.env }
 
 		beforeEach(() => {
 			// 8 с в тесте не ждём: сокращаем любой таймаут до 300 мс.
 			vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => realTimeout(Math.min(ms, 300)))
-			process.env.WAHA_URL = base
+			process.env.GREENAPI_URL = base
+			process.env.GREENAPI_ID_INSTANCE = '1100000000'
+			process.env.GREENAPI_TOKEN = 'test-token'
 		})
 		afterEach(() => {
 			vi.restoreAllMocks()
@@ -143,21 +145,10 @@ describe('T3: таймауты запросов к провайдеру', () => 
 		})
 
 		it('sendWhatsApp → ok:false, code TIMEOUT', async () => {
-			const res = await waha.sendWhatsApp('+79614466655', 'привет', '79614466655@c.us')
-			expect(res).toMatchObject({ ok: false, code: 'TIMEOUT' })
-		})
-
-		it('checkNumberExists бросает NotifyError(TIMEOUT)', async () => {
-			const err = await waha.checkNumberExists('+79610000001').catch((e) => e)
-			expect(err).toBeInstanceOf(NotifyError)
-			expect(err.code).toBe('TIMEOUT')
-		})
-
-		it('messageAck не выходит за общий бюджет', async () => {
 			const started = Date.now()
-			// Бюджета не хватает даже на первую пробу — сразу undefined, без ожидания.
-			expect(await waha.messageAck('x@c.us', 'id1', Date.now() + 100)).toBeUndefined()
-			expect(Date.now() - started).toBeLessThan(500)
+			const res = await greenapi.sendWhatsApp('+79614466655', 'привет')
+			expect(res).toMatchObject({ ok: false, code: 'TIMEOUT' })
+			expect(Date.now() - started).toBeLessThan(3000)
 		})
 	})
 })

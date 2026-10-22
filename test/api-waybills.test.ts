@@ -11,13 +11,11 @@ vi.mock('next-auth', async (orig) => ({
 	getServerSession: vi.fn(async () => h.session),
 }))
 
-const wa = vi.hoisted(() => ({ send: vi.fn(), check: vi.fn(), confirm: vi.fn() }))
+const wa = vi.hoisted(() => ({ send: vi.fn(), check: vi.fn() }))
 vi.mock('@/lib/notify/whatsapp', () => ({
-	whatsappProvider: () => 'waha',
 	whatsappConfigured: () => true,
 	checkNumberExists: (...a: unknown[]) => wa.check(...a),
 	sendWhatsApp: (...a: unknown[]) => wa.send(...a),
-	confirmDelivery: (...a: unknown[]) => wa.confirm(...a),
 }))
 
 describe.skipIf(!TEST_DB_URL)('API /api/waybills (БД)', () => {
@@ -80,7 +78,6 @@ describe.skipIf(!TEST_DB_URL)('API /api/waybills (БД)', () => {
 		h.session = SESSION
 		wa.check.mockReset().mockResolvedValue({ exists: true })
 		wa.send.mockReset().mockResolvedValue({ ok: true, providerId: 'm1' })
-		wa.confirm.mockReset().mockResolvedValue(undefined)
 	})
 
 	it('без сессии — 401', async () => {

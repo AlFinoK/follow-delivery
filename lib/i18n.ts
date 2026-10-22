@@ -493,7 +493,6 @@ export type Translations = {
 	neRecentlySent: string
 	neDeliveryFailed: string
 	neCheckFailed: string
-	neSessionNotReady: string
 	neUnauthorized: string
 	neNetwork: string
 	neTimeout: string
@@ -992,7 +991,6 @@ export const translations: Record<Lang, Translations> = {
 		neRecentlySent: 'Уведомление по этой накладной уже отправлялось недавно. Повторите позже, если это нужно.',
 		neDeliveryFailed: 'WhatsApp принял сообщение, но не доставил его',
 		neCheckFailed: 'Не удалось проверить номер в WhatsApp',
-		neSessionNotReady: 'Сессия WhatsApp не готова к отправке',
 		neUnauthorized: 'Сервис WhatsApp отклонил ключ доступа',
 		neNetwork: 'Нет связи с сервисом WhatsApp',
 		neTimeout: 'Сервис WhatsApp не ответил вовремя',
@@ -1489,7 +1487,6 @@ export const translations: Record<Lang, Translations> = {
 		neRecentlySent: 'Бұл жүкқұжат бойынша хабарлама жуырда жіберілген. Қажет болса, кейінірек қайталаңыз.',
 		neDeliveryFailed: 'WhatsApp хабарламаны қабылдады, бірақ жеткізбеді',
 		neCheckFailed: 'Нөмірді WhatsApp-та тексеру мүмкін болмады',
-		neSessionNotReady: 'WhatsApp сессиясы жіберуге дайын емес',
 		neUnauthorized: 'WhatsApp қызметі қол жеткізу кілтін қабылдамады',
 		neNetwork: 'WhatsApp қызметімен байланыс жоқ',
 		neTimeout: 'WhatsApp қызметі уақытында жауап бермеді',
